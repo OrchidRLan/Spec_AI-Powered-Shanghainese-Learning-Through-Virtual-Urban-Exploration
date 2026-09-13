@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>虚拟豫园 · 上海话练习</title>
+<title>Virtual Yu Garden · Shanghainese Practice</title>
 <style>
   :root{
     --ink:#2c3230; --ink-2:#5c6a66; --ink-3:#8c9994;
@@ -130,6 +130,8 @@
   .bub{background:var(--paper-2);border:1px solid var(--line);border-radius:13px;border-top-left-radius:4px;padding:8px 11px}
   .msg.me .bub{background:var(--jade-soft);border-color:#bcd9d3;border-radius:13px;border-top-right-radius:4px}
   .bub .sh{font-size:14px;font-weight:600;letter-spacing:.01em}
+  .bub .roman{display:block;font-size:11.5px;color:var(--jade);margin-top:3px;font-family:ui-monospace,Menlo,monospace;letter-spacing:.02em}
+  .bub .en-gloss{display:block;font-size:11px;color:var(--ink-3);margin-top:2px;font-style:italic}
   .bub .gl{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px}
   .bub .sys{display:block;font-size:10.5px;color:var(--ink-3);margin-top:5px;font-family:ui-monospace,Menlo,monospace}
   .msg.note .bub{background:var(--vermilion-soft);border-color:#e8cdbc;color:var(--vermilion);font-size:12.5px}
@@ -234,9 +236,31 @@
   }
   .toast.on{opacity:.95}
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+
+  /* ================= 页面顶栏 ================= */
+  .page-bar{
+    display:flex;align-items:center;justify-content:flex-end;
+    padding:10px 18px 6px;gap:8px;
+  }
+  .lang-sw{
+    display:flex;gap:3px;background:#fff;border:1px solid var(--line-2);
+    border-radius:999px;padding:3px;
+  }
+  .lang-sw button{
+    padding:4px 13px;border-radius:999px;font-size:12px;color:var(--ink-2);
+    transition:background .15s,color .15s;
+  }
+  .lang-sw button[aria-selected="true"]{background:var(--jade);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
+
+<div class="page-bar">
+  <div class="lang-sw" id="pageLang" role="tablist" aria-label="Language">
+    <button role="tab" data-lang="zh" aria-selected="false">中文</button>
+    <button role="tab" data-lang="en" aria-selected="true">EN</button>
+  </div>
+</div>
 
 <div class="wrap">
   <!-- ======================= APP ======================= -->
@@ -256,7 +280,7 @@
       <div class="wave hidden" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="quick" id="quick"></div>
       <div class="inputrow">
-        <textarea id="say" rows="1" placeholder="用上海话回应…"></textarea>
+        <textarea id="say" rows="1" placeholder="Respond in Shanghainese…"></textarea>
         <button class="send" id="sendText" title="文本提交">⌨</button>
         <button class="mic" id="mic" title="语音提交（模拟 ASR）">🎤</button>
       </div>
@@ -264,47 +288,47 @@
 
     <div class="sheet-bg" id="sheetBg"></div>
     <div class="sheet" id="sheet">
-      <div class="sheet-h"><h3>表达卡</h3><button class="x" id="sheetX">✕</button></div>
+      <div class="sheet-h"><h3 id="sheetTitle">Expression Cards</h3><button class="x" id="sheetX">✕</button></div>
       <div class="sheet-b" id="sheetB"></div>
     </div>
   </div>
 
   <!-- ======================= 评测台 ======================= -->
   <div class="dev">
-    <p class="banner">原型：上海话文本与注音为占位内容，需母语者复核。ASR 与字段抽取为规则模拟，替换点见下。</p>
+    <p class="banner" id="devBanner"></p>
 
     <div class="panel">
-      <div class="panel-h">评测台 <span class="n"><button class="tg" id="devTg">收起</button></span></div>
+      <div class="panel-h" id="devPanelH">Dev Panel <span class="n"><button class="tg" id="devTg">Collapse</button></span></div>
       <div class="panel-b" id="devB">
-        <div class="drow"><label for="asrModel">ASR 模型</label>
+        <div class="drow"><label id="asrLabel" for="asrModel">ASR model</label>
           <select id="asrModel">
             <option value="whisper-medium">whisper-medium</option>
             <option value="whisper-medium-wu" selected>whisper-medium-wu</option>
             <option value="qwen3-asr-1.7b">qwen3-asr-1.7b</option>
           </select></div>
-        <div class="drow"><label for="inject">错误注入</label>
+        <div class="drow"><label id="injectLabel" for="inject">Error injection</label>
           <select id="inject">
-            <option value="none">无（转写正确）</option>
-            <option value="quantity">数量听错 → 200</option>
-            <option value="drop">漏掉最后一个字段</option>
-            <option value="garble">整句没听清</option>
+            <option value="none" id="injectNone">None (correct transcript)</option>
+            <option value="quantity" id="injectQty">Quantity mishear → 200</option>
+            <option value="drop" id="injectDrop">Drop last field</option>
+            <option value="garble" id="injectGarble">Garbled (no parse)</option>
           </select></div>
-        <div class="drow"><label for="showAudio">音频文本</label>
+        <div class="drow"><label id="audioLabel" for="showAudio">Audio text</label>
           <select id="showAudio">
-            <option value="hide" selected>隐藏（正常听力任务）</option>
-            <option value="show">显示（调试用）</option>
+            <option value="hide" id="audioHide" selected>Hide (normal listening task)</option>
+            <option value="show" id="audioShow">Show (debug)</option>
           </select></div>
         <div class="drow" style="margin-bottom:0">
-          <label>会话</label>
-          <button class="btn" id="exportBtn" style="flex:1">导出 JSONL</button>
-          <button class="btn" id="resetBtn">重置</button>
+          <label id="sessionLabel">Session</label>
+          <button class="btn" id="exportBtn" style="flex:1">Export JSONL</button>
+          <button class="btn" id="resetBtn">Reset</button>
         </div>
-        <p class="dnote">错误注入只作用于语音通道。延迟为各模型占位值，语音提交会真的等这么久。</p>
+        <p class="dnote" id="devNote"></p>
       </div>
     </div>
 
     <div class="panel">
-      <div class="panel-h">日志 <span class="n" id="logCount"></span></div>
+      <div class="panel-h" id="logPanelH">Log <span class="n" id="logCount"></span></div>
       <div class="console" id="console"></div>
     </div>
   </div>
@@ -313,6 +337,85 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* =======================================================================
+   0. 语言包
+   ======================================================================= */
+let LANG = 'en';
+const L = {
+  zh:{
+    docTitle:"虚拟豫园 · 上海话练习",
+    appTitle:"虚拟豫园", appSub:"上海话入门 · 四站路线",
+    mapTitle:"豫园 · 四站路线", mapSub:(done)=>`20–30 分钟，8–12 条核心表达。已完成 ${done} / 4。`,
+    taskLabel:"任务", listenBtn:"▶ 听店家介绍", listenPlayed:(n)=>`▶ 听店家介绍 · ${n}`,
+    listenDone:"（已播放 · 预生成音频占位）", listenShow:(t)=>`（音频文本）${t}`,
+    listenToast:"预生成音频占位 · 已记 audio_play",
+    cardBtn:(n)=>`📇 表达卡 ${n}`, skipBtn:"跳过（assist）",
+    sheetTitle:"表达卡",
+    doneTitle:"本站完成", skipTitle:"已跳过本站",
+    doneStat:(s)=>`耗时 ${s.elapsed}s · retries ${s.retries} · clarify ${s.clarifies}`,
+    nextBtn:(name)=>`走去下一站：${name} →`, backMapBtn:"回到地图 · 查看总结",
+    summaryTitle:"路线完成",
+    summaryStat:(d,a,r,co,au,sw)=>`总耗时 ${d}s · 自主完成 ${a}/4 · assist — · retries ${r} · 查卡 ${co} · 音频 ${au} · 通道切换 ${sw}`,
+    exportBtn:"导出本场日志",
+    devTitle:"评测台", devCollapse:"收起", devExpand:"展开",
+    asrLabel:"ASR 模型", injectLabel:"错误注入", audioLabel:"音频文本",
+    injectNone:"无（转写正确）", injectQty:"数量听错 → 200", injectDrop:"漏掉最后一个字段", injectGarble:"整句没听清",
+    audioHide:"隐藏（正常听力任务）", audioShow:"显示（调试用）",
+    sessionLabel:"会话", exportBtnDev:"导出 JSONL", resetBtn:"重置",
+    devNote:"错误注入只作用于语音通道。延迟为各模型占位值，语音提交会真的等这么久。",
+    logTitle:"日志", logCount:(n)=>`${n} 条`,
+    emptyLog:"暂无记录。",
+    banner:"原型：上海话文本与注音为占位内容，需母语者复核。ASR 与字段抽取为规则模拟，替换点见下。",
+    toastSpeech:"先写下你要说的话（原型没有真实录音）", toastText:"先写一句回应",
+    toastExport:(n)=>`已导出 ${n} 条`, toastReset:"会话已重置",
+    lockIcon:"🔒",
+    buttonChannel:"按钮通道", textChannel:"文本输入",
+    recognizing:(m)=>`识别中… ${m}`,
+    recognizedAs:(t)=>`识别为：${t}`,
+    confirmHint:"state: confirming · 讲「对」确认",
+    speedNormal:"▶ 常速", speedSlow:"▶ 慢速", fillBtn:"填入",
+    playBtnLabel:(id)=>`Play ${id}`, fillBtnLabel:(id)=>`Fill ${id}`,
+    placeholder:"用上海话回应…",
+    stateLabel:"state", retriesLabel:"retries",
+  },
+  en:{
+    docTitle:"Virtual Yu Garden · Shanghainese Practice",
+    appTitle:"Virtual Yu Garden", appSub:"Shanghainese Intro · 4-Stop Route",
+    mapTitle:"Yu Garden · 4-Stop Route", mapSub:(done)=>`20–30 min, 8–12 key expressions. Completed ${done} / 4.`,
+    taskLabel:"Task", listenBtn:"▶ Listen to shopkeeper", listenPlayed:(n)=>`▶ Listen again · ${n}`,
+    listenDone:"(played · pre-generated audio placeholder)", listenShow:(t)=>`(audio text) ${t}`,
+    listenToast:"Pre-generated audio placeholder · audio_play logged",
+    cardBtn:(n)=>`📇 Cards ${n}`, skipBtn:"Skip (assist)",
+    sheetTitle:"Expression Cards",
+    doneTitle:"Stop complete", skipTitle:"Stop skipped",
+    doneStat:(s)=>`Time ${s.elapsed}s · retries ${s.retries} · clarify ${s.clarifies}`,
+    nextBtn:(name)=>`Next stop: ${name} →`, backMapBtn:"Back to map · View summary",
+    summaryTitle:"Route complete",
+    summaryStat:(d,a,r,co,au,sw)=>`Total ${d}s · independent ${a}/4 · retries ${r} · cards ${co} · audio ${au} · channel switches ${sw}`,
+    exportBtn:"Export logs",
+    devTitle:"Dev Panel", devCollapse:"Collapse", devExpand:"Expand",
+    asrLabel:"ASR model", injectLabel:"Error injection", audioLabel:"Audio text",
+    injectNone:"None (correct transcript)", injectQty:"Quantity mishear → 200", injectDrop:"Drop last field", injectGarble:"Garbled (no parse)",
+    audioHide:"Hide (normal listening task)", audioShow:"Show (debug)",
+    sessionLabel:"Session", exportBtnDev:"Export JSONL", resetBtn:"Reset",
+    devNote:"Error injection applies to speech channel only. Latency values are per-model placeholders.",
+    logTitle:"Log", logCount:(n)=>`${n} entries`,
+    emptyLog:"No entries yet.",
+    banner:"Prototype: Shanghainese text and romanization are placeholder content pending native-speaker review. ASR and field extraction are rule-based simulations.",
+    toastSpeech:"Type what you'd say first (no real mic in prototype)", toastText:"Type a response first",
+    toastExport:(n)=>`Exported ${n} entries`, toastReset:"Session reset",
+    lockIcon:"🔒",
+    buttonChannel:"button channel", textChannel:"text input",
+    recognizing:(m)=>`Recognizing… ${m}`,
+    recognizedAs:(t)=>`Transcript: ${t}`,
+    confirmHint:"state: confirming · say 'yes' to confirm",
+    speedNormal:"▶ Normal", speedSlow:"▶ Slow", fillBtn:"Fill",
+    playBtnLabel:(id)=>`Play ${id}`, fillBtnLabel:(id)=>`Fill ${id}`,
+    placeholder:"Respond in Shanghainese…",
+    stateLabel:"state", retriesLabel:"retries",
+  },
+};
+
 /* =======================================================================
    1. 内容层 —— 只有这一块需要和内容负责人对齐
    ======================================================================= */
@@ -340,56 +443,98 @@ const MENU = [
 
 const STATIONS = [
   {
-    id:"old_restaurant", name:"上海老饭店", sub:"表达偏好", xy:[74,236],
-    brief:"说明勿吃辣、请店家推荐、确认一道菜。",
-    fields:["preference","item"], labels:{ preference:"偏好", item:"菜品" }, confirm:true,
+    id:"old_restaurant",
+    name:{ zh:"上海老饭店", en:"Old Shanghai Restaurant" },
+    sub:{ zh:"表达偏好", en:"Express preferences" },
+    xy:[74,236],
+    brief:{ zh:"说明勿吃辣、请店家推荐、确认一道菜。", en:"Say you don't eat spicy food, ask for a recommendation, and confirm a dish." },
+    fields:["preference","item"],
+    labels:{ zh:{ preference:"偏好", item:"菜品" }, en:{ preference:"preference", item:"dish" } },
+    confirm:true,
     cards:["greet","nospicy","recmd","takethis"],
-    presets:[ {label:"勿吃辣",field:"preference",value:"non_spicy"},
-              {label:"腌笃鲜",field:"item",value:"yandu_xian"},
-              {label:"香辣蟹（辣·看拒绝）",field:"item",value:"xiangla_xie"} ],
-    open:"侬好！今朝想吃点啥？",
-    clarify:{ preference:"侬吃勿吃辣个？", item:"搿么点一道啥菜？" },
-    confirmText:f=>`搿么就是一份${MENU.find(m=>m.id===f.item).name}，勿要辣个，对伐？`,
-    doneText:"好嘞，马上就来。",
+    presets:[
+      {label:{ zh:"勿吃辣", en:"No spicy" }, field:"preference", value:"non_spicy"},
+      {label:{ zh:"腌笃鲜", en:"Yandu Xian" }, field:"item", value:"yandu_xian"},
+      {label:{ zh:"香辣蟹（辣·看拒绝）", en:"Spicy crab (spicy·see rejection)" }, field:"item", value:"xiangla_xie"},
+    ],
+    open:{ sh:"侬好！今朝想吃点啥？", roman:"Nong hoq! Zin zau siang chiq tiq sa?", en:"Hello! What would you like today?" },
+    clarify:{
+      preference:{ sh:"侬吃勿吃辣个？", roman:"Nong chiq veq chiq laq gheq?", en:"Do you eat spicy food?" },
+      item:{ sh:"搿么点一道啥菜？", roman:"Geq meq tiq iq dau sa tsai?", en:"Which dish would you like?" },
+    },
+    confirmText:{ zh:f=>`搿么就是一份${MENU.find(m=>m.id===f.item).name}，勿要辣个，对伐？`, en:f=>`So that's one ${MENU.find(m=>m.id===f.item).name}, no spice — correct?` },
+    doneText:{ sh:"好嘞，马上就来。", roman:"Hau leq, mau zau jiu lae.", en:"Great, coming right up!" },
   },
   {
-    id:"pear_candy_shop", name:"上海梨膏糖商店", sub:"听音辨味", xy:[196,150],
-    brief:"听一段店家介绍，听出今朝个口味，再要两包对应个糖。",
-    fields:["flavor","item","quantity"], labels:{ flavor:"口味", item:"商品", quantity:"数量" }, confirm:true,
-    audio:{ target:"rose", text:"今朝新做个是玫瑰味个梨膏糖，老香个。" },
+    id:"pear_candy_shop",
+    name:{ zh:"上海梨膏糖商店", en:"Shanghai Pear Candy Shop" },
+    sub:{ zh:"听音辨味", en:"Listen & identify" },
+    xy:[196,150],
+    brief:{ zh:"听一段店家介绍，听出今朝个口味，再要两包对应个糖。", en:"Listen to the shopkeeper's introduction, identify today's flavor, then order two packs." },
+    fields:["flavor","item","quantity"],
+    labels:{ zh:{ flavor:"口味", item:"商品", quantity:"数量" }, en:{ flavor:"flavor", item:"item", quantity:"qty" } },
+    confirm:true,
+    audio:{ target:"rose", text:{ zh:"今朝新做个是玫瑰味个梨膏糖，老香个。", en:"Today's new batch is rose-flavored pear candy, very fragrant." } },
     cards:["rose","twopack","thanks"],
-    presets:[ {label:"玫瑰味",field:"flavor",value:"rose"},
-              {label:"梨膏糖",field:"item",value:"pear_candy"},
-              {label:"两包",field:"quantity",value:2} ],
-    open:"侬要点啥？先听阿拉介绍一记。",
-    clarify:{ flavor:"侬要啥味道个？", item:"要点啥？", quantity:"要几包？" },
-    confirmText:()=>"两包玫瑰味梨膏糖，对伐？",
-    doneText:"好，两包玫瑰味，拿好。",
+    presets:[
+      {label:{ zh:"玫瑰味", en:"Rose flavor" }, field:"flavor", value:"rose"},
+      {label:{ zh:"梨膏糖", en:"Pear candy" }, field:"item", value:"pear_candy"},
+      {label:{ zh:"两包", en:"Two packs" }, field:"quantity", value:2},
+    ],
+    open:{ sh:"侬要点啥？先听阿拉介绍一记。", roman:"Nong yau tiq sa? Tsien ting ala gae sau iq ji.", en:"What would you like? Listen to our intro first." },
+    clarify:{
+      flavor:{ sh:"侬要啥味道个？", roman:"Nong yau sa vi dau gheq?", en:"Which flavor?" },
+      item:{ sh:"要点啥？", roman:"Yau tiq sa?", en:"What item?" },
+      quantity:{ sh:"要几包？", roman:"Yau ji pau?", en:"How many packs?" },
+    },
+    confirmText:{ zh:()=>"两包玫瑰味梨膏糖，对伐？", en:()=>"Two packs of rose pear candy — correct?" },
+    doneText:{ sh:"好，两包玫瑰味，拿好。", roman:"Hau, liang pau me kue vi, na hau.", en:"Here you go, two rose-flavored packs." },
   },
   {
-    id:"nanxiang", name:"南翔馒头店", sub:"数量与外带", xy:[292,238],
-    brief:"点两笼小笼包外带，再跟牢店家复述一遍订单。",
-    fields:["item","quantity","takeaway"], labels:{ item:"商品", quantity:"数量", takeaway:"外带" }, confirm:true,
+    id:"nanxiang",
+    name:{ zh:"南翔馒头店", en:"Nanxiang Dumpling House" },
+    sub:{ zh:"数量与外带", en:"Quantity & takeaway" },
+    xy:[292,238],
+    brief:{ zh:"点两笼小笼包外带，再跟牢店家复述一遍订单。", en:"Order two baskets of xiaolongbao to take away, then repeat the order back to confirm." },
+    fields:["item","quantity","takeaway"],
+    labels:{ zh:{ item:"商品", quantity:"数量", takeaway:"外带" }, en:{ item:"item", quantity:"qty", takeaway:"takeaway" } },
+    confirm:true,
     cards:["twobask","togo","thanks"],
-    presets:[ {label:"小笼包",field:"item",value:"xiaolongbao"},
-              {label:"两笼",field:"quantity",value:2},
-              {label:"打包",field:"takeaway",value:true},
-              {label:"堂吃",field:"takeaway",value:false} ],
-    open:"欢迎光临，要点啥？",
-    clarify:{ item:"要点啥？", quantity:"要几笼？", takeaway:"堂吃还是打包？" },
-    confirmText:f=>`两笼小笼包，${f.takeaway?"打包带走":"堂吃"}，对伐？`,
-    doneText:"好嘞，稍微等一歇。",
+    presets:[
+      {label:{ zh:"小笼包", en:"Xiaolongbao" }, field:"item", value:"xiaolongbao"},
+      {label:{ zh:"两笼", en:"Two baskets" }, field:"quantity", value:2},
+      {label:{ zh:"打包", en:"Takeaway" }, field:"takeaway", value:true},
+      {label:{ zh:"堂吃", en:"Dine in" }, field:"takeaway", value:false},
+    ],
+    open:{ sh:"欢迎光临，要点啥？", roman:"Wueh ying guang lin, yau tiq sa?", en:"Welcome! What can I get you?" },
+    clarify:{
+      item:{ sh:"要点啥？", roman:"Yau tiq sa?", en:"What would you like?" },
+      quantity:{ sh:"要几笼？", roman:"Yau ji long?", en:"How many baskets?" },
+      takeaway:{ sh:"堂吃还是打包？", roman:"Dang chiq wueh zeq tang pau?", en:"Dine in or takeaway?" },
+    },
+    confirmText:{ zh:f=>`两笼小笼包，${f.takeaway?"打包带走":"堂吃"}，对伐？`, en:f=>`Two baskets of xiaolongbao, ${f.takeaway?"takeaway":"dine in"} — correct?` },
+    doneText:{ sh:"好嘞，稍微等一歇。", roman:"Hau leq, sau vi den iq xiq.", en:"Sure, just a moment!" },
   },
   {
-    id:"huxin_teahouse", name:"湖心亭茶楼", sub:"评价与道谢", xy:[196,338],
-    brief:"跟店家讲茶老好吃个，再谢谢伊。",
-    fields:["praise","thanks"], labels:{ praise:"正面评价", thanks:"致谢" }, confirm:false,
+    id:"huxin_teahouse",
+    name:{ zh:"湖心亭茶楼", en:"Huxinting Teahouse" },
+    sub:{ zh:"评价与道谢", en:"Compliment & thank" },
+    xy:[196,338],
+    brief:{ zh:"跟店家讲茶老好吃个，再谢谢伊。", en:"Tell the host the tea is really good, then thank them." },
+    fields:["praise","thanks"],
+    labels:{ zh:{ praise:"正面评价", thanks:"致谢" }, en:{ praise:"praise", thanks:"thanks" } },
+    confirm:false,
     cards:["tasty","thanks"],
-    presets:[ {label:"茶老好吃个",field:"praise",value:true},
-              {label:"谢谢侬",field:"thanks",value:true} ],
-    open:"请慢用，搿是今朝新泡个茶。",
-    clarify:{ praise:"茶哪能？", thanks:"" },
-    doneText:"勿要客气，欢迎再来。",
+    presets:[
+      {label:{ zh:"茶老好吃个", en:"Tea is great" }, field:"praise", value:true},
+      {label:{ zh:"谢谢侬", en:"Thank you" }, field:"thanks", value:true},
+    ],
+    open:{ sh:"请慢用，搿是今朝新泡个茶。", roman:"Tsing man yong, geq zeq zin zau xin pau gheq zo.", en:"Please enjoy — this tea was freshly brewed today." },
+    clarify:{
+      praise:{ sh:"茶哪能？", roman:"Zo na nen?", en:"How's the tea?" },
+      thanks:{ sh:"", roman:"", en:"" },
+    },
+    doneText:{ sh:"勿要客气，欢迎再来。", roman:"Veq yau kheq qi, wueh ying zae lae.", en:"You're welcome, hope to see you again!" },
   },
 ];
 
@@ -491,7 +636,7 @@ function mapSVG(){
         <circle class="halo" r="11" fill="#b9705a"/>
         <circle r="14" fill="${fill}" stroke="#333d3b" stroke-opacity=".12"/>
         <text y="4.5" text-anchor="middle" font-size="12" fill="${ink}" font-weight="600">${ss.done?"✓":i+1}</text>
-        <text y="30" text-anchor="middle" font-size="10.5" fill="#5c6a66">${s.name}</text>
+        <text y="30" text-anchor="middle" font-size="10.5" fill="#5c6a66">${tx(s.name)}</text>
       </g>`;
     }).join("")}
     <g class="walker" transform="translate(${w[0]},${w[1]})">
@@ -567,8 +712,18 @@ function fresh(){
   };
 }
 const $ = s => document.querySelector(s);
+const t = () => L[LANG];
 const cur = () => STATIONS[S.stop];
 const curS = () => S.stops[S.stop];
+// tx: for UI labels that vary zh/en
+const tx = (obj) => (obj && typeof obj === 'object') ? (obj[LANG] || obj.en || obj.zh || '') : (obj || '');
+// txD: for dialogue objects — always return Shanghainese text, but carry roman+en for bubble rendering
+const txD = (obj) => {
+  if (!obj || typeof obj !== 'object') return { sh: obj || '', roman: '', en: '' };
+  if (obj.sh !== undefined) return obj; // {sh, roman, en} shape
+  // legacy {zh, en} shape — treat zh as sh
+  return { sh: obj.zh || obj.en || '', roman: '', en: obj.en || '' };
+};
 const sleep = ms => new Promise(r=>setTimeout(r, ms));
 
 function log(event, extra){
@@ -580,7 +735,11 @@ function toast(m){
   const el=$("#toast"); el.textContent=m; el.classList.add("on");
   clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),1600);
 }
-function push(who, text, gl, sys, kind){ curS().chat.push({who,text,gl,sys,kind}); }
+function push(who, text, gl, sys, kind, roman, enGloss){ curS().chat.push({who,text,gl,sys,kind,roman,enGloss}); }
+function pushD(who, dialogueObj, sys, kind){
+  const d = txD(dialogueObj);
+  push(who, d.sh, null, sys, kind, d.roman, d.en);
+}
 
 /* =======================================================================
    5. 状态机
@@ -601,22 +760,22 @@ async function submit(channel, rawText, pField, pValue){
   if(channel==="button"){
     fields = { [pField]: pValue };
     transcript = `[button] ${pField}=${pValue}`;
-    push("me", `${pField} = ${pValue}`, null, "按钮通道");
+    push("me", `${pField} = ${pValue}`, null, t().buttonChannel);
     renderScene();
   } else if(channel==="speech"){
     model = $("#asrModel").value; latency = MODEL_LATENCY[model]; injected = $("#inject").value;
     $("#wave").classList.remove("hidden"); $("#mic").classList.add("rec");
     await sleep(750);
     $("#wave").classList.add("hidden"); $("#mic").classList.remove("rec");
-    push("me", rawText, null, `识别中… ${model}`); renderScene();
+    push("me", rawText, null, t().recognizing(model)); renderScene();
     await sleep(latency);
     transcript = injectError(rawText, injected, st);
-    ss.chat[ss.chat.length-1].gl = transcript!==rawText ? `识别为：${transcript}` : null;
+    ss.chat[ss.chat.length-1].gl = transcript!==rawText ? t().recognizedAs(transcript) : null;
     ss.chat[ss.chat.length-1].sys = `${model} · ${latency}ms`;
     renderScene();
     fields = extract(st, transcript, { recommended: ss.recommended });
   } else {
-    push("me", rawText, null, "文本输入"); renderScene();
+    push("me", rawText, null, t().textChannel); renderScene();
     fields = extract(st, transcript, { recommended: ss.recommended });
   }
 
@@ -628,7 +787,8 @@ async function submit(channel, rawText, pField, pValue){
   if(fields.askRecommend && !ss.fields.item){
     const pick = MENU.find(m=>!m.spicy);
     ss.recommended = pick.id;
-    push("shop", `搿么推荐侬${pick.name}，一点勿辣个。`, null, "state: collecting");
+    const recD = { sh:`搿么推荐侬${pick.name}，一点勿辣个。`, roman:`Geq meq tsoe tsoe nong ${pick.name}, iq tiq veq laq gheq.`, en:`We recommend ${pick.name} — not spicy at all.` };
+    pushD("shop", recD, "state: collecting");
     log("action",{ next_action:"recommend", value:pick.id, state:ss.state });
     busy=false; return renderScene();
   }
@@ -643,11 +803,13 @@ async function submit(channel, rawText, pField, pValue){
 
   if(rejected){
     log("validation_rejected", rejected); ss.retries++;
-    push("shop",
-      rejected.reason==="item_is_spicy" ? "搿只菜是辣个哦，换一只好伐？"
-      : rejected.reason==="quantity_out_of_range" ? "几包？再讲一遍好伐？"
-      : rejected.reason==="flavor_mismatch" ? "勿是搿只味道，再听一遍好伐？"
-      : "阿拉没搿只，换一只好伐？", null, `rejected: ${rejected.reason}`);
+    const rejMap = {
+      item_is_spicy:      { sh:"搿只菜是辣个哦，换一只好伐？",    roman:"Geq zeq tsai zeq laq gheq oh, wueh iq zeq hau vaq?",    en:"That dish is spicy — try another one?" },
+      quantity_out_of_range:{ sh:"几包？再讲一遍好伐？",          roman:"Ji pau? Zae kang iq bian hau vaq?",                      en:"How many packs? Say that again?" },
+      flavor_mismatch:    { sh:"勿是搿只味道，再听一遍好伐？",    roman:"Veq zeq geq zeq vi dau, zae ting iq bian hau vaq?",    en:"That's not the right flavor — listen again?" },
+    };
+    const rejD = rejMap[rejected.reason] || { sh:"阿拉没搿只，换一只好伐？", roman:"Ala meq geq zeq, wueh iq zeq hau vaq?", en:"We don't have that — try something else?" };
+    pushD("shop", rejD, `rejected: ${rejected.reason}`);
     busy=false; return renderScene();
   }
 
@@ -662,11 +824,14 @@ async function submit(channel, rawText, pField, pValue){
   if(missing.length){
     ss.state="collecting"; ss.clarifies++;
     if(!Object.keys(fields).length) ss.retries++;
-    push("shop", st.clarify[missing[0]] || "再讲一遍好伐？", null, `clarify: ${missing[0]}`);
+    const clarifyD = st.clarify[missing[0]] || { sh:"再讲一遍好伐？", roman:"Zae kang iq bian hau vaq?", en:"Could you say that again?" };
+    pushD("shop", clarifyD, `clarify: ${missing[0]}`);
     log("action",{ next_action:"clarify", missing, state:"collecting" });
   } else if(st.confirm && ss.state!=="confirming"){
     ss.state="confirming";
-    push("shop", st.confirmText(ss.fields), null, "state: confirming · 讲「对」确认");
+    const confirmZh = st.confirmText.zh(ss.fields);
+    const confirmEn = st.confirmText.en(ss.fields);
+    push("shop", confirmZh, null, t().confirmHint, null, "", confirmEn);
     log("action",{ next_action:"confirm", fields:Object.assign({},ss.fields), state:"confirming" });
   } else { busy=false; return finishStop(); }
 
@@ -697,7 +862,7 @@ function finishStop(){
   const st=cur(), ss=curS();
   ss.state="completed"; ss.done=true;
   ss.elapsed = Math.round((Date.now()-(ss.startedAt||Date.now()))/1000);
-  push("shop", st.doneText, null, "state: completed");
+  pushD("shop", st.doneText, "state: completed");
   log("completed",{ fields:Object.assign({},ss.fields), criteria_met:true,
     retries:ss.retries, clarifications:ss.clarifies, assist:ss.assist, elapsed_s:ss.elapsed });
   renderAll();
@@ -707,7 +872,7 @@ function skipStop(){
   const ss=curS();
   ss.assist=true; ss.done=true; ss.state="completed";
   ss.elapsed = Math.round((Date.now()-(ss.startedAt||Date.now()))/1000);
-  push("shop","（主持人协助，跳过本站）",null,"assist: true","note");
+  push("shop", LANG==='zh'?"（主持人协助，跳过本站）":"(Facilitator assist — stop skipped)", null, "assist: true", "note");
   log("completed",{ criteria_met:false, assist:true, retries:ss.retries,
     fields:Object.assign({},ss.fields), elapsed_s:ss.elapsed });
   renderAll();
@@ -717,7 +882,7 @@ function enterStop(i){
   if(i>0 && !S.stops[i-1].done) return;
   S.stop=i; S.view="stop";
   const ss=curS();
-  if(!ss.chat.length){ push("shop", cur().open, null, "state: collecting"); ss.startedAt=Date.now(); }
+  if(!ss.chat.length){ pushD("shop", cur().open, "state: collecting"); ss.startedAt=Date.now(); }
   log("enter_station",{ index:i });
   renderAll();
 }
@@ -735,8 +900,8 @@ function toMap(nextIndex){
 function renderBar(){
   const onMap = S.view==="map";
   $("#back").classList.toggle("hidden", onMap);
-  $("#barTitle").textContent = onMap ? "虚拟豫园" : cur().name;
-  $("#barSub").textContent = onMap ? "上海话入门 · 四站路线" : cur().sub;
+  $("#barTitle").textContent = onMap ? t().appTitle : tx(cur().name);
+  $("#barSub").textContent = onMap ? t().appSub : tx(cur().sub);
   $("#dots").innerHTML = STATIONS.map((_,i)=>
     `<i class="${S.stops[i].done?"on":""} ${!onMap && i===S.stop?"cur":""}"></i>`).join("");
   $("#dock").classList.toggle("hidden", onMap || curS().done);
@@ -745,16 +910,16 @@ function renderBar(){
 function renderMap(){
   const done = S.stops.filter(s=>s.done).length;
   $("#screen").innerHTML = `<div class="fade">
-    <div class="map-head"><h2>豫园 · 四站路线</h2>
-      <p>20–30 分钟，8–12 条核心表达。已完成 ${done} / 4。</p></div>
+    <div class="map-head"><h2>${t().mapTitle}</h2>
+      <p>${t().mapSub(done)}</p></div>
     <div class="mapbox">${mapSVG()}</div>
     <div class="stoplist">${STATIONS.map((st,i)=>{
       const ss=S.stops[i], locked = i>0 && !S.stops[i-1].done;
       return `<button class="stoprow ${ss.done?"done":""} ${locked?"locked":""}" data-stop="${i}"
         ${i===S.stop?'aria-current="true"':""}>
         <span class="num">${ss.done?"✓":i+1}</span>
-        <span><span class="t">${st.name}</span><br><span class="s">${st.sub}${ss.assist?" · assist":""}${ss.done?` · ${ss.elapsed}s`:""}</span></span>
-        <span class="go">${locked?"🔒":"›"}</span></button>`;
+        <span><span class="t">${tx(st.name)}</span><br><span class="s">${tx(st.sub)}${ss.assist?" · assist":""}${ss.done?` · ${ss.elapsed}s`:""}</span></span>
+        <span class="go">${locked?t().lockIcon:"›"}</span></button>`;
     }).join("")}</div>
     ${done===4 ? summaryHTML() : ""}
   </div>`;
@@ -767,28 +932,33 @@ function renderMap(){
 
 function renderScene(){
   const st=cur(), ss=curS();
-  const audioBtn = st.audio ? `<button class="mini" id="playAudio" style="margin-top:8px">▶ 听店家介绍${ss.audioPlayed?` · ${ss.audioPlayed}`:""}</button>
+  const listenBtnTxt = ss.audioPlayed ? t().listenPlayed(ss.audioPlayed) : t().listenBtn;
+  const audioBtn = st.audio ? `<button class="mini" id="playAudio" style="margin-top:8px">${listenBtnTxt}</button>
     <span style="font-size:11px;color:var(--ink-3);margin-left:7px" id="audioText"></span>` : "";
+  const meAv = LANG==='zh'?'我':'Me', shopAv = LANG==='zh'?'店':'Shop';
 
   $("#screen").innerHTML = `
     <div class="scene">${SCENES[st.id]}</div>
     <div class="task-strip">
-      <span class="lbl">任务</span>
-      <p>${st.brief}</p>${audioBtn}
+      <span class="lbl">${t().taskLabel}</span>
+      <p>${tx(st.brief)}</p>${audioBtn}
       <div class="chips">${st.fields.map(f=>{
         const v = ss.fields[f];
         const shown = v===undefined ? "—"
           : (f==="item" && st.id==="old_restaurant" ? (MENU.find(m=>m.id===v)||{}).name : String(v));
-        return `<span class="chip ${v!==undefined?"set":""} ${S.justSet.includes(f)?"pop":""}">${st.labels[f]} <b>${shown}</b></span>`;
+        return `<span class="chip ${v!==undefined?"set":""} ${S.justSet.includes(f)?"pop":""}">${st.labels[LANG][f]} <b>${shown}</b></span>`;
       }).join("")}
-      <span class="chip">state <b>${ss.state}</b></span>
-      <span class="chip">retries <b>${ss.retries}</b></span></div>
+      <span class="chip">${t().stateLabel} <b>${ss.state}</b></span>
+      <span class="chip">${t().retriesLabel} <b>${ss.retries}</b></span></div>
     </div>
     <div class="chat" id="chat">${ss.chat.map(m=>{
-      if(m.typing) return `<div class="msg"><span class="av">店</span><span class="bub typing"><span></span><span></span><span></span></span></div>`;
+      if(m.typing) return `<div class="msg"><span class="av">${shopAv}</span><span class="bub typing"><span></span><span></span><span></span></span></div>`;
+      const showAnnotations = m.who === 'shop' && LANG === 'en';
       return `<div class="msg ${m.who==="me"?"me":""} ${m.kind==="note"?"note":""}">
-        <span class="av">${m.who==="me"?"我":"店"}</span>
+        <span class="av">${m.who==="me"?meAv:shopAv}</span>
         <span class="bub"><span class="sh">${m.text}</span>
+          ${showAnnotations && m.roman ? `<span class="roman">${m.roman}</span>` : ""}
+          ${showAnnotations && m.enGloss ? `<span class="en-gloss">${m.enGloss}</span>` : ""}
           ${m.gl?`<span class="gl">${m.gl}</span>`:""}
           ${m.sys?`<span class="sys">${m.sys}</span>`:""}</span></div>`;
     }).join("")}</div>
@@ -797,9 +967,9 @@ function renderScene(){
   $("#screen").scrollTop = $("#screen").scrollHeight;
 
   $("#quick").innerHTML =
-    `<button class="qbtn card" id="openCards">📇 表达卡 ${st.cards.length}</button>` +
-    st.presets.map((p,i)=>`<button class="qbtn" data-preset="${i}">${p.label}</button>`).join("") +
-    `<button class="qbtn" id="assistBtn">跳过（assist）</button>`;
+    `<button class="qbtn card" id="openCards">${t().cardBtn(st.cards.length)}</button>` +
+    st.presets.map((p,i)=>`<button class="qbtn" data-preset="${i}">${tx(p.label)}</button>`).join("") +
+    `<button class="qbtn" id="assistBtn">${t().skipBtn}</button>`;
   $("#quick").querySelectorAll("[data-preset]").forEach(b=>{
     b.onclick = ()=>{ const p = st.presets[+b.dataset.preset]; submit("button", null, p.field, p.value); };
   });
@@ -810,30 +980,31 @@ function renderScene(){
     const s=curS(); s.audioPlayed++; S.audioPlays++;
     log("audio_play",{ clip:`${st.id}_intro`, count:s.audioPlayed, source:"pre-generated (placeholder)" });
     $("#audioText").textContent = $("#showAudio").value==="show"
-      ? `（音频文本）${st.audio.text}` : "（已播放 · 预生成音频占位）";
-    $("#playAudio").textContent = `▶ 听店家介绍 · ${s.audioPlayed}`;
-    toast("预生成音频占位 · 已记 audio_play");
+      ? t().listenShow(tx(st.audio.text)) : t().listenDone;
+    $("#playAudio").textContent = t().listenPlayed(s.audioPlayed);
+    toast(t().listenToast);
   };
+  $("#say").placeholder = t().placeholder;
   if($("#nextBtn")) $("#nextBtn").onclick = ()=>toMap(S.stop+1);
   if($("#backMap")) $("#backMap").onclick = ()=>toMap();
 }
 
 function doneCardHTML(){
   const ss=curS(), all = S.stops.every(s=>s.done), next = S.stop+1;
-  return `<div class="done-card"><h3>${ss.assist?"已跳过本站":"本站完成"}</h3>
-    <p>耗时 ${ss.elapsed}s · retries ${ss.retries} · clarify ${ss.clarifies}</p>
+  return `<div class="done-card"><h3>${ss.assist?t().skipTitle:t().doneTitle}</h3>
+    <p>${t().doneStat(ss)}</p>
     <button class="btn primary" id="${all?"backMap":"nextBtn"}">
-      ${all ? "回到地图 · 查看总结" : `走去下一站：${STATIONS[next].name} →`}</button></div>`;
+      ${all ? t().backMapBtn : t().nextBtn(tx(STATIONS[next].name))}</button></div>`;
 }
 
 function summaryHTML(){
   const total = Math.round((Date.now()-S.startedAt)/1000);
   const assists = S.stops.filter(s=>s.assist).length;
   const retries = S.stops.reduce((a,s)=>a+s.retries,0);
-  return `<div class="done-card" style="margin:0 14px 22px"><h3>路线完成</h3>
-    <p>总耗时 ${total}s · 自主完成 ${S.stops.filter(s=>s.done&&!s.assist).length}/4 · assist ${assists}
-      · retries ${retries} · 查卡 ${S.cardOpens} · 音频 ${S.audioPlays} · 通道切换 ${S.switches}</p>
-    <button class="btn primary" id="exp2">导出本场日志</button></div>`;
+  const indep = S.stops.filter(s=>s.done&&!s.assist).length;
+  return `<div class="done-card" style="margin:0 14px 22px"><h3>${t().summaryTitle}</h3>
+    <p>${t().summaryStat(total,indep,retries,S.cardOpens,S.audioPlays,S.switches)}</p>
+    <button class="btn primary" id="exp2">${t().exportBtn}</button></div>`;
 }
 
 function openSheet(){
@@ -843,9 +1014,9 @@ function openSheet(){
     return `<div class="ecard"><div class="sh">${e.sh}</div><div class="rm">${e.roman}</div>
       <div class="gl">${e.zh} · ${e.en}</div>
       <div class="acts">
-        <button class="mini" data-play="${id}" data-speed="normal">▶ 常速</button>
-        <button class="mini" data-play="${id}" data-speed="slow">▶ 慢速</button>
-        <button class="mini" data-fill="${id}">填入</button>
+        <button class="mini" data-play="${id}" data-speed="normal">${t().speedNormal}</button>
+        <button class="mini" data-play="${id}" data-speed="slow">${t().speedSlow}</button>
+        <button class="mini" data-fill="${id}">${t().fillBtn}</button>
       </div></div>`;
   }).join("");
   $("#sheetB").querySelectorAll("[data-play]").forEach(b=>{
@@ -858,20 +1029,21 @@ function openSheet(){
     b.onclick = ()=>{ S.cardOpens++; log("card_open",{ card:b.dataset.fill });
       $("#say").value = EXPR[b.dataset.fill].sh; closeSheet(); $("#say").focus(); };
   });
+  $("#sheetTitle").textContent = t().sheetTitle;
   $("#sheet").classList.add("on"); $("#sheetBg").classList.add("on");
   S.cardOpens++; log("card_sheet_open",{ cards:st.cards.length });
 }
 function closeSheet(){ $("#sheet").classList.remove("on"); $("#sheetBg").classList.remove("on"); }
 
 function renderConsole(){
-  $("#logCount").textContent = `${S.logs.length} 条`;
+  $("#logCount").textContent = t().logCount(S.logs.length);
   $("#console").innerHTML = S.logs.slice(-60).reverse().map(l=>{
     const cls = l.event==="completed" ? "ev" : (l.event==="validation_rejected" ? "bad" : "ev");
     const rest = Object.keys(l).filter(k=>!["ts","session","station","turn","event"].includes(k))
       .map(k=>`<span class="k">${k}=</span>${typeof l[k]==="object"?JSON.stringify(l[k]):l[k]}`).join(" ");
     return `<div class="lg"><span class="k">${l.ts.slice(11,19)}</span> <span class="${cls}">${l.event}</span>
       <span class="k">${l.station}#${l.turn}</span> ${rest}</div>`;
-  }).join("") || `<p class="empty">暂无记录。</p>`;
+  }).join("") || `<p class="empty">${t().emptyLog}</p>`;
 }
 
 function renderAll(){
@@ -885,7 +1057,7 @@ function renderAll(){
    ======================================================================= */
 function send(channel){
   const v = $("#say").value.trim();
-  if(!v){ toast(channel==="speech" ? "先写下你要说的话（原型没有真实录音）" : "先写一句回应"); return; }
+  if(!v){ toast(channel==="speech" ? t().toastSpeech : t().toastText); return; }
   $("#say").value = "";
   submit(channel, v);
 }
@@ -895,22 +1067,52 @@ $("#say").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e
 $("#back").onclick = ()=>toMap();
 $("#sheetX").onclick = closeSheet;
 $("#sheetBg").onclick = closeSheet;
-$("#devTg").onclick = ()=>{
-  const b = $("#devB"); const hid = b.classList.toggle("hidden");
-  $("#devTg").textContent = hid ? "展开" : "收起";
-};
-
 function exportLogs(){
   const blob = new Blob([S.logs.map(l=>JSON.stringify(l)).join("\n")],{type:"application/x-ndjson"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = `${SESSION}.jsonl`; a.click();
-  URL.revokeObjectURL(a.href); toast(`已导出 ${S.logs.length} 条`);
+  URL.revokeObjectURL(a.href); toast(t().toastExport(S.logs.length));
 }
 $("#exportBtn").onclick = exportLogs;
-$("#resetBtn").onclick = ()=>{ S = fresh(); renderAll(); toast("会话已重置"); };
+$("#resetBtn").onclick = ()=>{ S = fresh(); renderAll(); toast(t().toastReset); };
+
+function renderDevPanel(){
+  const l = t();
+  $("#devBanner").textContent = l.banner;
+  const ph = $("#devPanelH"); if(ph) ph.firstChild.textContent = l.devTitle + " ";
+  const lg = $("#logPanelH"); if(lg) lg.firstChild.textContent = l.logTitle + " ";
+  const dtg = $("#devTg"); if(dtg) dtg.textContent = $("#devB").classList.contains("hidden") ? l.devExpand : l.devCollapse;
+  const set = (id, v) => { const el=$(id); if(el) el.textContent = v; };
+  set("#asrLabel", l.asrLabel); set("#injectLabel", l.injectLabel); set("#audioLabel", l.audioLabel);
+  set("#injectNone", l.injectNone); set("#injectQty", l.injectQty);
+  set("#injectDrop", l.injectDrop); set("#injectGarble", l.injectGarble);
+  set("#audioHide", l.audioHide); set("#audioShow", l.audioShow);
+  set("#sessionLabel", l.sessionLabel); set("#exportBtn", l.exportBtnDev); set("#resetBtn", l.resetBtn);
+  set("#devNote", l.devNote);
+}
+
+function setLang(next){
+  LANG = next;
+  document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en';
+  document.title = t().docTitle;
+  $("#pageLang").querySelectorAll("[data-lang]").forEach(b=>{
+    b.setAttribute("aria-selected", b.dataset.lang === next);
+  });
+  renderDevPanel();
+  renderAll();
+}
+
+$("#pageLang").querySelectorAll("[data-lang]").forEach(b=>{
+  b.onclick = ()=> setLang(b.dataset.lang);
+});
+
+$("#devTg").onclick = ()=>{
+  const b = $("#devB"), hid = b.classList.toggle("hidden");
+  $("#devTg").textContent = hid ? t().devExpand : t().devCollapse;
+};
 
 S = fresh();
-renderAll();
+setLang('en');
 </script>
 </body>
 </html>
