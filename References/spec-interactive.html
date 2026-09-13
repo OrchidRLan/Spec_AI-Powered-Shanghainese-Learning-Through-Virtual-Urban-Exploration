@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec</title>
+<style>
+  :root{
+    /* 简洁配色：白底 + 湖绿强调 + 深炭文字 */
+    --ink:#2c3230;
+    --ink-2:#5c6a66;
+    --ink-3:#8c9994;
+    --line:#e5e5e5;
+    --line-strong:#d0d0d0;
+    --surface:#ffffff;
+    --surface-2:#f6f6f6;
+    --surface-3:#d8e8e4;
+    --accent:#5a9e98;
+    --accent-ink:#3c7c77;
+    --accent-soft:#d8e8e4;
+    --charcoal:#33403d;
+    --radius:16px;
+    --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--surface);
+    color:var(--ink);
+    font-family:"Inter","Helvetica Neue",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-ink);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+
+  /* ---------- 阶段条 ---------- */
+  .stages{
+    display:flex;align-items:stretch;gap:0;
+    border:1px solid var(--line);border-radius:var(--radius);
+    margin:20px 24px 0;background:var(--surface);overflow-x:auto;
+  }
+  .stage{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 18px;flex:1;min-width:200px;text-align:left;
+    border-radius:var(--radius);
+  }
+  .stage[aria-current="step"]{background:var(--surface-3)}
+  .stage-num{
+    flex:none;width:26px;height:26px;border-radius:50%;
+    border:1px solid var(--line-strong);color:var(--ink-3);
+    display:grid;place-items:center;font-size:11px;font-variant-numeric:tabular-nums;
+  }
+  .stage[aria-current="step"] .stage-num{background:var(--accent);border-color:var(--accent);color:#fff}
+  .stage-name{font-weight:600;font-size:14px;line-height:1.3}
+  .stage[aria-current="step"] .stage-name{color:var(--accent-ink)}
+  .stage-desc{font-size:12px;color:var(--ink-3);line-height:1.4}
+  .stage-sep{align-self:center;color:var(--line-strong);padding:0 2px;flex:none}
+
+  /* ---------- 子流程 Tab ---------- */
+  .flows{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    padding:18px 24px 14px;border-bottom:1px solid var(--line);
+  }
+  .flows-label{color:var(--ink-3);font-size:13px;margin-right:10px}
+  .flow-tab{
+    display:flex;align-items:center;gap:8px;
+    padding:7px 14px;border-radius:999px;color:var(--ink-2);font-size:13px;
+  }
+  .flow-tab .k{color:var(--ink-3);font-weight:600}
+  .flow-tab:hover{background:var(--surface-2)}
+  .flow-tab[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+  .flow-tab[aria-selected="true"] .k{color:var(--accent)}
+  .flow-arrow{color:var(--line-strong);font-size:12px}
+
+  /* ---------- 布局 ---------- */
+  .shell{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:0;align-items:start}
+  .canvas{padding:24px;min-width:0}
+  .inspector{
+    position:sticky;top:0;max-height:100vh;overflow-y:auto;
+    border-left:1px solid var(--line);background:var(--surface-2);padding:22px 20px 40px;
+  }
+  @media (max-width:1080px){
+    .shell{grid-template-columns:1fr}
+    .inspector{position:static;max-height:none;border-left:none;border-top:1px solid var(--line)}
+  }
+
+  /* ---------- 画布节点 ---------- */
+  .canvas-hint{color:var(--ink-3);font-size:12px;margin:0 0 10px}
+  .node-source{
+    display:flex;align-items:center;gap:14px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+  }
+  .node-source .glyph{
+    flex:none;width:38px;height:38px;border-radius:10px;background:var(--accent-soft);
+    color:var(--accent);display:grid;place-items:center;font-size:16px;
+  }
+  .node-source h3{margin:0;font-size:15px}
+  .node-source p{margin:2px 0 0;color:var(--ink-3);font-size:12.5px}
+  .node-source .side{margin-left:auto}
+  .pill-link{
+    border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+    font-size:12px;color:var(--ink-2);background:var(--surface);
+  }
+  .pill-link:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+  .drop{height:26px;width:2px;background:var(--line-strong);margin:0 auto;position:relative}
+  .drop.arrow::after{
+    content:"";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+    border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--line-strong);
+  }
+
+  .node-step,.node-result{
+    display:inline-flex;align-items:center;gap:12px;
+    border:1px solid var(--line);border-radius:10px;background:var(--surface);
+    padding:10px 16px;font-size:13.5px;
+  }
+  .node-result{background:var(--surface-2);font-weight:600}
+  .center{display:flex;justify-content:center}
+
+  .node-decision{
+    display:inline-flex;align-items:center;gap:14px;
+    border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink);
+    border-radius:10px;padding:11px 18px;font-weight:600;font-size:13.5px;
+  }
+  .node-decision .rhombus{width:13px;height:13px;border:2px solid var(--accent);transform:rotate(45deg);flex:none}
+  .node-decision .hint{
+    font-weight:400;color:var(--accent-ink);border-left:1px solid rgba(90,158,152,.45);padding-left:14px;font-size:12.5px;
+  }
+
+  /* ---------- 分叉 ---------- */
+  .fork{display:flex;height:24px}
+  .fork > div{position:relative}
+  .fork > div::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--line-strong)}
+  .fork > div::before{content:"";position:absolute;top:0;height:2px;background:var(--line-strong)}
+  .fork.down > div:first-child::before{left:50%;right:0}
+  .fork.down > div:last-child::before{left:0;right:50%}
+  .fork.up > div::before{top:auto;bottom:0}
+  .fork.up > div:first-child::before{left:50%;right:0}
+  .fork.up > div:last-child::before{left:0;right:50%}
+
+  .paths{display:flex;gap:22px;align-items:stretch}
+  .path{
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--surface-2);padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0;
+  }
+  .path-head{display:flex;align-items:center;gap:10px}
+  .path-tag{
+    background:var(--surface);border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+  }
+  .path-name{font-weight:600;font-size:14px}
+  .path-note{color:var(--ink-3);font-size:12px;margin:0}
+  .card-row{display:flex;align-items:center;gap:10px;min-width:0}
+  .card-row .seq{color:var(--line-strong);flex:none}
+
+  /* ---------- 节点卡 ---------- */
+  .card{
+    flex:1;min-width:0;text-align:left;display:block;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;transition:border-color .15s,box-shadow .15s;
+  }
+  .card:hover{border-color:var(--line-strong)}
+  .card[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .card-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .card-idx{
+    background:var(--surface-3);color:var(--accent-ink);border-radius:5px;
+    padding:1px 7px;font-size:11.5px;font-variant-numeric:tabular-nums;
+  }
+  .card-kind{color:var(--ink-3);font-size:12px}
+  .card-open{margin-left:auto;color:var(--ink-3);font-size:13px}
+  .card h4{margin:0 0 5px;font-size:15px;line-height:1.4}
+  .card .sub{margin:0;color:var(--ink-2);font-size:13px}
+  .card hr{border:none;border-top:1px solid var(--line);margin:13px 0 11px}
+  .card .out{font-size:12.5px;color:var(--ink-3)}
+  .card .out b{color:var(--accent-ink);font-weight:600;margin-left:4px}
+  .card .why{margin:9px 0 0;font-size:12.5px;color:var(--ink-3);line-height:1.6}
+  .card .why b{color:var(--ink-2);font-weight:600}
+
+  .footnote{color:var(--ink-3);font-size:12px;margin:2px 0 0}
+  .tail{
+    border:1px dashed var(--line-strong);border-radius:var(--radius);
+    padding:12px 16px;color:var(--ink-3);font-size:12.5px;margin-top:22px;
+  }
+
+  /* ---------- 右侧证据面板 ---------- */
+  .insp-crumb{display:flex;align-items:center;gap:9px;color:var(--ink-3);font-size:12px}
+  .insp-crumb .idx{background:var(--surface-3);color:var(--accent-ink);border-radius:5px;padding:1px 7px;font-variant-numeric:tabular-nums}
+  .insp h2{margin:10px 0 16px;font-size:19px;line-height:1.35}
+  .insp-block{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+  .insp-block:first-of-type{border-top:none;padding-top:0;margin-top:0}
+  .insp-h{color:var(--accent-ink);font-weight:600;font-size:13.5px;margin:0 0 8px}
+  .insp p{margin:0;color:var(--ink-2);font-size:13px}
+  details.more{margin-top:14px}
+  details.more summary{
+    color:var(--accent-ink);font-size:13px;cursor:pointer;list-style:none;
+    display:flex;align-items:center;gap:7px;
+  }
+  details.more summary::-webkit-details-marker{display:none}
+  details.more summary::before{content:"▸";font-size:11px;transition:transform .15s}
+  details.more[open] summary::before{transform:rotate(90deg)}
+  details.more .body{margin-top:9px;color:var(--ink-2);font-size:12.5px;line-height:1.7}
+
+  .insp-h-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .count{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:11.5px;color:var(--ink-3);background:var(--surface)}
+  .field-label{color:var(--ink-3);font-size:12px;margin:0 0 6px}
+  select.trace{
+    width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);
+    padding:9px 11px;font-size:12.5px;color:var(--ink);
+  }
+  .meta{color:var(--ink-3);font-size:11.5px;margin:8px 0 0;line-height:1.7}
+  .seg{
+    display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:4px;margin:14px 0 12px;
+  }
+  .seg button{flex:1;padding:7px 10px;border-radius:999px;font-size:12.5px;color:var(--ink-2);text-align:center}
+  .seg button[aria-selected="true"]{background:var(--surface-3);color:var(--accent-ink);font-weight:600}
+  .io{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:13px;margin-bottom:10px}
+  .io-tag{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .io-tag .t{background:var(--surface-3);color:var(--accent-ink);border-radius:5px;padding:1px 8px;font-size:11.5px}
+  .io-tag .d{color:var(--ink-3);font-size:12px}
+  .io-item{background:var(--surface-2);border-radius:var(--radius-sm);padding:11px 12px;margin-bottom:8px}
+  .io-item:last-child{margin-bottom:0}
+  .io-item.quote{background:var(--surface);border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+  .io-item h5{margin:0 0 5px;font-size:12.5px}
+  .io-item p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+  pre.raw{
+    margin:0;background:var(--charcoal);color:#f3ead0;border-radius:var(--radius);
+    padding:14px;font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .empty{color:var(--ink-3);font-size:12.5px}
+
+  /* ---------- 顶栏与语言切换 ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:16px 24px 14px;border-bottom:1px solid var(--line);
+  }
+  .topbar-left{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .topbar h1{font-size:14px;font-weight:600;margin:0;color:var(--ink);line-height:1.4}
+  .topbar-members{font-size:11.5px;color:var(--ink-3);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seg.lang{margin:0;flex:none;width:auto}
+  .seg.lang button{flex:none;padding:6px 14px;white-space:nowrap}
+
+  /* ---------- 皮肤微调 ---------- */
+  body{background:var(--surface)}
+  .stages{box-shadow:0 1px 2px rgba(44,50,48,.04), 0 4px 16px rgba(44,50,48,.05)}
+  .card{box-shadow:0 1px 2px rgba(44,50,48,.04)}
+  .card:hover{box-shadow:0 2px 4px rgba(44,50,48,.06), 0 8px 20px rgba(44,50,48,.07)}
+  .stage-name,.node-source h3,.insp-crumb{letter-spacing:.01em}
+  .flow-tab[aria-selected="true"]{background:var(--accent);color:#fff}
+  .flow-tab[aria-selected="true"] .k{color:#fff;opacity:.75}
+  .seg.lang button[aria-selected="true"]{background:var(--accent);color:#fff}
+  .node-source .glyph{border-radius:12px}
+  .topbar{background:var(--surface);border-bottom-color:var(--line)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <h1 id="pageTitle">AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec</h1>
+    <p class="topbar-members">Haoyang Song (hs2289) &nbsp;·&nbsp; Ruolan Chen (rc975)</p>
+  </div>
+  <div class="seg lang" id="langSwitch" role="tablist" aria-label="Language / 语言">
+    <button role="tab" data-lang="zh" aria-selected="false">中文</button>
+    <button role="tab" data-lang="en" aria-selected="true">English</button>
+  </div>
+</header>
+
+<nav class="stages" id="stages" aria-label="分析阶段（可点击切换）"></nav>
+
+<div class="flows" role="tablist" aria-label="子流程" id="flows">
+  <span class="flows-label" id="flowsLabel">流程导航</span>
+</div>
+
+<div class="shell">
+  <main class="canvas" id="canvas"></main>
+  <aside class="inspector insp" id="inspector" aria-live="polite"></aside>
+</div>
+
+<script>
+/* =========================================================================
+   全部内容都在这个 DATA 对象里。改数据即可，下面的渲染逻辑不用动。
+   ========================================================================= */
+const DATA = {
+  /* 顶部阶段条现在可以点击，每个阶段有自己的一组子流程。 */
+  activeStage: 1,
+
+  stages: [
+    /* ============================================================ 01 背景 */
+    {
+      num:"01", name:"项目背景", desc:"上海话入门与豫园路线",
+      flows: [
+        {
+          key:"A", name:"入门者缺什么",
+          hint:"为什么普通话经验接不上、词表也不够",
+          blocks:[
+            { type:"source", title:"上海话", meta:"吴语的一支 · 发音、词汇、语法与普通话都不同",
+              link:{ label:"查看目标表达范围", href:"#" } },
+            { type:"step", title:"词表与发音指南能带到的位置" },
+            { type:"decision", title:"入门练习还缺两件东西", hint:"都要补" },
+            { type:"branches",
+              footnote:"这两件东西决定了项目形态：先有交流目标，再有承载目标的场景，最后才是模型。",
+              paths:[
+                { tag:"缺口 1", name:"能开口的场合", flex:1, note:"没有场景，表达就没有触发点。", cards:["bg-context"] },
+                { tag:"缺口 2", name:"能判定的任务", flex:1, note:"没有完成标准，学习者不知道说到哪算说清楚。", cards:["bg-task"] },
+              ]
+            },
+            { type:"result", title:"以任务为单位、不用到场的练习结构" },
+            { type:"note", text:"项目只覆盖入门交流：表达偏好、选择商品、说明数量、确认订单 · 不涉及成段叙述" },
+          ],
+        },
+        {
+          key:"B", name:"为什么是豫园",
+          hint:"场景怎么反推出 8–12 条核心表达",
+          blocks:[
+            { type:"source", title:"豫园老城厢", meta:"餐馆 / 点心铺 / 茶楼 · 场景与表达的对应关系明确" },
+            { type:"step", title:"从四个场景反推需要的表达" },
+            { type:"decision", title:"表达分两批安排", hint:"跨站编排" },
+            { type:"branches",
+              footnote:"路线全程 20–30 分钟。学习者不需要真的去豫园，场景只用来组织交流目标。",
+              paths:[
+                { tag:"批次 1", name:"首次出现", flex:1, note:"每站引入一到三条新表达。", cards:["bg-expr-new"] },
+                { tag:"批次 2", name:"跨站复现", flex:1, note:"同一条表达在后面的站点再用一次。", cards:["bg-expr-reuse"] },
+              ]
+            },
+            { type:"result", title:"四站固定路线 · 8–12 条核心表达" },
+          ],
+        },
+        {
+          key:"C", name:"用现成组件",
+          hint:"不训练新模型，拿什么拼出原型",
+          blocks:[
+            { type:"source", title:"候选组件", meta:"ASR / LLM / TTS 均使用已发布模型 · 不做额外训练" },
+            { type:"step", title:"已完成的初步试跑" },
+            { type:"decision", title:"三类组件各要回答一个问题", hint:"都要验" },
+            { type:"branches",
+              footnote:"三类组件的不确定性不同：识别是准不准，合成是像不像，模型与状态机是职责划在哪。吴语适配的 checkpoint 都来自 WenetSpeech-Wu 发布，本项目不训练模型。",
+              paths:[
+                { tag:"组件 1", name:"识别", flex:1.5, note:"三个候选，含吴语适配版；另有两个发布模型被排除。", cards:["bg-asr-cand","bg-screen"] },
+                { tag:"组件 2", name:"合成", flex:1, note:"通用版与吴语微调版对照。", cards:["bg-tts-cand"] },
+                { tag:"组件 3", name:"解释与推进", flex:1, note:"模型只做抽取。", cards:["bg-llm"] },
+              ]
+            },
+            { type:"result", title:"可直接拼装的原型组件集" },
+          ],
+        },
+        {
+          key:"D", name:"三个研究问题",
+          hint:"技术评测与用户研究分别回答什么",
+          blocks:[
+            { type:"source", title:"研究目标", meta:"speech 模型表现 / 系统可靠性 / 使用体验" },
+            { type:"decision", title:"拆成三个可回答的问题", hint:"逐层收窄" },
+            { type:"branches",
+              footnote:"RQ1 决定用哪套组件，RQ2 决定系统能不能拿去测人，RQ3 才是学习者怎么用。顺序不能倒。",
+              paths:[
+                { tag:"RQ1", name:"模型比较", flex:1, note:"识别准确率、发音与可懂度。", cards:["rq1-def"] },
+                { tag:"RQ2", name:"系统可靠性", flex:1, note:"识别与解释错误如何影响推进。", cards:["rq2-def"] },
+                { tag:"RQ3", name:"使用体验", flex:1, note:"入门者怎么用语音与语言支持。", cards:["rq3-def"] },
+              ]
+            },
+            { type:"result", title:"技术评测 + 用户研究两条证据线" },
+          ],
+        },
+      ],
+    },
+
+    /* ============================================================ 02 链路 */
+    {
+      num:"02", name:"系统链路", desc:"看懂一次对话怎么跑完",
+      flows: [
+        {
+          key:"A", name:"路线与任务",
+          hint:"学习者走哪几站、每站算什么叫完成",
+          blocks:[
+            { type:"source", title:"学习者", meta:"18–35 岁 / 零或极少上海话基础 · 本地招募 6–8 人",
+              link:{ label:"查看招募标准", href:"#" } },
+            { type:"step", title:"入门引导与表达卡预习", link:{ label:"8–12 条核心表达", href:"#" } },
+            { type:"decision", title:"任务分两类", hint:"四站都要走" },
+            { type:"branches",
+              footnote:"四站顺序固定，全程 20–30 分钟。核心表达跨站复现，后一站会用到前一站说过的句子。",
+              paths:[
+                { tag:"类型 1", name:"偏好与选择", flex:1, note:"只要求说出偏好并确认，先完成一次成功交流。",
+                  cards:["a-restaurant","a-candy"] },
+                { tag:"类型 2", name:"数量与社交", flex:1, note:"引入数量、外带与复述，最后一站不涉及商品字段。",
+                  cards:["a-bun","a-tea"] },
+              ]
+            },
+            { type:"result", title:"完成路线 · 每条核心表达至少出现一次", link:{ label:"预览完成标准", href:"#" } },
+            { type:"note", text:"重试上限内仍未完成的任务 → 记一次 facilitator assist，直接进入下一站 · 不中断路线" },
+          ],
+        },
+        {
+          key:"B", name:"输入与识别",
+          hint:"学习者说的话怎么变成文本",
+          blocks:[
+            { type:"source", title:"学习者回应", meta:"语音 / 文本 / 按钮 · 浏览器端采集" },
+            { type:"step", title:"录音切分与格式归一", link:{ label:"16 kHz 单声道", href:"#" } },
+            { type:"decision", title:"选择一种输入通道", hint:"三选一" },
+            { type:"branches",
+              footnote:"三条通道汇入同一个解释层。只有语音通道会引入识别误差，这样 ASR 错误才能被单独归因。",
+              paths:[
+                { tag:"通道 1", name:"语音输入", flex:1.4, note:"唯一引入识别误差的路径。", cards:["b-asr"] },
+                { tag:"通道 2", name:"文本输入", flex:1, note:"跳过 ASR，可作无识别误差的对照。", cards:["b-text"] },
+                { tag:"通道 3", name:"按钮输入", flex:1, note:"直接给定字段值，不经模型。", cards:["b-button"] },
+              ]
+            },
+            { type:"result", title:"归一后的学习者文本或字段" },
+          ],
+        },
+        {
+          key:"C", name:"任务解释",
+          hint:"把一句话拆成 item / quantity / preference",
+          blocks:[
+            { type:"source", title:"学习者文本", meta:"ASR 转写或键入文本 · 附当前任务上下文" },
+            { type:"step", title:"拼接任务上下文与字段模式" },
+            { type:"decision", title:"抽取后两道检查", hint:"都要跑" },
+            { type:"branches",
+              footnote:"同一条录音的 ASR 转写与人工核对转写走同一套 LLM 配置与状态机，用来分离识别错误与解释错误。",
+              paths:[
+                { tag:"检查 1", name:"字段抽取", flex:1.3, note:"口语的多种说法收敛成同一组值。", cards:["c-extract"] },
+                { tag:"检查 2", name:"应用规则校验", flex:1, note:"落不进菜单或数量范围的值退回追问。", cards:["c-validate"] },
+              ]
+            },
+            { type:"result", title:"结构化任务字段" },
+          ],
+        },
+        {
+          key:"D", name:"状态机推进",
+          hint:"什么时候追问，什么时候判完成",
+          blocks:[
+            { type:"source", title:"结构化任务字段", meta:"item / quantity / takeaway / preference · 附完成标准" },
+            { type:"decision", title:"按字段完整度分流", hint:"缺一项就不推进" },
+            { type:"branches",
+              footnote:"下一步动作是确定的：同样的字段组合永远得到同一个动作，评测时才能算 task-state correctness。",
+              paths:[
+                { tag:"分支 1", name:"追问缺失字段", flex:1, note:"一次只问一项。", cards:["d-clarify"] },
+                { tag:"分支 2", name:"确认与完成判定", flex:1, note:"复述订单后按完成标准判定。", cards:["d-confirm"] },
+              ]
+            },
+            { type:"result", title:"任务状态已更新" },
+            { type:"note", text:"连续两次追问仍未补齐 → 提示切换输入方式，并记一次 retry · 不自动判失败" },
+          ],
+        },
+        {
+          key:"E", name:"语音与学习支持",
+          hint:"学习者听到什么、能查什么",
+          blocks:[
+            { type:"source", title:"任务提示与示范句", meta:"预生成 TTS 片段 · 常速 + 慢速" },
+            { type:"step", title:"匹配当前任务的表达卡" },
+            { type:"decision", title:"两类支持并存", hint:"学习者自行取用" },
+            { type:"branches",
+              footnote:"上线前所有语音与文本由流利上海话使用者逐条复核，复核不通过的片段重新合成或改用录音。",
+              paths:[
+                { tag:"支持 1", name:"角色语音提示", flex:1, note:"店家台词与示范句。", cards:["e-tts"] },
+                { tag:"支持 2", name:"表达卡", flex:1, note:"拼音、释义与慢速音频。", cards:["e-card"] },
+              ]
+            },
+            { type:"result", title:"学习者获得可直接复述的示范" },
+          ],
+        },
+        {
+          key:"F", name:"日志",
+          hint:"每一步留下什么，供后面算指标",
+          blocks:[
+            { type:"source", title:"交互日志", meta:"模型配置 / 转写 / 抽取字段 / 状态变化 / 耗时 / 支持使用 / 完成情况" },
+            { type:"step", title:"按 run 归档并对齐参考标注" },
+            { type:"result", title:"可回溯到具体调用的运行记录" },
+            { type:"note", text:"右侧面板中的调用记录为示例数据，接入真实日志后替换 DATA.cards[].traces 即可 · 待补充" },
+          ],
+        },
+      ],
+    },
+
+    /* ============================================================ 03 条件 */
+    {
+      num:"03", name:"评测条件", desc:"固定录音集与模型版本",
+      flows: [
+        {
+          key:"A", name:"数据与标注",
+          hint:"所有对照都跑在同一批数据上",
+          blocks:[
+            { type:"source", title:"任务回应录音", meta:"覆盖目标表达 · 同一批音频供三个 ASR 使用" },
+            { type:"step", title:"人工核对参考转写 + 统一文本归一规则" },
+            { type:"decision", title:"同一批数据两处用", hint:"都要" },
+            { type:"branches",
+              footnote:"评测期间数据集与归一规则冻结；任何改动都要重跑全部模型，否则前后数字不可比。",
+              paths:[
+                { tag:"用途 1", name:"模型对照集", flex:1, note:"算 CER 的参考。", cards:["ev-refset"] },
+                { tag:"用途 2", name:"可靠性用例集", flex:1, note:"期望字段与期望动作事先写好。", cards:["ev-cases"] },
+              ]
+            },
+            { type:"result", title:"冻结的评测数据集" },
+          ],
+        },
+        {
+          key:"B", name:"模型与运行条件",
+          hint:"版本、推理设置、硬件怎么固定",
+          blocks:[
+            { type:"source", title:"已发布 checkpoint", meta:"不做额外训练或微调" },
+            { type:"step", title:"记录 checkpoint 版本、推理设置与硬件" },
+            { type:"decision", title:"两类组件分别对齐条件", hint:"条件必须一致" },
+            { type:"branches",
+              footnote:"条件写进日志而不是写在文档里：每条结果都能回查当时用的是哪个版本。",
+              paths:[
+                { tag:"条件 1", name:"ASR 运行条件", flex:1, note:"模型已加载、单条串行处理。", cards:["ev-asr-setup"] },
+                { tag:"条件 2", name:"TTS 合成条件", flex:1, note:"同一批参考录音、零样本合成。", cards:["ev-tts-setup"] },
+              ]
+            },
+            { type:"result", title:"可复现的对照条件" },
+          ],
+        },
+        {
+          key:"C", name:"指标口径",
+          hint:"每个数字具体怎么算出来",
+          blocks:[
+            { type:"source", title:"四个指标", meta:"两个客观计算 · 两个人工评审" },
+            { type:"decision", title:"按组件分两组", hint:"口径先定后跑" },
+            { type:"branches",
+              footnote:"人工评审的两项在隐藏模型身份、随机排序的条件下进行，评审人为团队中的流利使用者。",
+              paths:[
+                { tag:"组 1", name:"ASR 指标", flex:1.2, note:"可自动计算。", cards:["ev-cer","ev-latency"] },
+                { tag:"组 2", name:"TTS 指标", flex:1.2, note:"依赖人工评审。", cards:["ev-pron","ev-intel"] },
+              ]
+            },
+            { type:"result", title:"每个模型一行的指标表" },
+          ],
+        },
+        {
+          key:"D", name:"可靠性测试条件",
+          hint:"怎么把失败归到识别还是解释",
+          blocks:[
+            { type:"source", title:"预设用例集", meta:"完整请求 / 信息不全 / 更正 · 各带期望字段与期望动作" },
+            { type:"step", title:"同一套 LLM 配置与状态机" },
+            { type:"decision", title:"两组转写并行跑", hint:"只差一个环节" },
+            { type:"branches",
+              footnote:"两组结果的差值就是识别误差对任务推进的影响；错误再沿识别、解释、状态转换三段回溯定位。",
+              paths:[
+                { tag:"组 1", name:"ASR 转写组", flex:1, note:"含识别误差。", cards:["ev-asr-arm"] },
+                { tag:"组 2", name:"人工转写组", flex:1, note:"识别误差为零的对照。", cards:["ev-verified-arm"] },
+              ]
+            },
+            { type:"result", title:"按环节归因的错误清单" },
+            { type:"note", text:"可靠性问题修完之后才开始用户场次 · 否则会把系统缺陷当成使用问题" },
+          ],
+        },
+        {
+          key:"E", name:"用户场次条件",
+          hint:"一场怎么跑、记哪些东西",
+          blocks:[
+            { type:"source", title:"参与者", meta:"6–8 人 · 18–35 岁 · 零或极少上海话基础 · 线下场次" },
+            { type:"step", title:"简短引导后自行走完整条路线" },
+            { type:"decision", title:"每场记录三类数据", hint:"都要记" },
+            { type:"branches",
+              footnote:"日志与观察做描述性汇总，访谈按主题归类；主持人只在重试上限后介入并记录。",
+              paths:[
+                { tag:"记录 1", name:"任务完成", flex:1, note:"含耗时与重试。", cards:["ev-completion"] },
+                { tag:"记录 2", name:"支持使用", flex:1, note:"查卡、重放、切换。", cards:["ev-support"] },
+                { tag:"记录 3", name:"主观反馈", flex:1, note:"评分加访谈。", cards:["ev-feedback"] },
+              ]
+            },
+            { type:"result", title:"一场完整可分析的记录" },
+          ],
+        },
+      ],
+    },
+
+    /* ============================================================ 04 对照 */
+    {
+      num:"04", name:"模型对照", desc:"比较 CER、延迟与发音",
+      flows: [
+        {
+          key:"A", name:"结果表",
+          hint:"条件已定，等跑批结果填进来",
+          blocks:[
+            { type:"source", title:"冻结的评测数据集", meta:"条件见阶段 03" },
+            { type:"step", title:"按固定条件跑批" },
+            { type:"decision", title:"两张结果表", hint:"待填" },
+            { type:"branches",
+              footnote:"选型结论出来之前，用户场次不启动；换组件要回到阶段 03 重跑。",
+              paths:[
+                { tag:"表 1", name:"ASR 结果", flex:1, note:"三个模型一行一个。", cards:["res-asr"] },
+                { tag:"表 2", name:"TTS 结果", flex:1, note:"两个模型盲评对照。", cards:["res-tts"] },
+              ]
+            },
+            { type:"result", title:"最终应用的组件选型" },
+          ],
+        },
+      ],
+    },
+
+    /* ============================================================ 05 研究 */
+    {
+      num:"05", name:"用户研究", desc:"6–8 名零基础学习者",
+      flows: [
+        {
+          key:"A", name:"场次结果",
+          hint:"条件已定，等场次数据填进来",
+          blocks:[
+            { type:"source", title:"用户场次记录", meta:"条件见阶段 03 · E" },
+            { type:"decision", title:"两类结果", hint:"待填" },
+            { type:"branches",
+              footnote:"两类结果要放在一起读：完成率高但查卡频繁，和完成率低但很少求助，指向的改法完全不同。",
+              paths:[
+                { tag:"结果 1", name:"行为与完成", flex:1, note:"来自日志与观察。", cards:["res-quant"] },
+                { tag:"结果 2", name:"体验与困惑", flex:1, note:"来自评分与访谈。", cards:["res-qual"] },
+              ]
+            },
+            { type:"result", title:"可用性问题清单与改进优先级" },
+          ],
+        },
+      ],
+    },
+  ],
+
+  /* ------------------------------ 节点卡 ------------------------------ */
+  cards: {
+    /* ---------- 01 项目背景 ---------- */
+    "bg-context":{
+      idx:"01", kind:"背景", title:"缺能开口的场合",
+      sub:"发音、词汇、语法三处都与普通话不同，听会了也没有用它的时机。",
+      output:"一组有触发点的场景",
+      why:"如果只是口音差别，学习者靠猜就能过；三处都不同，意味着必须先有场景把具体表达逼出来。",
+      detail:"项目只覆盖入门交流：表达偏好、选择商品、说明数量、确认订单。成段叙述与书面表达不在范围内，否则表达清单会失控，也没法给每条表达找到明确的使用时机。",
+      ioTitle:"资料与范围", pickLabel:"选择一条资料",
+      traces:[
+        { label:"1. 资料 · 目标表达范围",
+          model:"课程设计资料",
+          time:"—",
+          input:[ { kind:"范围", desc:"项目打算覆盖什么" },
+                  { title:"交流类型", text:"表达偏好、选择商品、说明数量、确认订单。" } ],
+          output:[ { kind:"产出", desc:"由此得到什么" },
+                   { title:"表达清单", text:"8–12 条核心表达，按四类交流目标归组，每条至少对应一个站点任务。" } ],
+          raw:'{\n  "scope": ["preference", "selection", "quantity", "confirmation"],\n  "target_expressions": "8-12",\n  "out_of_scope": ["narrative", "written"]\n}'
+        },
+      ],
+    },
+    "bg-task":{
+      idx:"02", kind:"背景", title:"缺能判定的任务",
+      sub:"词表和发音指南能带入门，但给不了「说到什么程度算说清楚了」。",
+      output:"带完成标准的练习单位",
+      why:"没有完成标准，学习者只能靠感觉判断自己说对没有；有了标准，系统才能给出确定的反馈，研究上也才有可测的完成率。",
+      ioTitle:"资料与范围", pickLabel:"选择一条资料",
+      traces:[
+        { label:"1. 资料 · 完成标准的写法",
+          model:"课程设计资料",
+          time:"—",
+          input:[ { kind:"输入", desc:"一个站点任务" },
+                  { title:"任务", text:"点两笼小笼包外带。" } ],
+          output:[ { kind:"输出", desc:"对应的完成标准" },
+                   { title:"标准", text:"item、quantity、takeaway 三项都正确，且经过一次复述确认。" } ],
+          raw:'{\n  "task": "nanxiang_order",\n  "criteria": ["item", "quantity", "takeaway", "readback"]\n}'
+        },
+      ],
+    },
+    "bg-expr-new":{
+      idx:"01", kind:"路线设计", title:"每站首次出现的表达",
+      sub:"一到三条新表达，配合该站的交流目标引入。",
+      output:"新表达的引入顺序",
+      why:"新表达按难度递增分散到四站，学习者每次只需要处理少量陌生内容。",
+      detail:"第一站只要偏好与确认，第二站加听力与数量，第三站加外带与复述，第四站回到没有信息负担的社交表达。",
+    },
+    "bg-expr-reuse":{
+      idx:"02", kind:"路线设计", title:"跨站复现的表达",
+      sub:"同一条表达在后面的站点再用一次。",
+      output:"复现位置表",
+      why:"复现是这条路线里唯一能观察到「第二次是不是更顺」的设计；没有复现，日志里只剩四条互不相关的记录。",
+      ioTitle:"资料与范围", pickLabel:"选择一条资料",
+      traces:[
+        { label:"1. 资料 · 数量表达的复现",
+          model:"课程设计资料",
+          time:"—",
+          input:[ { kind:"输入", desc:"一条核心表达" },
+                  { title:"表达", text:"说明数量（两包 / 两笼）。" } ],
+          output:[ { kind:"输出", desc:"它出现在哪里" },
+                   { title:"复现位置", text:"梨膏糖店首次出现，南翔馒头店第二次出现，可比较两次的耗时与查卡次数。" } ],
+          raw:'{\n  "expression": "quantity_two",\n  "first": "pear_candy_shop",\n  "reuse": ["nanxiang"]\n}'
+        },
+      ],
+    },
+    "bg-asr-cand":{
+      idx:"01", kind:"组件候选", title:"ASR 候选",
+      sub:"Whisper-medium、Whisper-Medium-Wu（WenetSpeech-Wu 发布）、Qwen3-ASR-1.7B。",
+      output:"三个待比较的识别模型",
+      why:"前两个是同架构、同基座、只差吴语微调的一对，差值能直接归到适配上；第三个来自另一条模型路线，用来看不做吴语微调的新通用模型够不够用。",
+      detail:"均使用已发布 checkpoint，不做额外训练。Qwen3-ASR-1.7B 既有开放权重也有托管 API，准确率对照统一走本地权重，避免服务端差异混进来。选型只看在本项目目标表达上的表现，不追求通用榜单成绩。",
+      ioTitle:"候选清单", pickLabel:"选择一条资料",
+      traces:[
+        { label:"1. 资料 · 候选与角色",
+          model:"模型调研",
+          time:"—",
+          input:[ { kind:"输入", desc:"筛选条件" },
+                  { title:"条件", text:"公开可用、支持中文或吴语、可本地推理。" } ],
+          output:[ { kind:"输出", desc:"入选模型与它承担的角色" },
+                   { title:"候选", text:"Whisper-medium 作通用基线；Whisper-Medium-Wu（WenetSpeech-Wu 发布）作同源适配对照；Qwen3-ASR-1.7B 作另一路线参照。" } ],
+          raw:'{\n  "asr_candidates": [\n    {"name": "whisper-medium", "role": "baseline"},\n    {"name": "whisper-medium-wu", "role": "wu_adapted"},\n    {"name": "qwen3-asr-1.7b", "role": "alternative"}\n  ]\n}'
+        },
+      ],
+    },
+    "bg-screen":{
+      idx:"02", kind:"组件候选", title:"候选筛选与取舍",
+      sub:"WenetSpeech-Wu 还发布了 Conformer-U2pp-Wu 与 Step-Audio2-Wu-ASR，两个都不进对照。",
+      output:"三选一的理由",
+      why:"背景里列出的候选必须和最终跑的三个对得上，否则评审第一个问题就是「那两个哪去了」。",
+      detail:"Conformer-U2pp-Wu 从零训练、规模不同，没有配对的通用基线可比；Step-Audio2-Wu-ASR 是 7B 级模型，评测硬件与线上部署在本项目周期内都撑不住。两者的公开 benchmark 结果作为外部参照引用，不自己复现。",
+      ioTitle:"筛选记录", pickLabel:"选择一条资料",
+      traces:[
+        { label:"1. 资料 · 排除理由",
+          model:"模型调研",
+          time:"—",
+          input:[ { kind:"输入", desc:"同一发布里的其他模型" },
+                  { title:"被排除", text:"Conformer-U2pp-Wu、Step-Audio2-Wu-ASR。" } ],
+          output:[ { kind:"输出", desc:"处理方式" },
+                   { title:"结论", text:"不复现，只引用其公开 benchmark 结果作外部参照，排除理由写进 3.4。" } ],
+          raw:'{\n  "excluded": [\n    {"name": "conformer-u2pp-wu", "reason": "no_paired_baseline"},\n    {"name": "step-audio2-wu-asr", "reason": "7b_class_out_of_budget"}\n  ],\n  "cited_as": "external_reference"\n}'
+        },
+      ],
+    },
+    "bg-tts-cand":{
+      idx:"02", kind:"组件候选", title:"TTS 候选",
+      sub:"CosyVoice2-0.5B（通用版）与 CosyVoice2-Wu-SFT（WenetSpeech-Wu 发布）。",
+      output:"两个待比较的合成模型",
+      why:"同一家族的通用版与吴语微调版，文本和参考录音都一样，差别主要落在适配上。",
+      detail:"但两者调用方式不同：Wu-SFT 版走零样本合成，通用版要靠显式指令才会说上海话。所以比的是「两个发布系统各按推荐用法」的结果，不是严格消融，这一点写进 limitation。",
+    },
+    "bg-llm":{
+      idx:"03", kind:"组件候选", title:"LLM 与状态机的分工",
+      sub:"模型只把话拆成字段，推进与完成判定交给状态机。",
+      output:"明确的职责边界",
+      why:"把不确定的部分限制在抽取这一层，任务是否完成的判定就还是确定性的，评测时才有对错可判。",
+      detail:"省略这条边界的后果很具体：完成判定一旦交给模型，同一句话在两次运行里可能得到不同结果，RQ2 的状态正确率就无从谈起。",
+    },
+    "rq1-def":{
+      idx:"01", kind:"研究问题", title:"RQ1 · 模型比较",
+      sub:"候选 ASR 的识别准确率、候选 TTS 的发音准确率与可懂度，在本项目目标表达上如何。",
+      output:"组件选型依据",
+      why:"先定组件，后面两个问题才是在同一个系统上问的。",
+    },
+    "rq2-def":{
+      idx:"02", kind:"研究问题", title:"RQ2 · 系统可靠性",
+      sub:"识别错误与解释错误分别如何影响任务推进。",
+      output:"按环节归因的错误分析",
+      why:"任务没完成有很多种原因，不拆开就只能得到一个笼统的失败率，改不动任何东西。",
+    },
+    "rq3-def":{
+      idx:"03", kind:"研究问题", title:"RQ3 · 使用体验",
+      sub:"入门者如何使用语音交互与语言支持完成路线上的任务。",
+      output:"可用性问题与设计建议",
+      why:"技术指标说明系统能不能跑通，用户场次说明学习者在跑通的系统上会怎么用。",
+    },
+
+    /* ---------- 02 系统链路 ---------- */
+    "a-restaurant":{
+      idx:"01", kind:"站点任务", title:"上海老饭店 · 表达偏好",
+      sub:"说明不吃辣、请店家推荐、确认一道菜。",
+      output:"一道符合偏好的菜品",
+      why:"第一站只要求说出偏好和确认，让零基础学习者用最短的句子先完成一次成功交流。",
+      detail:"完成标准写在应用菜单数据里：被确认的菜必须落在非辣集合内，判定不交给模型。省略风险：如果第一站就要求数量和外带，学习者会在第一次开口时卡住，后面三站的数据也就失去意义。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 老饭店",
+          model:"无模型调用（菜单规则判定）",
+          time:"2026-09-12 14:02:11+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"任务上下文", text:"站点：老饭店。需采集字段：preference、item。菜单：12 道，其中 4 道标 spicy。" },
+                  { title:"完成标准", text:"确认的 item 必须 spicy=false，且 preference 已明确表达。", quote:true } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"判定", text:"preference=non_spicy；学习者在店家推荐里确认「腌笃鲜」，菜单标记 spicy=false，任务完成。" } ],
+          raw:'{\n  "session": "pilot_0912",\n  "location": "old_restaurant",\n  "fields": {"preference": "non_spicy", "item": "yandu_xian"},\n  "criteria_met": true,\n  "retries": 1\n}'
+        },
+      ],
+    },
+    "a-candy":{
+      idx:"02", kind:"站点任务", title:"上海梨膏糖商店 · 听音辨味",
+      sub:"从一段音频里听出一种口味，再要两包对应的糖。",
+      output:"口味判断 + 商品与数量",
+      why:"这一站第一次把听力和产出放在同一个任务里：听懂了才知道要哪种糖，说清楚了才拿得到两包。",
+      detail:"口味只在音频里出现，不在界面文本里，否则学习者可以绕过听力直接读。数量表达在这一站首次出现，之后在南翔站复现，用来观察同一表达第二次使用时是否更快。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 梨膏糖店",
+          model:"无模型调用（任务规则判定）",
+          time:"2026-09-12 14:09:47+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"播放音频", text:"店家介绍今日口味，目标口味只出现在音频里。" },
+                  { title:"需采集字段", text:"flavor、item、quantity。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"判定", text:"flavor 判断正确；quantity=2 在第二次尝试后被识别，任务完成。" } ],
+          raw:'{\n  "session": "pilot_0912",\n  "location": "pear_candy_shop",\n  "fields": {"flavor": "correct", "item": "pear_candy", "quantity": 2},\n  "criteria_met": true,\n  "audio_replays": 3\n}'
+        },
+      ],
+    },
+    "a-bun":{
+      idx:"03", kind:"站点任务", title:"南翔馒头店 · 数量与外带",
+      sub:"点两笼小笼包外带，并复述一遍订单。",
+      output:"商品 + 数量 + 外带方式",
+      why:"复述是整条路线里唯一能验证学习者听懂了系统确认的环节，前面几站都只验证「说得出」。",
+      detail:"三个字段必须同时齐备才判完成，缺任何一项由状态机分别追问。省略风险：如果允许按钮补齐外带方式，就无法区分「没听懂确认」和「懒得再说一遍」。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 南翔",
+          model:"无模型调用（任务规则判定）",
+          time:"2026-09-12 14:18:05+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"需采集字段", text:"item、quantity、takeaway，三项齐备才判完成。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"判定", text:"item 与 quantity 一次说全，takeaway 经一次追问后补齐；复述通过，任务完成。" } ],
+          raw:'{\n  "session": "pilot_0912",\n  "location": "nanxiang",\n  "fields": {"item": "xiaolongbao", "quantity": 2, "takeaway": true},\n  "clarifications": 1,\n  "criteria_met": true\n}'
+        },
+      ],
+    },
+    "a-tea":{
+      idx:"04", kind:"站点任务", title:"湖心亭茶楼 · 评价与道谢",
+      sub:"说茶好喝，并向店家道谢。",
+      output:"正面评价 + 致谢",
+      why:"最后一站不涉及任何商品字段，只考察社交表达，让路线以一次没有信息负担的交流收尾。",
+      detail:"判定看两个意图是否都表达出来，不看句式是否与表达卡完全一致。省略风险：要求逐字复述会把这一站变成朗读练习，观察不到学习者自己的组织方式。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 湖心亭",
+          model:"无模型调用（意图判定）",
+          time:"2026-09-12 14:26:33+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"需采集意图", text:"positive_evaluation、thanks，两项都要出现。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"判定", text:"两个意图分两句说出，均识别到，任务完成，路线结束。" } ],
+          raw:'{\n  "session": "pilot_0912",\n  "location": "huxin_teahouse",\n  "intents": ["positive_evaluation", "thanks"],\n  "criteria_met": true,\n  "route_finished": true\n}'
+        },
+      ],
+    },
+    "b-asr":{
+      idx:"01", kind:"语音识别", title:"ASR 转写",
+      sub:"把上海话录音转成文本，模型可整体替换。",
+      output:"转写文本 + 延迟",
+      why:"这是整条链路唯一的识别误差来源；把模型做成可替换的，才能在同一套任务上比较三个候选。",
+      detail:"候选为 Whisper-medium、Whisper-Medium-Wu 与 Qwen3-ASR-1.7B，均使用已发布 checkpoint，不做额外训练。线上与离线是两条路径：部署在 Vercel 的后端只能调托管服务，模型权重跑不进去；三个候选的准确率对照统一在本地同一硬件上跑。选中的模型若没有可用托管端点就上不了线，这条限制和选型结论一起记录。省略风险：日志里不写清用的是哪个 checkpoint、走的哪条路径，后面无法把任务失败归因到具体模型。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 转写正确",
+          model:"whisper-medium-wu · 本地推理",
+          time:"2026-09-12 14:18:12+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"audio", text:"3.1 秒单声道录音，南翔站第一次回应。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"转写", text:"与人工核对转写一致，CER 为 0；下游抽取到 item 与 quantity。" } ],
+          raw:'{\n  "model": "whisper-medium-wu",\n  "audio_ms": 3100,\n  "cer": 0.0,\n  "latency_ms": 1240,\n  "channel": "speech"\n}'
+        },
+        { label:"2. 示例 · pilot_0912 · 数量识别错误",
+          model:"whisper-medium · 本地推理",
+          time:"2026-09-12 14:10:26+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"audio", text:"2.4 秒录音，梨膏糖站请求两包。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"转写", text:"数量词被听成另一个近音词，quantity 抽取为 200；规则校验拦下，状态机改为追问数量。" } ],
+          raw:'{\n  "model": "whisper-medium",\n  "audio_ms": 2400,\n  "cer": 0.18,\n  "latency_ms": 1610,\n  "downstream": "validation_rejected"\n}'
+        },
+      ],
+    },
+    "b-text":{
+      idx:"02", kind:"输入通道", title:"文本输入",
+      sub:"学习者键入回应，跳过识别环节。",
+      output:"输入文本",
+      why:"给识别反复失败的学习者一个出口，同时留下一组不含 ASR 误差的对照数据。",
+      detail:"文本输入与语音输入走完全相同的解释层与状态机，差别只在有没有经过 ASR。切换次数本身也是 RQ3 的观察指标。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 第三次尝试后切换",
+          model:"无模型调用",
+          time:"2026-09-12 14:11:03+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"typed", text:"学习者在两次识别失败后改为键入，内容与目标表达一致。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"文本", text:"直接进入解释层，quantity=2 抽取成功；日志记一次 input_switch。" } ],
+          raw:'{\n  "channel": "text",\n  "switched_from": "speech",\n  "attempts_before_switch": 2\n}'
+        },
+      ],
+    },
+    "b-button":{
+      idx:"03", kind:"输入通道", title:"按钮输入",
+      sub:"点击预设选项，直接给出字段值。",
+      output:"预设字段值",
+      why:"保证任务在任何情况下都能推进，也把「这次没有开口」这个行为明确记录下来，而不是变成一段空白。",
+      detail:"按钮只提供任务已定义的合法值，因此不经过抽取，直接进入规则校验。使用按钮完成的任务在分析时单独标记，不与开口完成的场次混算。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 补齐外带方式",
+          model:"无模型调用",
+          time:"2026-09-12 14:17:52+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"click", text:"追问外带方式后，学习者点选「外带」。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"字段", text:"takeaway=true 直接写入，标记 source=button。" } ],
+          raw:'{\n  "channel": "button",\n  "field": "takeaway",\n  "value": true,\n  "spoken": false\n}'
+        },
+      ],
+    },
+    "c-extract":{
+      idx:"01", kind:"任务解释", title:"字段抽取",
+      sub:"让模型把一句话映射成 item / quantity / preference 等字段。",
+      output:"结构化字段",
+      why:"状态机只认字段、不认自然语言；这一层把同一个意思的多种说法收敛成同一组值。",
+      detail:"同一条录音的 ASR 转写与人工核对转写会走同一套 LLM 配置与状态机，用来分离识别错误与解释错误。省略这个对照，一次任务失败就无法判断是听错了还是理解错了。未提及的字段要显式记为未设置，它同样参与 field-extraction accuracy 的计算。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 完整请求",
+          model:"LLM API · 固定配置",
+          time:"2026-09-12 14:18:14+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"transcript", text:"南翔站第一次回应的转写文本。" },
+                  { title:"字段模式", text:"item ∈ 菜单；quantity 为整数；takeaway 为布尔；未提到的字段保持未设置。", quote:true } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"字段", text:"item 与 quantity 抽出，takeaway 保持未设置，交给状态机追问。" } ],
+          raw:'{\n  "item": "xiaolongbao",\n  "quantity": 2,\n  "takeaway": null,\n  "source_transcript": "asr"\n}'
+        },
+        { label:"2. 示例 · pilot_0912 · 更正上一句",
+          model:"LLM API · 固定配置",
+          time:"2026-09-12 14:10:44+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"transcript", text:"学习者在确认环节改口，把数量从一包改成两包。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"字段", text:"quantity 由 1 覆盖为 2，其余字段保留，状态回到确认。" } ],
+          raw:'{\n  "quantity": {"from": 1, "to": 2},\n  "action": "correction",\n  "next_state": "confirm"\n}'
+        },
+      ],
+    },
+    "c-validate":{
+      idx:"02", kind:"校验", title:"应用规则校验",
+      sub:"检查字段是否落在菜单、数量范围与任务允许值内。",
+      output:"合法字段 / 拒绝原因",
+      why:"「这道菜辣不辣」「这个数量合不合理」交给菜单数据判断而不是模型，完成判定才是确定性的、可复现的。",
+      detail:"校验失败不算任务失败，只是把状态退回追问，并在日志里记下拒绝原因。这也是识别错误最常被拦住的地方——数量被听成一个明显超范围的数字时，这里会直接挡下。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 数量超范围",
+          model:"无模型调用",
+          time:"2026-09-12 14:10:27+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"fields", text:"quantity=200，来自一次识别错误。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"拒绝", text:"超出允许范围 1–5，退回追问数量，记 reason=quantity_out_of_range。" } ],
+          raw:'{\n  "field": "quantity",\n  "value": 200,\n  "allowed": [1, 5],\n  "accepted": false,\n  "reason": "quantity_out_of_range"\n}'
+        },
+      ],
+    },
+    "d-clarify":{
+      idx:"01", kind:"状态机", title:"追问缺失字段",
+      sub:"缺哪个字段就问哪个，一次只问一项。",
+      output:"追问提示 + 状态保持",
+      why:"一次只问一项，学习者才知道现在该说哪句话；日志里也能看出到底缺的是数量还是外带。",
+      detail:"追问模板与表达卡上的目标句子对应，学习者可以直接复述。省略风险：一次把缺的三项全问出来，零基础学习者通常只回答最后一项，看起来像是「说不清」，其实是提示设计的问题。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 追问外带方式",
+          model:"无模型调用（状态机）",
+          time:"2026-09-12 14:18:16+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"state", text:"item 与 quantity 已齐，takeaway 未设置。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"下一步动作", text:"播放追问片段并高亮对应表达卡，状态保持在 collecting。" } ],
+          raw:'{\n  "missing": ["takeaway"],\n  "next_action": "clarify",\n  "state": "collecting",\n  "clarify_count": 1\n}'
+        },
+      ],
+    },
+    "d-confirm":{
+      idx:"02", kind:"状态机", title:"确认与完成判定",
+      sub:"字段齐全后复述订单，按预设标准判定完成。",
+      output:"任务完成 / 进入下一站",
+      why:"完成标准预先写死，同样的字段组合永远得到同一个动作，评测时才能算 task-state correctness。",
+      detail:"判定只比对字段值，不评判语气或流利度：说得磕巴但字段正确仍记完成，重试次数另行记录。省略风险：把流利度混进完成判定，会让 RQ3 的完成率同时反映系统判定的严格程度，两个变量分不开。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 复述后完成",
+          model:"无模型调用（状态机）",
+          time:"2026-09-12 14:18:31+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"fields", text:"item、quantity、takeaway 三项齐备且通过校验。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"下一步动作", text:"播放确认片段，学习者复述通过，状态转 completed，解锁下一站。" } ],
+          raw:'{\n  "state": "completed",\n  "elapsed_s": 146,\n  "retries": 1,\n  "assist": false\n}'
+        },
+      ],
+    },
+    "e-tts":{
+      idx:"01", kind:"语音输出", title:"角色语音提示",
+      sub:"播放预生成的店家台词与示范句。",
+      output:"常速音频片段",
+      why:"预生成而不是实时合成，才能在上线前逐条复核发音，也不必把合成延迟叠加进对话。",
+      detail:"CosyVoice2-0.5B 与 CosyVoice2-Wu-SFT 用同一批上海话参考录音、同一批文本合成，但各按其发布方式调用（Wu-SFT 走零样本，通用版走固定的上海话指令）；流利使用者在隐藏模型身份、随机排序的条件下评审发音准确率与 1–5 分可懂度。省略风险：带着模型身份评审，第二个模型天然占便宜。",
+      traces:[
+        { label:"1. 示例 · 合成复核 · 南翔站台词",
+          model:"cosyvoice2-wu-sft · 零样本",
+          time:"2026-09-10 20:14:09+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"text + 参考录音", text:"店家确认订单的台词，参考录音来自同一位流利使用者。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"复核结论", text:"两名评审均判无发音错误，可懂度打分一致，片段入库。" } ],
+          raw:'{\n  "clip_id": "nanxiang_confirm_01",\n  "model": "cosyvoice2-wu-sft",\n  "pronunciation_ok": true,\n  "intelligibility": [5, 5],\n  "status": "approved"\n}'
+        },
+      ],
+    },
+    "e-card":{
+      idx:"02", kind:"学习支持", title:"表达卡",
+      sub:"拼音提示、普通话与英文释义、常速与慢速两条音频。",
+      output:"随时可查的表达卡",
+      why:"把「查了什么、查了几次」变成可记录的行为，任务耗时的差异才有解释，而不是只剩一个快慢结论。",
+      detail:"核心表达跨站复现，同一张卡在后面的站点被查阅的次数是观察学习效果的直接线索。慢速音频与常速音频分别计数，因为它们对应的困难不同。",
+      traces:[
+        { label:"1. 示例 · pilot_0912 · 数量表达卡",
+          model:"无模型调用",
+          time:"2026-09-12 14:17:40+08:00",
+          input:[ { kind:"输入", desc:"这一步实际收到了什么" },
+                  { title:"context", text:"南翔站，学习者在开口前打开数量表达卡。" } ],
+          output:[ { kind:"输出", desc:"这一步实际给出了什么" },
+                   { title:"记录", text:"该卡在梨膏糖站被查阅 3 次，本站 1 次，慢速音频未使用。" } ],
+          raw:'{\n  "card": "quantity_two",\n  "opens": {"pear_candy_shop": 3, "nanxiang": 1},\n  "slow_audio_plays": 0\n}'
+        },
+      ],
+    },
+
+    /* ---------- 03 评测条件 ---------- */
+    "ev-refset":{
+      idx:"01", kind:"数据", title:"模型对照集",
+      sub:"同一批任务回应录音，配人工核对的参考转写。",
+      output:"录音 + 参考转写",
+      why:"三个 ASR 处理完全相同的音频、按完全相同的归一规则比对，CER 的差别才只来自模型本身。",
+      detail:"归一规则要在跑第一个模型之前定下来并写进文档：标点、数字写法、语气词处理都影响 CER，中途改规则等于前面的数字全部作废。",
+      ioTitle:"条件与口径", pickLabel:"选择一条条件",
+      traces:[
+        { label:"1. 条件 · 数据集冻结",
+          model:"评测准备",
+          time:"—",
+          input:[ { kind:"输入", desc:"数据集包含什么" },
+                  { title:"录音", text:"覆盖 8–12 条目标表达的任务回应，含完整请求与自然的口误。" } ],
+          output:[ { kind:"输出", desc:"冻结的内容" },
+                   { title:"冻结项", text:"音频文件、参考转写、文本归一规则三者一并冻结，改动需重跑全部模型。" } ],
+          raw:'{\n  "frozen": ["audio", "reference_transcripts", "normalization_rules"],\n  "on_change": "rerun_all_models"\n}'
+        },
+      ],
+    },
+    "ev-cases":{
+      idx:"02", kind:"数据", title:"可靠性用例集",
+      sub:"完整请求、信息不全、更正三类，各自带期望字段与期望动作。",
+      output:"带标准答案的用例",
+      why:"期望动作事先写好，系统给出的动作才有对错可判；事后再判断「这样回应算不算合理」，结论会随人而变。",
+      ioTitle:"条件与口径", pickLabel:"选择一条条件",
+      traces:[
+        { label:"1. 条件 · 用例结构",
+          model:"评测准备",
+          time:"—",
+          input:[ { kind:"输入", desc:"一条用例包含什么" },
+                  { title:"字段", text:"录音或文本、期望字段值（含应保持未设置的字段）、期望下一步动作。" } ],
+          output:[ { kind:"输出", desc:"用于计算什么" },
+                   { title:"指标", text:"field-extraction accuracy 与 task-state correctness 两项。" } ],
+          raw:'{\n  "case_types": ["complete", "incomplete", "correction"],\n  "labels": ["expected_fields", "expected_next_action"]\n}'
+        },
+      ],
+    },
+    "ev-asr-setup":{
+      idx:"01", kind:"运行条件", title:"ASR 运行条件",
+      sub:"已发布 checkpoint、固定推理设置、同一台硬件、单条串行处理。",
+      output:"可复现的识别运行环境",
+      why:"延迟只有在模型已加载、一次只处理一条的条件下才有可比性；批量或冷启动会让快慢完全变一个样。",
+      detail:"checkpoint 版本、推理参数与硬件写进每条日志，而不只写在文档里，这样任何一个数字都能回查当时的条件。三个候选一律走本地权重，服务端差异不进准确率对照；线上若调托管 API，另行计时并标为部署测量，不与模型延迟混算。",
+      ioTitle:"条件与口径", pickLabel:"选择一条条件",
+      traces:[
+        { label:"1. 条件 · 记录项",
+          model:"评测准备",
+          time:"—",
+          input:[ { kind:"输入", desc:"每次运行要记什么" },
+                  { title:"记录项", text:"模型名、checkpoint 修订号、推理参数、硬件、是否已预加载。" } ],
+          output:[ { kind:"输出", desc:"带来什么" },
+                   { title:"可回查性", text:"任一 CER 或延迟数字都能定位到具体运行条件。" } ],
+          raw:'{\n  "log_fields": ["model", "revision", "inference_params", "hardware", "warm_start"],\n  "serial_processing": true\n}'
+        },
+      ],
+    },
+    "ev-tts-setup":{
+      idx:"02", kind:"运行条件", title:"TTS 合成条件",
+      sub:"同一批文本、同一批参考录音，各按其发布方式调用，盲评。",
+      output:"可比较的合成音频对",
+      why:"文本与参考录音固定，剩下的主要差别就是吴语微调；但调用方式拉不平，硬把通用版塞进零样本模式只会得到一个它本来就不该有的结果。",
+      detail:"Wu-SFT 版走零样本合成，输入吴语参考音频与其转写；通用版走指令接口，用一句固定的上海话指令，指令文本全程不变并报告。这个不对称写进 limitation：比较的是两个发布系统按各自推荐用法的表现。评审时隐藏模型身份、随机排序，评审人是团队中的流利上海话使用者，每条片段独立评。",
+    },
+    "ev-cer":{
+      idx:"01", kind:"指标", title:"字符错误率 CER",
+      sub:"替换、删除、插入字符数除以参考字符数。",
+      output:"每个 ASR 模型一个数",
+      why:"字符级口径对上海话转写更稳：分词标准本身就有争议，词级指标会把分词分歧算成识别错误。",
+      ioTitle:"条件与口径", pickLabel:"选择一条口径",
+      traces:[
+        { label:"1. 口径 · 计算方式",
+          model:"指标定义",
+          time:"—",
+          input:[ { kind:"输入", desc:"计算需要什么" },
+                  { title:"输入", text:"模型转写、人工核对参考转写、统一的文本归一规则。" } ],
+          output:[ { kind:"输出", desc:"怎么算" },
+                   { title:"公式", text:"（替换 + 删除 + 插入）÷ 参考字符数，归一后计算，逐条保留错误样本。" } ],
+          raw:'{\n  "metric": "cer",\n  "formula": "(sub + del + ins) / ref_chars",\n  "normalized": true\n}'
+        },
+      ],
+    },
+    "ev-latency":{
+      idx:"02", kind:"指标", title:"响应延迟",
+      sub:"从发出识别请求到拿到完整转写的时间中位数。",
+      output:"每个 ASR 模型一个数",
+      why:"取中位数而不是平均值，避免个别冷启动或网络抖动主导结论。",
+    },
+    "ev-pron":{
+      idx:"03", kind:"指标", title:"发音准确率",
+      sub:"被流利评审判为无发音错误的片段占比。",
+      output:"每个 TTS 模型一个百分比",
+      why:"发音对错是二值判断，比打分更稳定，也更直接对应「学习者会不会照着学错」。",
+    },
+    "ev-intel":{
+      idx:"04", kind:"指标", title:"可懂度",
+      sub:"评审在 1–5 分区间打分，从完全听不懂到完全听得懂。",
+      output:"每个 TTS 模型的评分分布",
+      why:"发音全对但依然费解的片段是存在的，所以准确率之外还要有一个连续量。",
+      detail:"两名评审独立打分，分歧较大的片段单独列出复听，不直接取平均掩盖分歧。",
+    },
+    "ev-asr-arm":{
+      idx:"01", kind:"对照组", title:"ASR 转写组",
+      sub:"用识别结果驱动解释层与状态机。",
+      output:"含识别误差的推进结果",
+      why:"这是学习者实际经历的路径，所有可靠性问题都会在这一组里出现。",
+    },
+    "ev-verified-arm":{
+      idx:"02", kind:"对照组", title:"人工转写组",
+      sub:"用人工核对转写驱动完全相同的解释层与状态机。",
+      output:"识别误差为零的推进结果",
+      why:"两组只差一个环节，差值就是识别误差对任务推进的影响；剩下的失败都归解释或状态转换。",
+      detail:"两组必须用同一份 LLM 配置与同一套状态机代码，中途修改任何一侧都要两组重跑。",
+      ioTitle:"条件与口径", pickLabel:"选择一条条件",
+      traces:[
+        { label:"1. 条件 · 归因方式",
+          model:"评测设计",
+          time:"—",
+          input:[ { kind:"输入", desc:"两组结果" },
+                  { title:"对照", text:"同一批用例，分别用 ASR 转写与人工转写跑一遍。" } ],
+          output:[ { kind:"输出", desc:"能得出什么" },
+                   { title:"归因", text:"两组之差归识别；人工转写组仍失败的归解释或状态转换，再逐条回溯。" } ],
+          raw:'{\n  "arms": ["asr", "verified"],\n  "shared": ["llm_config", "state_machine"],\n  "attribution": ["recognition", "interpretation", "state_transition"]\n}'
+        },
+      ],
+    },
+    "ev-completion":{
+      idx:"01", kind:"场次记录", title:"任务完成",
+      sub:"按预设标准记录完成情况、耗时、重试次数与主持人协助。",
+      output:"每站一条完成记录",
+      why:"完成标准是预先写死的，所以完成与否不依赖主持人当场判断，跨参与者可比。",
+    },
+    "ev-support":{
+      idx:"02", kind:"场次记录", title:"支持使用",
+      sub:"表达卡查阅、音频重放、输入方式切换，附发生时机的观察。",
+      output:"支持使用的时间线",
+      why:"耗时长可能是在查卡，也可能是在反复重说，两者的改法完全不同；只有记下时机才分得开。",
+    },
+    "ev-feedback":{
+      idx:"03", kind:"场次记录", title:"主观反馈",
+      sub:"场次结束后的简短难易度评分，加一段关于困惑点与有用功能的访谈。",
+      output:"评分 + 访谈记录",
+      why:"日志能看出学习者卡在哪一步，看不出他当时以为系统在问什么，这部分只能问。",
+      detail:"访谈紧接场次进行，围绕具体步骤提问而不是泛泛评价；回答按主题归类，与日志中的卡点对照。",
+    },
+
+    /* ---------- 04 / 05 结果（待填） ---------- */
+    "res-asr":{
+      idx:"01", kind:"结果", title:"ASR 结果",
+      sub:"三个模型在同一批录音上的 CER 与延迟中位数。",
+      output:"待填",
+      why:"这张表决定应用最终用哪个识别模型；口径与运行条件已在阶段 03 固定。",
+      detail:"除了汇总数字，还要保留错误样本，用来看错在哪类表达上——如果错误集中在数量词，影响的是两个站点而不是全线。",
+      emptyText:"跑批完成后把结果挂到这张卡上。",
+      traces:[],
+    },
+    "res-tts":{
+      idx:"02", kind:"结果", title:"TTS 结果",
+      sub:"两个模型的发音准确率与 1–5 分可懂度分布。",
+      output:"待填",
+      why:"决定示范音频用哪个模型合成；发音错误会被学习者直接模仿，这一项比可懂度更优先。",
+      emptyText:"盲评完成后把结果挂到这张卡上。",
+      traces:[],
+    },
+    "res-quant":{
+      idx:"01", kind:"结果", title:"行为与完成",
+      sub:"完成率、耗时、重试、协助次数与支持使用的汇总。",
+      output:"待填",
+      why:"这部分回答学习者有没有走通，以及卡在哪一站、哪个字段。",
+      emptyText:"场次结束后把汇总挂到这张卡上。",
+      traces:[],
+    },
+    "res-qual":{
+      idx:"02", kind:"结果", title:"体验与困惑",
+      sub:"难易度评分与访谈主题。",
+      output:"待填",
+      why:"这部分回答学习者当时以为系统在问什么，是把日志中的卡点翻译成设计改动的依据。",
+      emptyText:"访谈整理完成后把主题挂到这张卡上。",
+      traces:[],
+    },
+  },
+};
+
+/* =========================================================================
+   英文覆盖层：只写英文，结构与上面的 DATA 一一对应，按下标合并。
+   没有写到的字段自动回退到中文（例如 raw 原始记录）。
+   ========================================================================= */
+const EN = {
+  stages: {
+    /* ---------------------------------------------------- 01 Background */
+    0:{
+      name:"Background", desc:"Beginner Shanghainese and the Yu Garden route",
+      flows:{
+        0:{
+          name:"What beginners lack",
+          hint:"Why Mandarin experience does not carry over, and why a word list is not enough",
+          blocks:{
+            0:{ title:"Shanghainese", meta:"A Wu variety · pronunciation, vocabulary and grammar all differ from Mandarin",
+                link:{ label:"See the target expressions" } },
+            1:{ title:"How far word lists and pronunciation guides get you" },
+            2:{ title:"Two things are still missing", hint:"both needed" },
+            3:{ footnote:"These two decide the shape of the project: first a communication goal, then a scene that carries it, and only then the models.",
+                paths:{
+                  0:{ tag:"Gap 1", name:"An occasion to speak", note:"Without a scene, an expression has no trigger." },
+                  1:{ tag:"Gap 2", name:"A task that can be judged", note:"Without criteria, learners cannot tell when they have said enough." },
+                } },
+            4:{ title:"Task-sized practice that needs no travel" },
+            5:{ text:"Scope is beginner exchanges only: express a preference, select an item, specify a quantity, confirm an order · no extended narration" },
+          },
+        },
+        1:{
+          name:"Why Yu Garden",
+          hint:"How four scenes produce 8–12 core expressions",
+          blocks:{
+            0:{ title:"Yu Garden old city", meta:"Restaurant / snack shop / teahouse · scenes map cleanly onto expressions" },
+            1:{ title:"Work backwards from four scenes to the expressions needed" },
+            2:{ title:"Expressions arrive in two batches", hint:"scheduled across stops" },
+            3:{ footnote:"The route runs 20–30 minutes. Learners never have to visit Yu Garden; the scenes only organise the communication goals.",
+                paths:{
+                  0:{ tag:"Batch 1", name:"First appearance", note:"One to three new expressions per stop." },
+                  1:{ tag:"Batch 2", name:"Reuse across stops", note:"The same expression comes back at a later stop." },
+                } },
+            4:{ title:"Fixed four-stop route · 8–12 core expressions" },
+          },
+        },
+        2:{
+          name:"Off-the-shelf components",
+          hint:"No new models — what the prototype is assembled from",
+          blocks:{
+            0:{ title:"Candidate components", meta:"ASR / LLM / TTS all released models · no additional training" },
+            1:{ title:"Initial tests already run" },
+            2:{ title:"Each component answers one question", hint:"all three checked" },
+            3:{ footnote:"The three carry different kinds of uncertainty: recognition is about accuracy, synthesis about faithfulness, the model-plus-state-machine split about where responsibility sits. The Wu-adapted checkpoints all come from the WenetSpeech-Wu release; this project trains nothing.",
+                paths:{
+                  0:{ tag:"Component 1", name:"Recognition", note:"Three candidates including a Wu-adapted one; two further released models excluded." },
+                  1:{ tag:"Component 2", name:"Synthesis", note:"General version against Wu fine-tuned version." },
+                  2:{ tag:"Component 3", name:"Interpretation", note:"The model only extracts fields." },
+                } },
+            4:{ title:"A component set ready to assemble" },
+          },
+        },
+        3:{
+          name:"Three research questions",
+          hint:"What the technical evaluation and the user study each answer",
+          blocks:{
+            0:{ title:"Research aim", meta:"Speech model performance / system reliability / user experience" },
+            1:{ title:"Split into three answerable questions", hint:"narrowing" },
+            2:{ footnote:"RQ1 fixes the components, RQ2 decides whether the system can face participants, RQ3 is about how learners actually use it. The order cannot be reversed.",
+                paths:{
+                  0:{ tag:"RQ1", name:"Model comparison", note:"Recognition accuracy, pronunciation, intelligibility." },
+                  1:{ tag:"RQ2", name:"System reliability", note:"How recognition and interpretation errors affect progression." },
+                  2:{ tag:"RQ3", name:"User experience", note:"How beginners use speech and language support." },
+                } },
+            3:{ title:"Two lines of evidence: technical evaluation and user study" },
+          },
+        },
+      },
+    },
+
+    /* ------------------------------------------------------- 02 System */
+    1:{
+      name:"System path", desc:"How one exchange runs end to end",
+      flows:{
+        0:{
+          name:"Route and tasks",
+          hint:"Which stops learners visit, and what counts as finished at each",
+          blocks:{
+            0:{ title:"Learner", meta:"18–35 / little or no prior Shanghainese · 6–8 recruited locally",
+                link:{ label:"See recruitment criteria" } },
+            1:{ title:"Introduction and expression-card preview", link:{ label:"8–12 core expressions" } },
+            2:{ title:"Tasks fall into two kinds", hint:"all four stops" },
+            3:{ footnote:"Stop order is fixed and the route runs 20–30 minutes. Core expressions recur, so later stops reuse sentences from earlier ones.",
+                paths:{
+                  0:{ tag:"Kind 1", name:"Preference and selection", note:"Only state a preference and confirm — one successful exchange first." },
+                  1:{ tag:"Kind 2", name:"Quantity and social talk", note:"Adds quantity, takeaway and read-back; the last stop has no item fields." },
+                } },
+            4:{ title:"Route finished · every core expression used at least once", link:{ label:"Preview completion criteria" } },
+            5:{ text:"Task not finished within the retry limit → logged as facilitator assist, move to the next stop · the route is not interrupted" },
+          },
+        },
+        1:{
+          name:"Input and recognition",
+          hint:"How what the learner says becomes text",
+          blocks:{
+            0:{ title:"Learner response", meta:"Speech / text / buttons · captured in the browser" },
+            1:{ title:"Segmentation and format normalisation", link:{ label:"16 kHz mono" } },
+            2:{ title:"Pick one input channel", hint:"one of three" },
+            3:{ footnote:"All three channels feed the same interpretation layer. Only speech introduces recognition error, which is what makes ASR errors separable.",
+                paths:{
+                  0:{ tag:"Channel 1", name:"Speech", note:"The only path that introduces recognition error." },
+                  1:{ tag:"Channel 2", name:"Text", note:"Skips ASR; a control without recognition error." },
+                  2:{ tag:"Channel 3", name:"Buttons", note:"Supplies field values directly, no model." },
+                } },
+            4:{ title:"Normalised learner text or fields" },
+          },
+        },
+        2:{
+          name:"Task interpretation",
+          hint:"Turning a sentence into item / quantity / preference",
+          blocks:{
+            0:{ title:"Learner text", meta:"ASR transcript or typed text · with the current task context" },
+            1:{ title:"Attach task context and the field schema" },
+            2:{ title:"Two checks after extraction", hint:"both run" },
+            3:{ footnote:"The ASR transcript and the verified transcript of the same recording go through the same LLM configuration and state machine, which separates recognition errors from interpretation errors.",
+                paths:{
+                  0:{ tag:"Check 1", name:"Field extraction", note:"Many spoken forms collapse into one set of values." },
+                  1:{ tag:"Check 2", name:"Application rules", note:"Values outside the menu or range go back to a clarification." },
+                } },
+            4:{ title:"Structured task fields" },
+          },
+        },
+        3:{
+          name:"State machine",
+          hint:"When to ask again, when to call it done",
+          blocks:{
+            0:{ title:"Structured task fields", meta:"item / quantity / takeaway / preference · with completion criteria" },
+            1:{ title:"Branch on field completeness", hint:"one missing field stops progression" },
+            2:{ footnote:"The next action is deterministic: the same field combination always produces the same action, which is what makes task-state correctness measurable.",
+                paths:{
+                  0:{ tag:"Branch 1", name:"Ask for the missing field", note:"One field at a time." },
+                  1:{ tag:"Branch 2", name:"Confirm and judge completion", note:"Read the order back, then apply the criteria." },
+                } },
+            3:{ title:"Task state updated" },
+            4:{ text:"Two clarifications without a complete answer → suggest switching input method and log a retry · never an automatic failure" },
+          },
+        },
+        4:{
+          name:"Speech output and support",
+          hint:"What learners hear and what they can look up",
+          blocks:{
+            0:{ title:"Prompts and model sentences", meta:"Pre-generated TTS clips · normal and slow speed" },
+            1:{ title:"Match the expression cards for the current task" },
+            2:{ title:"Two kinds of support, always available", hint:"learner's choice" },
+            3:{ footnote:"Every clip and line is reviewed by fluent Shanghainese speakers before testing; clips that fail review are re-synthesised or replaced with a recording.",
+                paths:{
+                  0:{ tag:"Support 1", name:"In-character prompts", note:"Shopkeeper lines and model sentences." },
+                  1:{ tag:"Support 2", name:"Expression cards", note:"Phonetics, glosses, slow audio." },
+                } },
+            4:{ title:"A model sentence the learner can repeat directly" },
+          },
+        },
+        5:{
+          name:"Logging",
+          hint:"What each step leaves behind for the metrics",
+          blocks:{
+            0:{ title:"Interaction logs", meta:"Model config / transcripts / extracted fields / state changes / timings / support use / completion" },
+            1:{ title:"Archive per run and align with reference labels" },
+            2:{ title:"Run records traceable to individual calls" },
+            3:{ text:"The call records in the right-hand panel are illustrative; replace DATA.cards[].traces once real logs are wired in · to be added" },
+          },
+        },
+      },
+    },
+
+    /* -------------------------------------------------- 03 Evaluation */
+    2:{
+      name:"Evaluation setup", desc:"Frozen recordings and fixed model versions",
+      flows:{
+        0:{
+          name:"Data and labels",
+          hint:"Every comparison runs on the same data",
+          blocks:{
+            0:{ title:"Task response recordings", meta:"Covering the target expressions · the same audio for all three ASR models" },
+            1:{ title:"Manually verified transcripts + one normalisation rule set" },
+            2:{ title:"One dataset, two uses", hint:"both" },
+            3:{ footnote:"The dataset and the normalisation rules are frozen for the evaluation; any change means rerunning every model, otherwise the numbers stop being comparable.",
+                paths:{
+                  0:{ tag:"Use 1", name:"Model comparison set", note:"The reference for CER." },
+                  1:{ tag:"Use 2", name:"Reliability test cases", note:"Expected fields and actions written in advance." },
+                } },
+            4:{ title:"Frozen evaluation dataset" },
+          },
+        },
+        1:{
+          name:"Models and run conditions",
+          hint:"How versions, inference settings and hardware are fixed",
+          blocks:{
+            0:{ title:"Released checkpoints", meta:"No additional training or fine-tuning" },
+            1:{ title:"Record checkpoint revision, inference settings and hardware" },
+            2:{ title:"Conditions aligned per component", hint:"must match" },
+            3:{ footnote:"Conditions go into the logs rather than only into the document, so any single number can be traced back to the version that produced it.",
+                paths:{
+                  0:{ tag:"Condition 1", name:"ASR run conditions", note:"Models pre-loaded, one recording at a time." },
+                  1:{ tag:"Condition 2", name:"TTS synthesis conditions", note:"Same reference recordings, zero-shot." },
+                } },
+            4:{ title:"Reproducible comparison conditions" },
+          },
+        },
+        2:{
+          name:"Metric definitions",
+          hint:"Exactly how each number is computed",
+          blocks:{
+            0:{ title:"Four metrics", meta:"Two computed · two rated by reviewers" },
+            1:{ title:"Grouped by component", hint:"definitions fixed before any run" },
+            2:{ footnote:"The two rated metrics are judged with model identities hidden and clips in randomised order, by fluent speakers on the team.",
+                paths:{
+                  0:{ tag:"Group 1", name:"ASR metrics", note:"Computed automatically." },
+                  1:{ tag:"Group 2", name:"TTS metrics", note:"Depend on human review." },
+                } },
+            3:{ title:"One row of metrics per model" },
+          },
+        },
+        3:{
+          name:"Reliability conditions",
+          hint:"How a failure is traced to recognition or interpretation",
+          blocks:{
+            0:{ title:"Predefined test cases", meta:"Complete requests / incomplete responses / corrections · each with expected fields and next action" },
+            1:{ title:"One LLM configuration and one state machine" },
+            2:{ title:"Two transcript arms in parallel", hint:"one step apart" },
+            3:{ footnote:"The gap between the two arms is the effect of recognition error on progression; remaining errors are traced back across recognition, interpretation and state transitions.",
+                paths:{
+                  0:{ tag:"Arm 1", name:"ASR transcripts", note:"Carries recognition error." },
+                  1:{ tag:"Arm 2", name:"Verified transcripts", note:"Control with zero recognition error." },
+                } },
+            4:{ title:"Errors attributed to a stage" },
+            5:{ text:"User sessions start only after reliability failures are fixed · otherwise system defects get read as usability problems" },
+          },
+        },
+        4:{
+          name:"Session conditions",
+          hint:"How one session runs and what gets recorded",
+          blocks:{
+            0:{ title:"Participants", meta:"6–8 people · 18–35 · little or no prior Shanghainese · in person" },
+            1:{ title:"Brief introduction, then the full route unaided" },
+            2:{ title:"Three kinds of record per session", hint:"all three" },
+            3:{ footnote:"Logs and observations are summarised descriptively and interview responses grouped into themes; the facilitator steps in only past the retry limit, and that is logged.",
+                paths:{
+                  0:{ tag:"Record 1", name:"Task completion", note:"Including time and retries." },
+                  1:{ tag:"Record 2", name:"Support use", note:"Card opens, replays, switches." },
+                  2:{ tag:"Record 3", name:"Feedback", note:"Ratings plus interview." },
+                } },
+            4:{ title:"One complete, analysable session record" },
+          },
+        },
+      },
+    },
+
+    /* ------------------------------------------------- 04 Comparison */
+    3:{
+      name:"Model comparison", desc:"CER, latency, pronunciation",
+      flows:{
+        0:{
+          name:"Result tables",
+          hint:"Conditions are set; the numbers go in here",
+          blocks:{
+            0:{ title:"Frozen evaluation dataset", meta:"Conditions in stage 03" },
+            1:{ title:"Run under the fixed conditions" },
+            2:{ title:"Two result tables", hint:"to be filled" },
+            3:{ footnote:"User sessions do not start before the selection is made; changing a component means going back to stage 03 and rerunning.",
+                paths:{
+                  0:{ tag:"Table 1", name:"ASR results", note:"One row per model." },
+                  1:{ tag:"Table 2", name:"TTS results", note:"Two models, blind review." },
+                } },
+            4:{ title:"Components selected for the final app" },
+          },
+        },
+      },
+    },
+
+    /* ------------------------------------------------- 05 User study */
+    4:{
+      name:"User study", desc:"6–8 beginner learners",
+      flows:{
+        0:{
+          name:"Session results",
+          hint:"Conditions are set; the session data goes in here",
+          blocks:{
+            0:{ title:"Session records", meta:"Conditions in stage 03 · E" },
+            1:{ title:"Two kinds of result", hint:"to be filled" },
+            2:{ footnote:"The two have to be read together: a high completion rate with constant card use, and a low one with almost no help-seeking, point to opposite fixes.",
+                paths:{
+                  0:{ tag:"Result 1", name:"Behaviour and completion", note:"From logs and observation." },
+                  1:{ tag:"Result 2", name:"Experience and confusion", note:"From ratings and interviews." },
+                } },
+            3:{ title:"Usability issues and a priority order" },
+          },
+        },
+      },
+    },
+  },
+
+  cards:{
+    /* ---------- 01 ---------- */
+    "bg-context":{
+      kind:"Background", title:"No occasion to speak",
+      sub:"Pronunciation, vocabulary and grammar all differ from Mandarin, and there is nowhere to use what was learned.",
+      output:"Scenes with real triggers",
+      why:"If it were only an accent, learners could guess their way through. Three kinds of difference mean a scene has to pull a specific expression out first.",
+      detail:"Scope is beginner exchanges only: express a preference, select an item, specify a quantity, confirm an order. Extended narration and written forms are excluded, otherwise the expression list grows without limit and no expression gets a clear moment of use.",
+      ioTitle:"Scope and materials", pickLabel:"Pick an item",
+      traces:{ 0:{ label:"1. Material · Scope of target expressions", model:"Course design notes",
+        input:{ 0:{ kind:"Scope", desc:"What the project covers" },
+                1:{ title:"Types of exchange", text:"Expressing a preference, selecting an item, specifying a quantity, confirming an order." } },
+        output:{ 0:{ kind:"Result", desc:"What that yields" },
+                 1:{ title:"Expression list", text:"8–12 core expressions grouped by the four communication goals, each tied to at least one stop task." } } } },
+    },
+    "bg-task":{
+      kind:"Background", title:"No task that can be judged",
+      sub:"Word lists and pronunciation guides get you started but cannot say when you have said enough.",
+      output:"Practice units with completion criteria",
+      why:"Without criteria, learners can only guess whether they got it right; with them, the system can give a definite response and the study gets a measurable completion rate.",
+      ioTitle:"Scope and materials", pickLabel:"Pick an item",
+      traces:{ 0:{ label:"1. Material · How criteria are written", model:"Course design notes",
+        input:{ 0:{ kind:"Input", desc:"One stop task" },
+                1:{ title:"Task", text:"Order two servings of xiaolongbao for takeaway." } },
+        output:{ 0:{ kind:"Output", desc:"The matching criteria" },
+                 1:{ title:"Criteria", text:"item, quantity and takeaway all correct, confirmed through one read-back." } } } },
+    },
+    "bg-expr-new":{
+      kind:"Route design", title:"Expressions introduced at each stop",
+      sub:"One to three new expressions, tied to that stop's communication goal.",
+      output:"The order in which expressions arrive",
+      why:"New material is spread across four stops in rising difficulty, so a learner handles only a little unfamiliar language at a time.",
+      detail:"Stop one asks for a preference and a confirmation; stop two adds listening and quantity; stop three adds takeaway and a read-back; stop four returns to social talk with no information load.",
+    },
+    "bg-expr-reuse":{
+      kind:"Route design", title:"Expressions reused across stops",
+      sub:"The same expression comes back at a later stop.",
+      output:"A reuse map",
+      why:"Reuse is the only thing in this route that makes a second attempt observable; without it the logs are four unrelated records.",
+      ioTitle:"Scope and materials", pickLabel:"Pick an item",
+      traces:{ 0:{ label:"1. Material · Reuse of the quantity expression", model:"Course design notes",
+        input:{ 0:{ kind:"Input", desc:"One core expression" },
+                1:{ title:"Expression", text:"Specifying a quantity (two packs / two servings)." } },
+        output:{ 0:{ kind:"Output", desc:"Where it appears" },
+                 1:{ title:"Reuse", text:"Introduced at the candy shop, used again at Nanxiang, so time and card use can be compared across the two." } } } },
+    },
+    "bg-asr-cand":{
+      kind:"Candidates", title:"ASR candidates",
+      sub:"Whisper-medium, Whisper-Medium-Wu (WenetSpeech-Wu release), Qwen3-ASR-1.7B.",
+      output:"Three recognition models to compare",
+      why:"The first two are a controlled pair — same architecture and base weights, differing only in Wu fine-tuning — so the gap is attributable to the adaptation. The third comes from a different model line and shows whether a recent general model suffices without Wu-specific training.",
+      detail:"All released checkpoints, no additional training. Qwen3-ASR-1.7B has both open weights and a hosted API; the accuracy comparison uses local weights throughout so that service-side differences do not enter it. Selection looks only at performance on this project's target expressions, not at general benchmark standing.",
+      ioTitle:"Candidate list", pickLabel:"Pick an item",
+      traces:{ 0:{ label:"1. Material · Candidates and their roles", model:"Model survey",
+        input:{ 0:{ kind:"Input", desc:"Selection criteria" },
+                1:{ title:"Criteria", text:"Publicly available, supports Chinese or Wu, can run locally." } },
+        output:{ 0:{ kind:"Output", desc:"Who plays what role" },
+                 1:{ title:"Candidates", text:"Whisper-medium as baseline; Whisper-Medium-Wu (WenetSpeech-Wu release) as the same-family adapted comparison; Qwen3-ASR-1.7B as an alternative line." } } } },
+    },
+    "bg-screen":{
+      kind:"Candidates", title:"Screening and exclusions",
+      sub:"WenetSpeech-Wu also releases Conformer-U2pp-Wu and Step-Audio2-Wu-ASR; neither is in the comparison.",
+      output:"The reason it is three and not five",
+      why:"The candidates named in the background have to match the three actually run, or the first question at review is where the other two went.",
+      detail:"Conformer-U2pp-Wu is trained from scratch at a different scale and has no paired baseline to compare against; Step-Audio2-Wu-ASR is a 7B-class model that neither the evaluation hardware nor the deployment can serve within the project timeline. Their published benchmark results are cited as external reference points rather than reproduced.",
+      ioTitle:"Screening record", pickLabel:"Pick an item",
+      traces:{ 0:{ label:"1. Material · Grounds for exclusion", model:"Model survey",
+        input:{ 0:{ kind:"Input", desc:"Other models in the same release" },
+                1:{ title:"Excluded", text:"Conformer-U2pp-Wu, Step-Audio2-Wu-ASR." } },
+        output:{ 0:{ kind:"Output", desc:"How they are handled" },
+                 1:{ title:"Decision", text:"Not reproduced; their published benchmark results are cited as external reference, with the grounds stated in Section 3.4." } } } },
+    },
+    "bg-tts-cand":{
+      kind:"Candidates", title:"TTS candidates",
+      sub:"CosyVoice2-0.5B (general release) and CosyVoice2-Wu-SFT (WenetSpeech-Wu release).",
+      output:"Two synthesis models to compare",
+      why:"Same family, general version against Wu fine-tuned version, with texts and reference recordings held constant, so most of the difference falls on the adaptation.",
+      detail:"They are not invoked identically: the Wu-SFT model synthesises zero-shot, while the general release needs an explicit instruction before it produces Shanghainese. The comparison is therefore between two released systems as each is meant to be used, not a strict ablation, and that is stated as a limitation.",
+    },
+    "bg-llm":{
+      kind:"Candidates", title:"Splitting LLM and state machine",
+      sub:"The model turns speech into fields; progression and completion belong to the state machine.",
+      output:"A clear responsibility boundary",
+      why:"Keeping the uncertain part inside extraction leaves completion deterministic, which is what makes right and wrong judgeable during evaluation.",
+      detail:"The consequence of dropping this boundary is concrete: once completion is decided by the model, the same sentence can be judged differently in two runs, and task-state correctness stops meaning anything.",
+    },
+    "rq1-def":{
+      kind:"Research question", title:"RQ1 · Model comparison",
+      sub:"How candidate ASR models compare in recognition accuracy, and candidate TTS models in pronunciation accuracy and intelligibility, on this project's target expressions.",
+      output:"A basis for component selection",
+      why:"Fix the components first, so the other two questions are asked of the same system.",
+    },
+    "rq2-def":{
+      kind:"Research question", title:"RQ2 · System reliability",
+      sub:"How recognition errors and interpretation errors each affect task progression.",
+      output:"Errors attributed by stage",
+      why:"A task can fail for many reasons; without separating them you are left with one blunt failure rate and nothing to fix.",
+    },
+    "rq3-def":{
+      kind:"Research question", title:"RQ3 · User experience",
+      sub:"How beginners use speech interaction and language support to complete the tasks along the route.",
+      output:"Usability findings and design recommendations",
+      why:"Technical metrics say whether the system runs; sessions say how learners behave once it does.",
+    },
+
+    /* ---------- 02 ---------- */
+    "a-restaurant":{
+      kind:"Stop task", title:"Shanghai Old Restaurant · stating a preference",
+      sub:"Say you do not want anything spicy, ask for a recommendation, confirm a dish.",
+      output:"A dish matching the preference",
+      why:"The first stop asks only for a preference and a confirmation, so a complete beginner finishes one successful exchange with the shortest possible sentence.",
+      detail:"The criteria live in the menu data: the confirmed dish must be in the non-spicy set, and the judgement is not left to the model. Skip this and require quantity and takeaway at stop one, and learners stall on their first attempt, which costs you the data from the other three stops too.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · old restaurant", model:"No model call (menu rules)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"Task context", text:"Stop: old restaurant. Fields: preference, item. Menu: 12 dishes, 4 marked spicy." },
+                2:{ title:"Criteria", text:"The confirmed item must have spicy=false and the preference must be stated." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Judgement", text:"preference=non_spicy; the learner confirmed a recommended dish with spicy=false, task complete." } } } },
+    },
+    "a-candy":{
+      kind:"Stop task", title:"Pear Candy Shop · identifying a taste",
+      sub:"Pick out a taste from an audio clip, then ask for two packs of that candy.",
+      output:"Taste identified + item and quantity",
+      why:"This stop puts listening and production in one task: you have to hear which candy, and say it clearly enough to get two packs.",
+      detail:"The taste appears only in the audio, never in on-screen text, or learners could read past the listening. Quantity is introduced here and returns at Nanxiang, which is how second use gets compared with first.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · candy shop", model:"No model call (task rules)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"Audio", text:"The shopkeeper describes today's tastes; the target taste is only in the audio." },
+                2:{ title:"Fields", text:"flavor, item, quantity." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Judgement", text:"Taste identified correctly; quantity=2 recognised on the second attempt, task complete." } } } },
+    },
+    "a-bun":{
+      kind:"Stop task", title:"Nanxiang · quantity and takeaway",
+      sub:"Order two servings of xiaolongbao for takeaway and read the order back.",
+      output:"Item + quantity + takeaway",
+      why:"The read-back is the only point on the route that checks whether the learner understood the system's confirmation; everything before it only checks production.",
+      detail:"All three fields must be present before completion, and the state machine asks for each missing one separately. Skip this and let a button supply takeaway, and you can no longer tell 'did not understand the confirmation' from 'did not feel like repeating it'.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · Nanxiang", model:"No model call (task rules)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"Fields", text:"item, quantity, takeaway — all three needed for completion." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Judgement", text:"Item and quantity given in one go, takeaway supplied after one clarification; read-back passed, task complete." } } } },
+    },
+    "a-tea":{
+      kind:"Stop task", title:"Huxin Pavilion Teahouse · praise and thanks",
+      sub:"Say the tea tastes good and thank the host.",
+      output:"Positive evaluation + thanks",
+      why:"The last stop has no item fields at all, only social expression, so the route ends on an exchange with no information load.",
+      detail:"The judgement checks that both intents were expressed, not that the sentences match the cards word for word. Requiring verbatim repetition would turn this stop into a reading exercise and hide how learners put things together themselves.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · teahouse", model:"No model call (intent check)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"Intents", text:"positive_evaluation and thanks, both required." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Judgement", text:"Both intents expressed in two sentences and both recognised; task complete, route finished." } } } },
+    },
+    "b-asr":{
+      kind:"Recognition", title:"ASR transcription",
+      sub:"Turns a Shanghainese recording into text; the model can be swapped wholesale.",
+      output:"Transcript + latency",
+      why:"This is the only source of recognition error in the chain; making the model interchangeable is what allows three candidates to be compared on the same tasks.",
+      detail:"Candidates are Whisper-medium, Whisper-Medium-Wu and Qwen3-ASR-1.7B, all released checkpoints with no additional training. Runtime and offline are two different paths: the Vercel backend can only call a hosted service, since model weights cannot run inside it, while all three candidates are benchmarked locally on one machine. A model without a usable hosted endpoint cannot ship, and that constraint is recorded with the selection. If the log does not say which checkpoint ran on which path, a failed task cannot be attributed to a model afterwards.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · transcript correct", model:"whisper-medium-wu · local",
+                   input:{ 0:{ kind:"Input", desc:"What this step received" },
+                           1:{ title:"audio", text:"3.1 s mono recording, first response at Nanxiang." } },
+                   output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                            1:{ title:"Transcript", text:"Matches the verified transcript, CER 0; item and quantity extracted downstream." } } },
+               1:{ label:"2. Example · pilot_0912 · quantity misheard", model:"whisper-medium · local",
+                   input:{ 0:{ kind:"Input", desc:"What this step received" },
+                           1:{ title:"audio", text:"2.4 s recording, asking for two packs at the candy shop." } },
+                   output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                            1:{ title:"Transcript", text:"The number word was heard as a near-homophone and quantity came out as 200; rule validation caught it and the state machine asked again." } } } },
+    },
+    "b-text":{
+      kind:"Input channel", title:"Typed input",
+      sub:"The learner types a response, skipping recognition.",
+      output:"Input text",
+      why:"It gives an exit to learners whose speech keeps failing, and leaves behind a set of data with no ASR error in it.",
+      detail:"Typed and spoken input go through exactly the same interpretation layer and state machine; the only difference is whether ASR was involved. The number of switches is itself an RQ3 observation.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · switched after two attempts", model:"No model call",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"typed", text:"After two failed recognitions the learner typed the same target expression." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Text", text:"Straight into interpretation, quantity=2 extracted; one input_switch logged." } } } },
+    },
+    "b-button":{
+      kind:"Input channel", title:"Button input",
+      sub:"Tap a preset option to supply a field value directly.",
+      output:"Preset field value",
+      why:"It keeps the task moving in any circumstance, and records 'did not speak this time' explicitly instead of leaving a blank.",
+      detail:"Buttons only offer values the task already defines, so they bypass extraction and go straight to validation. Tasks completed by button are marked separately and not pooled with spoken completions.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · supplying takeaway", model:"No model call",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"click", text:"After the clarification about takeaway, the learner tapped the takeaway option." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Field", text:"takeaway=true written directly, marked source=button." } } } },
+    },
+    "c-extract":{
+      kind:"Interpretation", title:"Field extraction",
+      sub:"The model maps a sentence onto item / quantity / preference and the rest.",
+      output:"Structured fields",
+      why:"The state machine reads fields, not natural language; this layer collapses the many ways of saying one thing into one set of values.",
+      detail:"The ASR transcript and the verified transcript of the same recording run through the same LLM configuration and state machine, which is what separates recognition errors from interpretation errors. Fields not mentioned must be recorded as explicitly unset, since they also count towards field-extraction accuracy.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · complete request", model:"LLM API · fixed config",
+                   input:{ 0:{ kind:"Input", desc:"What this step received" },
+                           1:{ title:"transcript", text:"Transcript of the first response at Nanxiang." },
+                           2:{ title:"Field schema", text:"item from the menu; quantity an integer; takeaway a boolean; anything unmentioned stays unset." } },
+                   output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                            1:{ title:"Fields", text:"item and quantity extracted, takeaway left unset for the state machine to ask about." } } },
+               1:{ label:"2. Example · pilot_0912 · correcting the previous turn", model:"LLM API · fixed config",
+                   input:{ 0:{ kind:"Input", desc:"What this step received" },
+                           1:{ title:"transcript", text:"At the confirmation the learner changes the quantity from one pack to two." } },
+                   output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                            1:{ title:"Fields", text:"quantity overwritten from 1 to 2, other fields kept, state returns to confirmation." } } } },
+    },
+    "c-validate":{
+      kind:"Validation", title:"Application rules",
+      sub:"Checks fields against the menu, the allowed quantity range and the task's permitted values.",
+      output:"Valid fields / rejection reason",
+      why:"Whether a dish is spicy or a quantity is plausible is decided by the menu data rather than the model, which keeps completion deterministic and reproducible.",
+      detail:"A failed check is not a failed task; it returns the state to a clarification and logs the reason. This is also where recognition errors are most often caught — a quantity heard as an implausible number stops here.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · quantity out of range", model:"No model call",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"fields", text:"quantity=200, from a recognition error." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Rejected", text:"Outside the allowed range of 1–5; back to asking for the quantity, reason=quantity_out_of_range." } } } },
+    },
+    "d-clarify":{
+      kind:"State machine", title:"Ask for the missing field",
+      sub:"Ask about whichever field is missing, one at a time.",
+      output:"Clarification prompt + state held",
+      why:"Asking one thing at a time tells the learner which sentence to say now, and the log shows whether what was missing was the quantity or the takeaway.",
+      detail:"Clarification templates match the sentences on the expression cards, so the learner can repeat them directly. Ask for all three missing fields at once and beginners typically answer only the last, which looks like a language problem but is a prompt design problem.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · asking about takeaway", model:"No model call (state machine)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"state", text:"item and quantity present, takeaway unset." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Next action", text:"Play the clarification clip and highlight the matching card; state stays at collecting." } } } },
+    },
+    "d-confirm":{
+      kind:"State machine", title:"Confirm and judge completion",
+      sub:"With all fields present, read the order back and apply the criteria.",
+      output:"Task complete / next stop",
+      why:"Criteria are fixed in advance, so the same field combination always yields the same action — which is what task-state correctness measures.",
+      detail:"The judgement compares field values only, not tone or fluency: a halting but correct answer still counts as complete, with retries logged separately. Fold fluency into completion and the RQ3 completion rate also reflects how strict the judge is, and the two can no longer be separated.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · complete after read-back", model:"No model call (state machine)",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"fields", text:"item, quantity and takeaway all present and validated." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Next action", text:"Confirmation clip played, read-back passed, state moves to completed and the next stop unlocks." } } } },
+    },
+    "e-tts":{
+      kind:"Speech output", title:"In-character prompts",
+      sub:"Plays pre-generated shopkeeper lines and model sentences.",
+      output:"Normal-speed audio clips",
+      why:"Pre-generating rather than synthesising live is what allows every clip to be reviewed before testing, and keeps synthesis latency out of the exchange.",
+      detail:"CosyVoice2-0.5B and CosyVoice2-Wu-SFT synthesise the same texts from the same Shanghainese reference recordings, each invoked as its release documents (Wu-SFT zero-shot, the general release through a fixed Shanghainese instruction); fluent speakers rate pronunciation accuracy and 1–5 intelligibility with identities hidden and order randomised. Review with identities visible and the second model gets an unearned advantage.",
+      traces:{ 0:{ label:"1. Example · clip review · Nanxiang line", model:"cosyvoice2-wu-sft · zero-shot",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"Text + reference", text:"The shopkeeper's confirmation line, reference recording from the same fluent speaker." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Review", text:"Both reviewers found no pronunciation errors and agreed on intelligibility; the clip was accepted." } } } },
+    },
+    "e-card":{
+      kind:"Learning support", title:"Expression cards",
+      sub:"Phonetic guide, Mandarin and English glosses, normal and slow audio.",
+      output:"Cards available at any time",
+      why:"It turns 'what was looked up, and how often' into recorded behaviour, so differences in task time have an explanation rather than just a speed ranking.",
+      detail:"Core expressions recur across stops, so how often a card is reopened later is a direct signal about learning. Slow and normal audio are counted separately because they correspond to different difficulties.",
+      traces:{ 0:{ label:"1. Example · pilot_0912 · quantity card", model:"No model call",
+        input:{ 0:{ kind:"Input", desc:"What this step received" },
+                1:{ title:"context", text:"At Nanxiang, the learner opens the quantity card before speaking." } },
+        output:{ 0:{ kind:"Output", desc:"What this step produced" },
+                 1:{ title:"Record", text:"Opened 3 times at the candy shop and once here; slow audio unused." } } } },
+    },
+
+    /* ---------- 03 ---------- */
+    "ev-refset":{
+      kind:"Data", title:"Model comparison set",
+      sub:"The same task response recordings with manually verified transcripts.",
+      output:"Audio + reference transcripts",
+      why:"All three ASR models process identical audio and are scored under identical normalisation rules, so differences in CER come only from the models.",
+      detail:"Normalisation rules have to be settled and written down before the first model runs: punctuation, number forms and filler handling all move CER, and changing the rules midway invalidates everything measured before.",
+      ioTitle:"Conditions and definitions", pickLabel:"Pick a condition",
+      traces:{ 0:{ label:"1. Condition · freezing the dataset", model:"Evaluation prep",
+        input:{ 0:{ kind:"Input", desc:"What the set contains" },
+                1:{ title:"Recordings", text:"Task responses covering the 8–12 target expressions, including complete requests and natural slips." } },
+        output:{ 0:{ kind:"Output", desc:"What gets frozen" },
+                 1:{ title:"Frozen", text:"Audio files, reference transcripts and normalisation rules together; any change means rerunning every model." } } } },
+    },
+    "ev-cases":{
+      kind:"Data", title:"Reliability test cases",
+      sub:"Complete requests, incomplete responses and corrections, each with expected fields and expected action.",
+      output:"Cases with reference answers",
+      why:"With the expected action written in advance, the system's action can be marked right or wrong; judged afterwards, 'was that a reasonable reply' varies from person to person.",
+      ioTitle:"Conditions and definitions", pickLabel:"Pick a condition",
+      traces:{ 0:{ label:"1. Condition · case structure", model:"Evaluation prep",
+        input:{ 0:{ kind:"Input", desc:"What one case holds" },
+                1:{ title:"Fields", text:"Audio or text, expected field values (including fields that should stay unset), expected next action." } },
+        output:{ 0:{ kind:"Output", desc:"What it feeds" },
+                 1:{ title:"Metrics", text:"Field-extraction accuracy and task-state correctness." } } } },
+    },
+    "ev-asr-setup":{
+      kind:"Run conditions", title:"ASR run conditions",
+      sub:"Released checkpoints, fixed inference settings, one machine, one recording at a time.",
+      output:"A reproducible recognition environment",
+      why:"Latency is only comparable with the model already loaded and a single recording in flight; batching or a cold start changes the picture entirely.",
+      detail:"Checkpoint revision, inference parameters and hardware go into every log line rather than only into the document, so any number can be traced back to the conditions that produced it. All three candidates run from local weights, keeping service-side differences out of the accuracy comparison; if the app calls a hosted API, that path is timed separately and reported as a deployment measurement.",
+      ioTitle:"Conditions and definitions", pickLabel:"Pick a condition",
+      traces:{ 0:{ label:"1. Condition · what gets logged", model:"Evaluation prep",
+        input:{ 0:{ kind:"Input", desc:"Recorded per run" },
+                1:{ title:"Fields", text:"Model name, checkpoint revision, inference parameters, hardware, whether pre-loaded." } },
+        output:{ 0:{ kind:"Output", desc:"What that buys" },
+                 1:{ title:"Traceability", text:"Any CER or latency figure can be traced back to the exact conditions." } } } },
+    },
+    "ev-tts-setup":{
+      kind:"Run conditions", title:"TTS synthesis conditions",
+      sub:"Same texts, same reference recordings, each invoked as its release documents, blind review.",
+      output:"Comparable pairs of clips",
+      why:"With texts and references fixed, the main remaining difference is the Wu fine-tuning; the invocation cannot be forced level, and pushing the general model into zero-shot mode would only produce a result it was never meant to give.",
+      detail:"The Wu-SFT model synthesises zero-shot from a Shanghainese reference utterance and its transcript; the general release goes through its instruction interface with one fixed Shanghainese instruction, held constant and reported. The asymmetry is stated as a limitation: this compares two released systems as each is intended to be used. Identities are hidden and clip order randomised; reviewers are fluent Shanghainese speakers on the team and rate each clip independently.",
+    },
+    "ev-cer":{
+      kind:"Metric", title:"Character error rate",
+      sub:"Substitutions, deletions and insertions divided by reference characters.",
+      output:"One number per ASR model",
+      why:"A character-level measure is steadier for Shanghainese transcription: word segmentation is itself contested, and a word-level metric would score segmentation disagreements as recognition errors.",
+      ioTitle:"Conditions and definitions", pickLabel:"Pick a definition",
+      traces:{ 0:{ label:"1. Definition · how it is computed", model:"Metric definition",
+        input:{ 0:{ kind:"Input", desc:"What the computation needs" },
+                1:{ title:"Inputs", text:"Model transcript, manually verified reference, one shared normalisation rule set." } },
+        output:{ 0:{ kind:"Output", desc:"The formula" },
+                 1:{ title:"Formula", text:"(substitutions + deletions + insertions) ÷ reference characters, computed after normalisation, with error samples kept." } } } },
+    },
+    "ev-latency":{
+      kind:"Metric", title:"Response latency",
+      sub:"Median time from sending the request to receiving the complete transcript.",
+      output:"One number per ASR model",
+      why:"The median rather than the mean, so one cold start or network hiccup does not drive the conclusion.",
+    },
+    "ev-pron":{
+      kind:"Metric", title:"Pronunciation accuracy",
+      sub:"Share of clips judged free of pronunciation errors by fluent reviewers.",
+      output:"One percentage per TTS model",
+      why:"Pronunciation is a yes-or-no judgement, which is steadier than a rating and maps directly onto whether learners would copy an error.",
+    },
+    "ev-intel":{
+      kind:"Metric", title:"Intelligibility",
+      sub:"Reviewer ratings from 1 to 5, unintelligible to fully understandable.",
+      output:"A rating distribution per TTS model",
+      why:"Clips with no pronunciation errors can still be hard to follow, so accuracy needs a continuous measure beside it.",
+      detail:"Two reviewers rate independently; clips where they disagree sharply are listed for a second listen rather than averaged into agreement.",
+    },
+    "ev-asr-arm":{
+      kind:"Arm", title:"ASR transcript arm",
+      sub:"Recognition output drives the interpretation layer and the state machine.",
+      output:"Progression with recognition error included",
+      why:"This is the path learners actually experience, so every reliability problem shows up here.",
+    },
+    "ev-verified-arm":{
+      kind:"Arm", title:"Verified transcript arm",
+      sub:"Manually verified transcripts drive exactly the same interpretation layer and state machine.",
+      output:"Progression with zero recognition error",
+      why:"The arms differ by one step, so the gap is the effect of recognition error; whatever still fails belongs to interpretation or state transitions.",
+      detail:"Both arms must share one LLM configuration and one state-machine build; changing either side means rerunning both.",
+      ioTitle:"Conditions and definitions", pickLabel:"Pick a condition",
+      traces:{ 0:{ label:"1. Condition · how errors are attributed", model:"Evaluation design",
+        input:{ 0:{ kind:"Input", desc:"Two sets of results" },
+                1:{ title:"Comparison", text:"The same cases run once with ASR transcripts and once with verified transcripts." } },
+        output:{ 0:{ kind:"Output", desc:"What it shows" },
+                 1:{ title:"Attribution", text:"The gap goes to recognition; failures remaining in the verified arm go to interpretation or state transitions and are traced case by case." } } } },
+    },
+    "ev-completion":{
+      kind:"Session record", title:"Task completion",
+      sub:"Completion against the predefined criteria, time spent, retries and facilitator assistance.",
+      output:"One completion record per stop",
+      why:"Because the criteria are fixed in advance, completion does not depend on the facilitator's judgement in the moment and stays comparable across participants.",
+    },
+    "ev-support":{
+      kind:"Session record", title:"Support use",
+      sub:"Card opens, audio replays and input-method switches, with observations of when they happen.",
+      output:"A timeline of support use",
+      why:"A long task might mean reading a card or might mean repeating a sentence over and over, and the two call for different fixes; only the timing separates them.",
+    },
+    "ev-feedback":{
+      kind:"Session record", title:"Feedback",
+      sub:"Brief post-session ratings of ease and effort, then an interview about confusing steps and useful features.",
+      output:"Ratings + interview notes",
+      why:"Logs show where a learner got stuck but not what they thought the system was asking, and that part can only be asked.",
+      detail:"The interview follows immediately and asks about specific steps rather than general impressions; responses are grouped into themes and read against the sticking points in the logs.",
+    },
+
+    /* ---------- 04 / 05 ---------- */
+    "res-asr":{
+      kind:"Result", title:"ASR results",
+      sub:"CER and median latency for three models on the same recordings.",
+      output:"To be filled",
+      why:"This table decides which recognition model ships; the definitions and run conditions are already fixed in stage 03.",
+      detail:"Besides the summary numbers, keep the error samples: if the errors cluster on number words, the damage is limited to two stops rather than the whole route.",
+      emptyText:"Attach the results here once the runs are done.",
+    },
+    "res-tts":{
+      kind:"Result", title:"TTS results",
+      sub:"Pronunciation accuracy and 1–5 intelligibility for two models.",
+      output:"To be filled",
+      why:"Decides which model synthesises the model sentences; pronunciation errors get copied by learners, so that metric takes priority over intelligibility.",
+      emptyText:"Attach the results here once the blind review is done.",
+    },
+    "res-quant":{
+      kind:"Result", title:"Behaviour and completion",
+      sub:"Completion rate, time, retries, assists and support use.",
+      output:"To be filled",
+      why:"This side answers whether learners got through, and which stop or field held them up.",
+      emptyText:"Attach the summary here once the sessions are done.",
+    },
+    "res-qual":{
+      kind:"Result", title:"Experience and confusion",
+      sub:"Ease-of-use ratings and interview themes.",
+      output:"To be filled",
+      why:"This side answers what learners thought the system was asking, and is what turns a sticking point in the logs into a design change.",
+      emptyText:"Attach the themes here once the interviews are analysed.",
+    },
+  },
+};
+
+/* --------------------------- 界面文案 --------------------------- */
+const UI = {
+  zh:{
+    docTitle:"上海话虚拟豫园学习应用 · 系统拆解",
+    pageTitle:"上海话虚拟豫园学习应用 · 系统拆解",
+    stagesLabel:"分析阶段", flowsLabel:"流程导航",
+    outLabel:"输出", whyLabel:"为什么：", whyHead:"为什么需要这一步",
+    moreSummary:"背景、例子与省略风险",
+    countAll:n=>`全部 ${n} 条`,
+    ioTitle:"输入与输出效果", pickLabel:"选择一条线上调用",
+    emptyTrace:"还没有挂上记录。", noRecord:"这一步没有记录。",
+    tabPreview:"效果预览", tabRaw:"原始记录", noRaw:"（未保留原始记录）",
+    emptyInspector:"选中左侧任意节点，查看它的作用与记录。",
+    missingCard:"缺少节点数据：",
+  },
+  en:{
+    docTitle:"AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec",
+    pageTitle:"AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec",
+    stagesLabel:"Stages", flowsLabel:"Flows",
+    outLabel:"Output", whyLabel:"Why: ", whyHead:"Why this step exists",
+    moreSummary:"Background, examples, and what breaks without it",
+    countAll:n=>`All ${n}`,
+    ioTitle:"Inputs and outputs", pickLabel:"Pick a logged call",
+    emptyTrace:"No records attached yet.", noRecord:"Nothing recorded at this step.",
+    tabPreview:"Preview", tabRaw:"Raw record", noRaw:"(no raw record kept)",
+    emptyInspector:"Select a node on the left to see what it does and its records.",
+    missingCard:"Missing node data: ",
+  },
+};
+
+/* ========================== 以下为渲染逻辑 ========================== */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* 英文覆盖层按下标／键名合并到中文数据上，未覆盖的字段自动回退。 */
+function merge(base, over){
+  if(over === undefined) return base;
+  if(Array.isArray(base)){
+    const out = base.slice();
+    if(Array.isArray(over)) over.forEach((v,i)=>{ out[i] = merge(base[i], v); });
+    else Object.keys(over).forEach(k=>{ out[+k] = merge(base[+k], over[k]); });
+    return out;
+  }
+  if(base && typeof base === 'object'){
+    if(!over || typeof over !== 'object') return over;
+    const out = Object.assign({}, base);
+    Object.keys(over).forEach(k=>{ out[k] = merge(base[k], over[k]); });
+    return out;
+  }
+  return over;
+}
+
+let lang = 'en';
+let V = merge(DATA, { stages: EN.stages, cards: EN.cards });
+let T = UI.en;
+let state = { stage: DATA.activeStage, flow: null, card: null, trace: 0, tab: 'preview' };
+
+function setLang(next){
+  lang = next;
+  T = UI[lang];
+  V = lang === 'zh' ? DATA : merge(DATA, { stages: EN.stages, cards: EN.cards });
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = T.docTitle;
+  $('#pageTitle').textContent = T.pageTitle;
+  $('#flowsLabel').textContent = T.flowsLabel;
+  $('#stages').setAttribute('aria-label', T.stagesLabel);
+  renderLang();
+  renderAll();
+}
+
+function renderLang(){
+  $('#langSwitch').querySelectorAll('[data-lang]').forEach(b=>{
+    b.setAttribute('aria-selected', b.dataset.lang === lang);
+  });
+}
+
+const curStage = () => V.stages[state.stage];
+const curFlow  = () => curStage().flows.find(f => f.key === state.flow) || curStage().flows[0];
+
+function renderStages(){
+  const el = $('#stages');
+  el.innerHTML = '';
+  V.stages.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'stage';
+    if(i === state.stage) b.setAttribute('aria-current','step');
+    b.innerHTML = `<span class="stage-num">${esc(s.num)}</span>
+      <span><span class="stage-name">${esc(s.name)}</span><br><span class="stage-desc">${esc(s.desc)}</span></span>`;
+    b.onclick = () => { state.stage = i; state.flow = V.stages[i].flows[0].key; selectFirstCard(); renderAll(); };
+    el.appendChild(b);
+    if(i < V.stages.length-1){
+      const sep = document.createElement('span');
+      sep.className = 'stage-sep'; sep.textContent = '→';
+      el.appendChild(sep);
+    }
+  });
+}
+
+function renderFlows(){
+  const el = $('#flows');
+  el.querySelectorAll('.flow-tab,.flow-arrow').forEach(n=>n.remove());
+  const flows = curStage().flows;
+  flows.forEach((f,i)=>{
+    const b = document.createElement('button');
+    b.className = 'flow-tab'; b.role = 'tab';
+    b.setAttribute('aria-selected', f.key === curFlow().key);
+    b.innerHTML = `<span class="k">${esc(f.key)}</span>${esc(f.name)}`;
+    b.onclick = () => { state.flow = f.key; selectFirstCard(); renderAll(); };
+    el.appendChild(b);
+    if(i < flows.length-1){ const a = document.createElement('span'); a.className='flow-arrow'; a.textContent='→'; el.appendChild(a); }
+  });
+}
+
+function cardHTML(id){
+  const c = V.cards[id];
+  if(!c) return `<div class="card"><p class="sub">${esc(T.missingCard)}${esc(id)}</p></div>`;
+  return `<button class="card" data-card="${esc(id)}" aria-pressed="${state.card===id}">
+    <div class="card-top">
+      <span class="card-idx">${esc(c.idx)}</span>
+      <span class="card-kind">${esc(c.kind)}</span>
+      <span class="card-open">↗</span>
+    </div>
+    <h4>${esc(c.title)}</h4>
+    <p class="sub">${esc(c.sub)}</p>
+    <hr>
+    <div class="out">${esc(T.outLabel)}<b>${esc(c.output)}</b></div>
+    <p class="why"><b>${esc(T.whyLabel)}</b>${esc(c.why)}</p>
+  </button>`;
+}
+
+function blockHTML(b){
+  switch(b.type){
+    case 'source':
+      return `<div class="node-source">
+        <span class="glyph">☰</span>
+        <span><h3>${esc(b.title)}</h3>${b.meta?`<p>${esc(b.meta)}</p>`:''}</span>
+        ${b.link?`<span class="side"><a class="pill-link" href="${esc(b.link.href||'#')}">${esc(b.link.label)} ↗</a></span>`:''}
+      </div><div class="drop arrow"></div>`;
+    case 'step':
+      return `<div class="center"><div class="node-step">${esc(b.title)}
+        ${b.link?`<a class="pill-link" href="${esc(b.link.href||'#')}">${esc(b.link.label)} ↗</a>`:''}
+      </div></div><div class="drop arrow"></div>`;
+    case 'decision':
+      return `<div class="center"><div class="node-decision">
+        <span class="rhombus"></span>${esc(b.title)}<span class="hint">${esc(b.hint||'')}</span>
+      </div></div>`;
+    case 'result':
+      return `<div class="center"><div class="node-result">${esc(b.title)}
+        ${b.link?`<a class="pill-link" href="${esc(b.link.href||'#')}">${esc(b.link.label)} ↗</a>`:''}
+      </div></div>`;
+    case 'note':
+      return `<div class="tail">${esc(b.text)}</div>`;
+    case 'branches': {
+      const fork = dir => `<div class="fork ${dir}">${b.paths.map(p=>`<div style="flex:${p.flex||1}"></div>`).join('')}</div>`;
+      const paths = b.paths.map(p=>`
+        <section class="path" style="flex:${p.flex||1}">
+          <div class="path-head"><span class="path-tag">${esc(p.tag)}</span><span class="path-name">${esc(p.name)}</span></div>
+          <div class="card-row">${p.cards.map(cardHTML).join('<span class="seq">→</span>')}</div>
+          ${p.note?`<p class="path-note">${esc(p.note)}</p>`:''}
+        </section>`).join('');
+      return `${fork('down')}<div class="paths">${paths}</div>
+        ${b.footnote?`<p class="footnote">${esc(b.footnote)}</p>`:''}
+        ${fork('up')}`;
+    }
+    default: return '';
+  }
+}
+
+function renderCanvas(){
+  const flow = curFlow();
+  $('#canvas').innerHTML =
+    (flow.hint?`<p class="canvas-hint">▸ ${esc(flow.hint)}</p>`:'') +
+    flow.blocks.map(blockHTML).join('');
+  $('#canvas').querySelectorAll('[data-card]').forEach(btn=>{
+    btn.onclick = () => { state.card = btn.dataset.card; state.trace = 0; state.tab = 'preview'; renderAll(); };
+  });
+}
+
+function ioHTML(items){
+  if(!items || !items.length) return `<p class="empty">${esc(T.noRecord)}</p>`;
+  const head = items[0].kind ? items[0] : null;
+  const body = head ? items.slice(1) : items;
+  return `<div class="io">
+    ${head?`<div class="io-tag"><span class="t">${esc(head.kind)}</span><span class="d">${esc(head.desc||'')}</span></div>`:''}
+    ${body.map(i=>`<div class="io-item${i.quote?' quote':''}">
+      ${i.title?`<h5>${esc(i.title)}</h5>`:''}<p>${esc(i.text)}</p></div>`).join('')}
+  </div>`;
+}
+
+function renderInspector(){
+  const c = V.cards[state.card];
+  const box = $('#inspector');
+  if(!c){ box.innerHTML = `<p class="empty">${esc(T.emptyInspector)}</p>`; return; }
+  const traces = c.traces || [];
+  const t = traces[state.trace];
+  const ioTitle   = c.ioTitle   || T.ioTitle;
+  const pickLabel = c.pickLabel || T.pickLabel;
+  const emptyText = c.emptyText || T.emptyTrace;
+
+  box.innerHTML = `
+    <div class="insp-crumb"><span class="idx">${esc(c.idx)}</span>${esc(c.kind)}</div>
+    <h2>${esc(c.title)}</h2>
+
+    <div class="insp-block">
+      <p class="insp-h">${esc(T.whyHead)}</p>
+      <p>${esc(c.why)}</p>
+      ${c.detail?`<details class="more"><summary>${esc(T.moreSummary)}</summary>
+        <div class="body">${esc(c.detail)}</div></details>`:''}
+    </div>
+
+    <div class="insp-block">
+      <div class="insp-h-row">
+        <p class="insp-h" style="margin:0">${esc(ioTitle)}</p>
+        <span class="count">${esc(T.countAll(traces.length))}</span>
+      </div>
+      ${traces.length ? `
+        <p class="field-label">${esc(pickLabel)}</p>
+        <select class="trace" id="traceSel" aria-label="${esc(pickLabel)}">
+          ${traces.map((x,i)=>`<option value="${i}" ${i===state.trace?'selected':''}>${esc(x.label)}</option>`).join('')}
+        </select>
+        <p class="meta">${esc(t.model)}<br>${esc(t.time)}</p>
+        <div class="seg" role="tablist">
+          <button role="tab" data-tab="preview" aria-selected="${state.tab==='preview'}">${esc(T.tabPreview)}</button>
+          <button role="tab" data-tab="raw" aria-selected="${state.tab==='raw'}">${esc(T.tabRaw)}</button>
+        </div>
+        ${state.tab==='preview'
+          ? ioHTML(t.input) + ioHTML(t.output)
+          : `<pre class="raw">${esc(t.raw||T.noRaw)}</pre>`}
+      ` : `<p class="empty">${esc(emptyText)}</p>`}
+  `;
+
+  const sel = $('#traceSel');
+  if(sel) sel.onchange = e => { state.trace = +e.target.value; renderInspector(); };
+  box.querySelectorAll('[data-tab]').forEach(b=>{
+    b.onclick = () => { state.tab = b.dataset.tab; renderInspector(); };
+  });
+}
+
+function selectFirstCard(){
+  const flow = curFlow();
+  state.flow = flow.key;
+  const br = flow.blocks.find(b => b.type === 'branches');
+  state.card = br ? br.paths[0].cards[0] : null;
+  state.trace = 0; state.tab = 'preview';
+}
+
+function renderAll(){ renderStages(); renderFlows(); renderCanvas(); renderInspector(); }
+
+$('#langSwitch').querySelectorAll('[data-lang]').forEach(b=>{
+  b.onclick = () => setLang(b.dataset.lang);
+});
+
+selectFirstCard();
+setLang('zh');
+</script>
+</body>
+</html>
