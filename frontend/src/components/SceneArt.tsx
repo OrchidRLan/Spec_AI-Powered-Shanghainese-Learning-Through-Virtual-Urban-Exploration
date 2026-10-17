@@ -408,11 +408,11 @@ function TakeawayBox({ x, y }: { x: number; y: number }) {
   </g>
 }
 
-/** Presentation only: the parent may select packing after a successful save, and packed on restore. */
-export function NanxiangScene({ label = 'A welcoming server at a warm wooden dumpling counter', className, pose = 'welcome', quantity, takeaway }: ArtProps & { pose?: ScenePose; quantity?: number | null; takeaway?: boolean | null }) {
+/** Saved order presentation stays independent of the host's speaking animation. */
+export function NanxiangScene({ label = 'A welcoming server at a warm wooden dumpling counter', className, pose = 'welcome', quantity, takeaway, completed: savedCompletion }: ArtProps & { pose?: ScenePose; quantity?: number | null; takeaway?: boolean | null; completed?: boolean }) {
   const id = `nanxiang-${useId().replace(/:/g, '')}`
   const servingCount = typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 1 && quantity <= 20 ? quantity : 0
-  const completed = (pose === 'packing' || pose === 'packed') && servingCount > 0 && typeof takeaway === 'boolean'
+  const completed = (savedCompletion ?? (pose === 'packing' || pose === 'packed')) && servingCount > 0 && typeof takeaway === 'boolean'
   const visibleServings = Math.min(servingCount, 3)
   return <svg className={`nanxiang-scene${className ? ` ${className}` : ''}`} data-pose={pose} viewBox="0 0 1100 580" role="img" aria-labelledby={`${id}-title`} preserveAspectRatio="xMidYMid slice">
     <title id={`${id}-title`}>{label}</title><ArtDefs id={id} />

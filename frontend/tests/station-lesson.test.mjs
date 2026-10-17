@@ -47,6 +47,20 @@ function resultAttempt(status, transcript = '我勿吃辣个。', station = 'res
       task_matches: true, channel: 'voice' }, ...lessonChanges,
   });
 }
+function finalAttempt(station = 'restaurant') {
+  const step = planFor(station).steps.at(-1);
+  const answers = station === 'restaurant' ? { preference: 'not_spicy', recommendation: 'recommend', dish: 'fish' }
+    : station === 'candy' ? { flavor: 'mint', quantity: 'two_packs' } : { appreciation: 'good_tea' };
+  return resultAttempt('correct', 'final response', station, { prompt_id: step.hostEntryId }, {
+    step: step.id, step_id: `${station}-final-step`, target: step.options[0].id, answers,
+  });
+}
+function completedResponse(attempt, requestId) {
+  return { request_id: requestId, status: 'applied', attempt: {
+    ...attempt, status: 'completed', revision: attempt.revision + 1, prompt_id: planFor(attempt.station_id).completionEntryId,
+    lesson: { ...attempt.lesson, answers: { ...attempt.lesson.answers, [attempt.lesson.step]: attempt.lesson.target } },
+  } };
+}
 function harness(options = {}) {
   const slots = []; const effects = []; const requests = []; const reads = [];
   const attempts = []; const busy = []; const drafts = []; const phases = []; const events = [];
@@ -75,8 +89,8 @@ function harness(options = {}) {
   class ApiError extends Error {
     constructor(code, message, attempt, terminal = false) { super(message); Object.assign(this, { code, attempt, terminal }); }
   }
-  const audio = { src: '', playbackRate: 1, preservesPitch: false, duration: 10, currentTime: 0, playCalls: 0,
-    async play() { this.playCalls += 1; if (options.audioError) throw new Error('Playback unavailable'); }, pause() {} };
+  const audio = { src: '', playbackRate: 1, preservesPitch: false, duration: 10, currentTime: 0, playCalls: 0, pauseCalls: 0,
+    async play() { this.playCalls += 1; if (options.audioError) throw new Error('Playback unavailable'); }, pause() { this.pauseCalls += 1; } };
   const value = (response, ...args) => typeof response === 'function' ? response(...args) : response?.promise ?? response;
   const context = {
     content, ...components, useState, useRef, useEffect, ApiError, AbortController, DOMException, crypto, sessionStorage,
@@ -140,6 +154,7 @@ function harness(options = {}) {
     get result() { return find(node => node.props?.['data-testid'] === 'lesson-result'); },
     get transcript() { return find(node => node.props?.['data-testid'] === 'lesson-transcript'); },
     get audioNode() { return find(node => node.type === 'audio')?.props; },
+    get scene() { return find(node => node.type === components.StationScene)?.props; },
     operations(operation) { return requests.filter(request => request.body?.operation === operation); },
     click(name) {
       const button = action(name); assert.ok(button, `action exists: ${name}`); assert.ok(!button.props.disabled, `action enabled: ${name}`);
@@ -408,5 +423,101 @@ test('restaurant and candy confirmation speech follows the complete saved choice
     h.click(`edit:${field}`); await h.settle();
     assert.equal(h.operations('edit')[0].body.step, field, 'editing requests only the existing designed step');
     assert.equal(h.operations('continue').length, 0);
+  }
+});
+
+test('each B+C final Continue plays its saved closing line once and returns the host to a completed pose', async t => {
+  for (const station of ['restaurant', 'candy', 'teahouse']) {
+    const attempt = finalAttempt(station); const response = deferred();
+    const h = harness({ station, attempt, continueResponse: response, props: { autoVoice: true, audioSpeed: 0.75 } }); t.after(() => h.dispose());
+    h.runTimers(); await h.settle(); assert.equal(h.audio.playCalls, 0, 'the retained final result does not re-read the question');
+    h.click('continue'); await h.settle();
+    const receipt = h.operations('continue')[0];
+    assert.equal(h.audio.playCalls, 0, 'completion waits for a successful save');
+    response.resolve(completedResponse(attempt, receipt.body.request_id)); await h.settle();
+    assert.equal(h.attempt.lesson.step_id, attempt.lesson.step_id, 'completion retains the final question identity');
+    assert.ok(h.attempt.lesson.result, 'a retained assessment must not suppress the closing line');
+    assert.equal(h.audio.playCalls, 1); assert.equal(h.audio.src, `/audio/test-${planFor(station).completionEntryId}.wav`);
+    assert.equal(h.audio.playbackRate, 0.75); assert.equal(h.audio.preservesPitch, true);
+    h.audioEvent('onPlay'); assert.equal(h.scene.pose, 'speaking'); assert.equal(h.scene.completed, true);
+    assert.match(h.text, /Your host is speaking/);
+    const completePanel = h.find(node => node.props?.className === 'r1-completed bc-completed');
+    const buttons = completePanel.props.children.flat(Infinity).find(node => node?.props?.className?.includes('completed-actions')).props.children;
+    assert.ok(buttons.every(button => !button.props.disabled), 'completion navigation stays available during the closing line');
+    h.audioEvent('onEnded'); assert.equal(h.scene.pose, 'packed');
+    h.update({ attempt: { ...h.attempt }, locale: 'zh' }); h.runTimers(); await h.settle();
+    assert.equal(h.audio.playCalls, 1, 'rerendering, language changes and later timers never repeat the closing line');
+    const sentence = content.entries.find(entry => entry.id === planFor(station).completionEntryId);
+    h.find(node => node.type === 'button' && node.props?.['aria-label'] === `试听 ${sentence.hanzi}`).props.onClick(); await h.settle();
+    assert.equal(h.audio.playCalls, 2, 'manual replay remains available');
+  }
+});
+
+test('restored completion and a saved receipt recovered after remount never auto-play a closing line', async t => {
+  const attempt = finalAttempt(); const done = completedResponse(attempt, 'old-completion');
+  const restored = harness({ attempt: done.attempt, props: { autoVoice: true } }); t.after(() => restored.dispose());
+  restored.runTimers(); await restored.settle(); assert.equal(restored.audio.playCalls, 0);
+  restored.update({ autoVoice: false }); restored.update({ autoVoice: true }); restored.runTimers(); await restored.settle();
+  assert.equal(restored.audio.playCalls, 0);
+  const memory = storage({ [`shanghai-lesson-pending:${attempt.id}`]: JSON.stringify({ requestId: done.request_id,
+    operation: 'continue', stepId: attempt.lesson.step_id, expectedRevision: attempt.revision, target: attempt.lesson.target, transcript: null,
+  }) });
+  const recovered = harness({ attempt, sessionStorage: memory, readResponse: done, props: { autoVoice: true } }); t.after(() => recovered.dispose());
+  recovered.click('recover'); await recovered.settle(); recovered.runTimers(); await recovered.settle();
+  assert.equal(recovered.attempt.status, 'completed'); assert.equal(recovered.audio.playCalls, 0, 'recovery restores state without replaying a prior visit');
+});
+
+test('a local completion with a lost response can play once after confirmed recovery, never from its late response', async t => {
+  const attempt = finalAttempt(); const late = deferred(); let receipt;
+  const h = harness({ attempt, continueResponse: late, readResponse: () => completedResponse(attempt, receipt.body.request_id), props: { autoVoice: true } }); t.after(() => h.dispose());
+  h.click('continue'); await h.settle(); receipt = h.operations('continue')[0];
+  h.runTimers(12000); await h.settle();
+  assert.equal(h.audio.playCalls, 0); assert.equal(h.attempt.status, 'collecting');
+  h.click('recover'); await h.settle(); assert.equal(h.audio.playCalls, 1);
+  late.resolve(completedResponse(attempt, receipt.body.request_id)); await h.settle(); h.runTimers(); await h.settle();
+  assert.equal(h.audio.playCalls, 1); assert.equal(h.attempts.length, 1);
+});
+
+test('host-audio off, navigation stops and a rejected save cannot trigger an automatic closing line', async t => {
+  for (const interrupt of ['off', 'stop', 'unmount', 'cancel', 'conflict']) {
+    const attempt = finalAttempt(); const response = deferred(); let conflict;
+    const h = harness({ attempt, continueResponse: interrupt === 'conflict' ? () => { throw conflict; } : response,
+      cancelResponse: (_path, _body) => ({ request_id: h.operations('continue')[0].body.request_id, status: 'cancelled', attempt }),
+      props: { autoVoice: true } }); t.after(() => { if (interrupt !== 'unmount') h.dispose(); });
+    if(interrupt === 'conflict') conflict = new h.ApiError('stale_revision', 'Already changed', completedResponse(attempt, 'other-visit').attempt);
+    h.click('continue'); await h.settle(); const receipt = h.operations('continue')[0];
+    if(interrupt === 'off') h.update({ autoVoice: false });
+    if(interrupt === 'stop') h.update({ stopSignal: 1 });
+    if(interrupt === 'unmount') h.dispose();
+    if(interrupt === 'cancel') { h.runTimers(12000); await h.settle(); h.click('cancel'); await h.settle(); }
+    response.resolve(completedResponse(attempt, receipt.body.request_id)); await h.settle();
+    if(interrupt !== 'unmount') { h.update({ autoVoice: true }); h.runTimers(); await h.settle(); }
+    assert.equal(h.audio.playCalls, 0, `${interrupt} must not announce an unconfirmed or interrupted completion`);
+  }
+});
+
+test('closing playback waits for the save lock to release and a rejected audio play never loops', async t => {
+  const attempt = finalAttempt(); const response = deferred();
+  const h = harness({ attempt, continueResponse: response, audioError: true, props: { autoVoice: true } }); t.after(() => h.dispose());
+  h.click('continue'); await h.settle(); h.update({ disabled: true });
+  response.resolve(completedResponse(attempt, h.operations('continue')[0].body.request_id)); await h.settle();
+  assert.equal(h.audio.playCalls, 0, 'wait for the parent save lock');
+  h.update({ disabled: false }); await h.settle();
+  assert.equal(h.audio.playCalls, 1); assert.match(h.text, /Audio could not play/);
+  h.runTimers(); h.update({ attempt: { ...h.attempt } }); await h.settle();
+  assert.equal(h.audio.playCalls, 1); assert.equal(h.scene.pose, 'packed');
+  const pauses = h.audio.pauseCalls; h.update({ stopSignal: 1 }); assert.ok(h.audio.pauseCalls > pauses, 'stop signals stop the shared audio channel');
+});
+
+test('completed station illustrations retain the speaking pose during their closing line', async () => {
+  const sceneSource = await readFile(new URL('../src/components/StationScenes.tsx', import.meta.url), 'utf8');
+  const transformed = await transformWithOxc(sceneSource, 'StationScenes.tsx', { jsx: { runtime: 'classic' } });
+  const code = transformed.code.replace(/^import\b[\s\S]*?;\n/gm, '').replace(/export (?=(?:function|const) )/g, '');
+  const runtime = vm.runInNewContext(`${code}\n({ StationScene });`, {
+    useId: () => 'scene-test', React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
+  });
+  for (const station of ['restaurant', 'candy', 'teahouse']) {
+    assert.equal(runtime.StationScene({ station, completed: true, pose: 'speaking' }).props['data-pose'], 'speaking');
+    assert.equal(runtime.StationScene({ station, completed: true, pose: 'idle' }).props['data-pose'], 'packed');
   }
 });

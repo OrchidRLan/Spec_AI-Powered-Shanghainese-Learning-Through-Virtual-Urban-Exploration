@@ -85,6 +85,8 @@ export default function GuidedPractice(props: Props) {
   const inputGeneration = useRef(0);
   const inputTicket = inputGeneration.current;
   const requestController = useRef<AbortController | null>(null);
+  // Media advancement belongs to this mounted interaction, never a receipt restored after navigation or refresh.
+  const localAdvanceRequest = useRef<string | null>(null);
   const latest = useRef(props);
   latest.current = props;
   const currentKey = `${attempt.id}:${practice.step_id}:${JSON.stringify(practice.target)}`;
@@ -126,18 +128,21 @@ export default function GuidedPractice(props: Props) {
   }
   function dismissUnapplied() { setUnapplied(null); try { sessionStorage.removeItem(`shanghai-practice-unapplied:${attempt.id}`); } catch { /* The current view is already cleared. */ } }
   function setBusy(value: boolean) { setWorking(value); onBusyChange(value); }
-  function accept(response: PracticeResponse, operation: PracticeRequest['operation']) {
+  function accept(response: PracticeResponse, receipt: Pending) {
+    const localAdvance = localAdvanceRequest.current === receipt.requestId;
+    localAdvanceRequest.current = null;
     inputGeneration.current += 1;
     if (response.attempt.id !== latest.current.attempt.id || response.attempt.revision < latest.current.attempt.revision) { updatePending(null); setRetrying(false); setMessage('changed'); return; }
     onAttempt(response.attempt); updatePending(null); setRetrying(false); setRecorderReset(value => value + 1); onDraftChange(false);
     setMessage(response.status === 'cancelled' ? 'cancelled' : '');
-    if (response.status === 'applied' && (operation === 'continue' || operation === 'edit')) onAdvanced(response.attempt);
+    if (response.status === 'applied' && localAdvance && (receipt.operation === 'continue' || receipt.operation === 'edit')) onAdvanced(response.attempt);
   }
   async function request(change: Omit<PracticeRequest, 'request_id' | 'expected_revision'>, sourceKey = keyRef.current) {
     if (!mounted.current || sourceKey !== keyRef.current || inFlight.current || pendingRef.current || latest.current.disabled || !latest.current.servicesReady) return;
     inFlight.current = true; onBeforeMedia(); setBusy(true); setMessage('');
     const body: PracticeRequest = { request_id: crypto.randomUUID(), expected_revision: latest.current.attempt.revision, ...change };
     const receipt: Pending = { requestId: body.request_id, operation: body.operation, stepId: practice.step_id, transcript: body.text ?? null, expectedRevision: body.expected_revision };
+    localAdvanceRequest.current = body.operation === 'continue' || body.operation === 'edit' ? receipt.requestId : null;
     updatePending(receipt);
     const ticket = ++generation.current;
     const controller = new AbortController(); requestController.current = controller;
@@ -145,7 +150,7 @@ export default function GuidedPractice(props: Props) {
       const response = await post<PracticeResponse>(`/attempts/${attempt.id}/practice`, body, controller.signal);
       if (!mounted.current || ticket !== generation.current) return;
       if (sourceKey !== keyRef.current) { keepUnapplied(receipt.transcript); updatePending(null); setMessage('changed'); return; }
-      accept(response, body.operation);
+      accept(response, receipt);
     } catch (cause) {
       if (!mounted.current || ticket !== generation.current) return;
       if (cause instanceof ApiError && cause.attempt) { inputGeneration.current += 1; keepUnapplied(receipt.transcript); if(cause.attempt.id === latest.current.attempt.id && cause.attempt.revision >= latest.current.attempt.revision) onAttempt(cause.attempt); updatePending(null); setRetrying(false); setRecorderReset(value => value + 1); setMessage('changed'); }
@@ -164,7 +169,7 @@ export default function GuidedPractice(props: Props) {
       const path = `/attempts/${attempt.id}/practice/${snapshot.requestId}`;
       const response = cancel ? await post<PracticeResponse>(`${path}/cancel`, { expected_revision: latest.current.attempt.revision }) : await api<PracticeResponse>(path);
       if (!mounted.current || ticket !== generation.current) return;
-      accept(response, snapshot.operation);
+      accept(response, snapshot);
     } catch (cause) {
       if (!mounted.current || ticket !== generation.current) return;
       if (cause instanceof ApiError && cause.attempt) { inputGeneration.current += 1; keepUnapplied(snapshot.transcript); if(cause.attempt.id === latest.current.attempt.id && cause.attempt.revision >= latest.current.attempt.revision) onAttempt(cause.attempt); updatePending(null); setRetrying(false); setRecorderReset(value => value + 1); setMessage('changed'); }

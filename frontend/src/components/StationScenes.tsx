@@ -250,7 +250,7 @@ function TeahouseRoom({ id, pose, completed }: { id: string; pose: ScenePose; co
 /** Presentation only. The parent sets completed after a successful server save. */
 export function StationScene({ station, pose = 'welcome', selectedDish, selectedFlavor, completed = false, label, className }: StationSceneProps) {
   const id = `station-${station}-${useId().replace(/:/g, '')}`
-  const resolvedPose = completed && pose !== 'packing' ? 'packed' : pose
+  const resolvedPose = completed && pose !== 'packing' && pose !== 'speaking' ? 'packed' : pose
   const fallbackLabels = {
     restaurant: 'A server welcomes you to a warm dining room with a menu and a porcelain place setting.',
     candy: 'A shopkeeper behind a glass candy counter, with rose, osmanthus and mint packages displayed equally.',

@@ -4,6 +4,10 @@
 
 ## 当前状态
 
+最新交付：[批次 2 修改 1](Batch-2-revision-1.md) 已先落盘再完成实现：四站结束语播放边界、Review 总览/单站详情与逐句双速、园亭对话 Logo。129 项前端回归、类型/开发内容/本地声音校验及构建通过；独立审查问题已修复。真实 Chrome 验证老饭店自动结束语、茶楼关闭声音与手动重听、南翔三份外带完成画面、Review 导航/两速/偏好及中英桌面/手机，七张截图见 [本轮验收](Batch-2-revision-1-acceptance.md)。本轮未改后端/教学内容，因此未重跑整套后端与内容测试；0/4、部分完成为浏览器检查，4/4 组合由前端回归覆盖。
+
+本轮无新增真实语音调用或部署，语言与声音批准状态不变。临时浏览器标签、视口设置与 5174/8001 测试服务已清理；用户原有 5173/8000 服务保留。实现与验收文档随本轮里程碑提交，最终 SHA 与远端同步以 Git 历史核验为准。以下 B+C 的 539 项与全路线记录为前一里程碑证据。
+
 用户已确认批次 A 以修订 4 为验收通过版本，并授权合并完成 B、C。**B+C 的代码、内容与本轮工程检查已交付，待用户体验验收。** 新增老饭店、梨膏糖、湖心亭的独立场景、固定问题、任务规则、保存恢复、声音及回顾；南翔既有 R3 进度和交互保留，不为扩展三站清空记录。
 
 539 项测试（49 内容、110 前端、380 后端）、类型/声音检查及开发构建通过。真实桌面 Chrome 的隔离环境已走完四站，验证历史成功保留和 4/4 回顾；三站中英桌面/手机共 12 张标准截图、另三张确认/回顾截图见 [B+C 验收](Batch-BC-acceptance.md)。320 px 英文三站和回顾页面均未出现横向溢出；窄视窗不等同于实体手机验收。
@@ -23,6 +27,7 @@ A 的产品体验已获用户验收，B+C 尚未收到用户验收结论。语�
 | 四站规格入口 | [Route-drafts-index.md](Route-drafts-index.md) | 各站草案；冲突内容以 A 修订和 B+C 合并计划覆盖 |
 | 批次 A 基线及修订 | [基线验收](Batch-A-acceptance.md)、[R1](Batch-A-revision-1-acceptance.md)、[R2](Batch-A-revision-2-acceptance.md)、[R3](Batch-A-revision-3-acceptance.md)、[R4](Batch-A-revision-4-acceptance.md) | 历史工程证据；A 修订 4 产品体验已通过 |
 | 批次 B+C | [合并计划](Batch-BC-plan.md)、[验收与 15 张截图](Batch-BC-acceptance.md) | 四站代码和工程检查已交付，新增体验待用户审阅 |
+| 批次 2 修改 1 | [需求](Batch-2-revision-1.md)、[验收与七张截图](Batch-2-revision-1-acceptance.md)、[Logo](design/brand/README.md) | 结束语、Review 及品牌接入已实现，待用户体验确认 |
 | 本地应用与接口 | [前端](../frontend/src/App.tsx)、[后端 API](../backend/API.md) | 四站、会话/偏好、逐题结果、保存/恢复、重练及单站/路线回顾 |
 | 场景与设计 | [场景组件](../frontend/src/components/StationScenes.tsx)、[资产清单](design/Asset-manifest.json) | 菜品/糖罐包装/茶具与角色动作采用可编辑 SVG/组件 |
 | 原基础与 R4 内容 | [基础内容](../content/batch-a.json)、[R4 确认句](../content/nanxiang-confirmations-r4.json)、[R2 声音](../content/audio-review-r2.json)、[R4 声音](../content/audio-review-r4.json) | 原 20 条与六条完整确认均有注音/样音，正式批准仍待审核 |
@@ -52,7 +57,7 @@ A 的产品体验已获用户验收，B+C 尚未收到用户验收结论。语�
 - 继续真人麦克风、实体设备、完整 Chrome/Safari、横屏、200% 缩放和读屏检查；恢复与网络故障结论区分自动化测试、实际浏览器和未执行项目。
 - 用户逐句审阅语言、注音和声音后记录真实意见；不将候选标签自行改成批准，不把合成样音或技术辅助路径称为真人识别验收。
 - 已有 R3 会话可继续南翔并进入三站，B+C 内容/规则独立绑定；R1/R2 历史会话仍按原有版本流程明确开始新探索，不静默迁移或重置。
-- `npm run check` 最新为 539 项测试并包含全部声音/版本检查；`npm run build` 已通过。正式内容校验拒绝 388 项待审条件，未继续完整 `build:release`。构建中 653.93 kB JavaScript chunk 提示作为后续加载优化项保留。
+- 上次完整 `npm run check` 为 B+C 的 539 项；本轮按前端改动验证 129 项 UI 回归及类型、内容/声音校验与构建。上次正式内容校验拒绝 388 项待审条件，本轮未重跑 `build:release`。最新构建 654.89 kB JavaScript chunk 的体积提示作为后续加载优化项保留。
 - 早期 pytest 导入默认应用曾触发开发数据库 `CREATE TABLE IF NOT EXISTS` 结构初始化，未读取或修改业务记录。现已在 [conftest.py](../backend/tests/conftest.py) 导入应用前设置临时数据库，后续测试隔离；[验收技术备注](Batch-BC-acceptance.md#数据隔离与技术备注)保留实际情况。
 
 ## 批次 A 已执行检查

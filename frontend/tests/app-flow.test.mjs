@@ -59,14 +59,14 @@ function harness(options = {}) {
   const localStorage = options.localStorage ?? storage({ 'shanghai-review-autovoice': 'off' });
   const attempt = options.attempt ?? makeAttempt();
   const serverSession = {
-    id: 'session-r2', locale: options.locale ?? 'en', show_romanization: true, reduced_motion: false,
+    id: 'session-r2', locale: options.locale ?? 'en', show_romanization: options.romanization ?? true, reduced_motion: false,
     content_version: content.contentVersion, rule_version: 'test',
     attempts: options.attempts ?? (options.completed && attempt.status !== 'completed'
       ? [makeAttempt({ id: 'previous-completed', status: 'completed' }), attempt] : [attempt]),
     completed_station_ids: options.completedStationIds ?? (options.completed ? ['nanxiang'] : []), services: {},
   };
-  const audio = { src: '', playbackRate: 1, preservesPitch: false, playCalls: 0,
-    async play() { this.playCalls += 1; }, pause() {}, currentTime: 0 };
+  const audio = { src: '', playbackRate: 1, preservesPitch: false, playCalls: 0, pauseCalls: 0,
+    async play() { this.playCalls += 1; }, pause() { this.pauseCalls += 1; }, currentTime: 0 };
   const dependenciesMatch = (left, right) => left && right && left.length === right.length
     && left.every((value, index) => Object.is(value, right[index]));
   const useState = initial => {
@@ -86,7 +86,7 @@ function harness(options = {}) {
       effects.push(() => { slot.cleanup?.(); slot.cleanup = callback(); });
     }
   };
-  const components = Object.fromEntries(['Dialog', 'Recorder', 'GuidedPractice', 'StationLesson', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
+  const components = Object.fromEntries(['Brand', 'Dialog', 'Recorder', 'GuidedPractice', 'StationLesson', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
     .map(name => [name, function boundaryComponent() {}]));
   const window = {
     location: { hash: options.hash ?? '#nanxiang' },
@@ -142,12 +142,12 @@ function harness(options = {}) {
   }
   function elements(node = tree) {
     if (!node || typeof node !== 'object') return [];
-    return [node, ...(node.props?.children ?? []).flat(Infinity).flatMap(child => elements(child))];
+    return [node, ...(node.props?.children ?? []).flat(Infinity).filter(child => child != null).flatMap(child => elements(child))];
   }
   function text(node = tree) {
     if (typeof node === 'string' || typeof node === 'number') return String(node);
     if (!node || typeof node !== 'object') return '';
-    return (node.props?.children ?? []).flat(Infinity).map(text).join('');
+    return (node.props?.children ?? []).flat(Infinity).filter(child => child != null).map(text).join('');
   }
   const find = predicate => elements().find(predicate);
   flush();
@@ -449,25 +449,52 @@ test('refresh during an order edit restores its question and unlocked fallback',
   assert.ok(refreshed.find(node => node.props?.entry?.id === 'NX-N02'));
 });
 
-test('Review cannot be opened by initial URL or hash navigation before Nanxiang completion', async t => {
-  for (const status of ['collecting', 'skipped']) {
-    const h = harness({ hash: '#review', attempt: makeAttempt({ status }) }); t.after(() => h.dispose()); await h.settle();
-    assert.equal(h.hash, 'map');
-    assert.equal(h.find(node => node.props?.className === 'review-page page-shell'), undefined);
-    h.hashChange('#review'); await h.settle();
-    assert.equal(h.hash, 'map');
-    assert.equal(h.find(node => node.props?.className === 'review-page page-shell'), undefined);
+test('Review overview is accessible with zero completed stops and never opens expressions automatically', async t => {
+  for (const attempts of [[], [makeAttempt()], [makeAttempt({ status: 'skipped' })]]) {
+    const h = harness({ hash: '#review', attempts }); t.after(() => h.dispose()); await h.settle();
+    assert.equal(h.hash, '#review');
+    assert.ok(h.find(node => node.props?.className === 'review-page page-shell'));
+    const cards = h.find(node => node.props?.className === 'review-stop-grid').props.children.flat(Infinity).filter(Boolean);
+    assert.equal(cards.length, 4);
+    assert.equal(h.find(node => node.props?.entry), undefined, 'the overview only contains stop status and entry buttons');
+    assert.equal(h.find(node => node.props?.className === 'review-stats'), undefined);
+    assert.equal(h.find(node => node.props?.className === 'bc-review-tabs'), undefined);
+    assert.ok(h.find(node => node.props?.['aria-label'] === 'Start: Shanghai Old Restaurant'));
+    assert.match(h.text, /Not started/);
+    if (attempts[0]?.status === 'skipped') assert.match(h.text, /Visit later/);
+    if (attempts[0]?.status === 'collecting') assert.ok(h.find(node => node.props?.['aria-label'] === 'Continue: Nanxiang Steamed Bun Restaurant'));
   }
 });
 
-test('completed Nanxiang unlocks Review and keeps it available during a repeat attempt', async t => {
+test('Nanxiang review detail stays unlocked during a repeat attempt and survives refresh', async t => {
   for (const status of ['completed', 'collecting']) {
-    const h = harness({ hash: '#review', completed: true, attempt: makeAttempt({ status }) });
+    const h = harness({ hash: '#review/nanxiang', completed: true, attempt: makeAttempt({ status }) });
     t.after(() => h.dispose()); await h.settle();
-    assert.ok(h.find(node => node.props?.className === 'review-page page-shell'));
+    assert.equal(h.hash, '#review/nanxiang');
     for (const id of ['NX-ITEM-XLB', 'NX-Q1', 'NX-Q2', 'NX-Q3', 'NX-MODE-HERE', 'E09', 'E05']) {
       assert.ok(h.find(node => node.props?.entry?.id === id), `${id} is available for review`);
     }
+    assert.equal(h.find(node => node.props?.className === 'review-stop-grid'), undefined);
+    h.click('Back to all stops');
+    assert.equal(h.hash, 'review');
+    assert.equal(h.find(node => node.props?.entry), undefined);
+    h.click(node => node.props?.['aria-label'] === 'Review: Nanxiang Steamed Bun Restaurant');
+    assert.equal(h.hash, 'review/nanxiang');
+    assert.ok(h.find(node => node.props?.entry?.id === 'NX-Q1'));
+  }
+});
+
+test('invalid or unfinished review detail URLs return to overview without clearing the session', async t => {
+  for (const hash of ['#review/unknown', '#review/nanxiang', '#review/restaurant']) {
+    const h = harness({ hash }); t.after(() => h.dispose()); await h.settle();
+    assert.equal(h.hash, 'review');
+    assert.ok(h.find(node => node.props?.className === 'review-stop-grid'));
+    assert.equal(h.find(node => node.props?.entry), undefined);
+    assert.equal(h.requests.length, 0, 'a rejected route cannot change stored progress');
+    h.hashChange('#review/another-unknown-stop'); await h.settle();
+    assert.equal(h.hash, 'review', 'invalid navigation is canonicalized even from the existing overview');
+    h.click(node => node.props?.['aria-label'] === 'Continue: Nanxiang Steamed Bun Restaurant');
+    assert.equal(h.hash, 'nanxiang'); assert.ok(h.tab('speak'));
   }
 });
 
@@ -623,8 +650,8 @@ test('R4 completion actions keep every icon before its label and remove repeated
     }
     assert.doesNotMatch(h.text, /You completed your order|Task completion is not a pronunciation score|你完成了这次点单|任务完成记录不代表/);
     assert.ok(h.find(node => node.props?.entry?.id === 'NX-N10'), 'completed turns keep the completion sentence');
-    h.click(locale === 'zh' ? '复习' : 'Review');
-    assert.equal(h.hash, 'review');
+    h.click(node => node === buttons[0]);
+    assert.equal(h.hash, 'review/nanxiang');
     assert.doesNotMatch(h.text, /This records conversations and practice|这里记录交流与练习/);
   }
 });
@@ -660,25 +687,17 @@ test('B+C starting a station sends that station identity and preserves existing 
   }
 });
 
-test('B+C Review unlocks only completed stations and remains available while a completed station is retried', async t => {
+test('all three new review details use the completed station even while it is retried', async t => {
   for (const station of ['restaurant', 'candy', 'teahouse']) for (const locale of ['zh', 'en']) {
     const saved = makeLessonAttempt(station, { status: 'completed' });
     const retry = makeLessonAttempt(station, { id: `retry-${station}` });
-    const h = harness({ hash: '#review', locale, attempts: [makeAttempt(), saved, retry], completedStationIds: [station] });
+    const h = harness({ hash: `#review/${station}`, locale, attempts: [makeAttempt(), saved, retry], completedStationIds: [station] });
     t.after(() => h.dispose()); await h.settle();
     assert.ok(h.find(node => node.props?.className === 'review-page page-shell'));
-    const pageHeading = h.find(node => node.props?.className === 'page-heading');
-    assert.doesNotMatch(h.textOf(pageHeading), /Nanxiang|南翔/);
-    assert.match(h.textOf(pageHeading), locale === 'zh' ? /回顾已完成地点的表达/ : /Revisit expressions from the stops you have completed/);
-    const expressionHeading = h.find(node => node.props?.className === 'r2-review-heading');
-    assert.doesNotMatch(h.textOf(expressionHeading), /Nanxiang|南翔/);
-    const plan = stationContentData.stationPlans.find(item => item.id === station);
-    assert.ok(h.textOf(expressionHeading).includes(plan.taskDescription[locale]), 'review help describes the selected station task');
-    if (station === 'teahouse') assert.match(h.textOf(expressionHeading), locale === 'zh' ? /湖心亭茶楼的表达/ : /Your Huxin Pavilion expressions/);
+    const heading = h.find(node => node.props?.className === 'page-heading review-detail-heading');
+    assert.doesNotMatch(h.textOf(heading), /Nanxiang|南翔/);
     assert.match(h.title, locale === 'zh' ? /复习$/ : /Review$/);
-    const tabs = h.find(node => node.props?.className === 'bc-review-tabs');
-    const buttons = tabs.props.children.flat(Infinity).filter(Boolean);
-    assert.equal(buttons.length, 1, 'unfinished stations have no expression review tab');
+    assert.equal(h.find(node => node.props?.className === 'bc-review-tabs'), undefined);
     for (const id of stationContentData.stationPlans.find(item => item.id === station).reviewEntryIds) {
       assert.ok(h.find(node => node.props?.entry?.id === id), `${id} is available after this station completes`);
     }
@@ -688,12 +707,181 @@ test('B+C Review unlocks only completed stations and remains available while a c
   }
 });
 
-test('completing the teahouse first records one real stop and does not claim the full route is complete', async t => {
+test('completing the teahouse opens its detail and overview reports only that stop as completed', async t => {
   const h = harness({ hash: '#teahouse', attempts: [makeLessonAttempt('teahouse')] }); t.after(() => h.dispose()); await h.settle();
   h.lesson.onAttempt(makeLessonAttempt('teahouse', { revision: 4, status: 'completed' })); await h.settle();
   h.lesson.onReview(); await h.settle();
-  const stats = h.find(node => node.props?.className === 'review-stats');
-  assert.match(h.textOf(stats), /^1\/ 4/);
-  assert.doesNotMatch(h.text, /Four stops\. A little more Shanghai|You have shared a meal/);
+  assert.equal(h.hash, 'review/teahouse');
+  assert.ok(h.find(node => node.props?.entry?.id === stationContentData.stationPlans.find(item => item.id === 'teahouse').reviewEntryIds[0]));
+  h.click('Back to all stops');
+  const grid = h.find(node => node.props?.className === 'review-stop-grid');
+  const cards = grid.props.children.flat(Infinity).filter(Boolean);
+  assert.equal(cards.filter(card => h.textOf(card).includes('Completed')).length, 1);
+  assert.equal(h.find(node => node.props?.className === 'review-stats'), undefined);
   assert.equal(h.find(node => node.props?.className === 'bc-route-banner'), undefined);
+});
+
+test('all completed stops appear only as status cards until their Review button is chosen', async t => {
+  const attempts = [makeAttempt({ status: 'completed' }), ...['restaurant', 'candy', 'teahouse'].map(id => makeLessonAttempt(id, { status: 'completed' }))];
+  const h = harness({ hash: '#review', attempts, completedStationIds: ['restaurant', 'candy', 'nanxiang', 'teahouse'] });
+  t.after(() => h.dispose()); await h.settle();
+  const cards = h.find(node => node.props?.className === 'review-stop-grid').props.children.flat(Infinity).filter(Boolean);
+  assert.equal(cards.filter(card => h.textOf(card).includes('Completed')).length, 4);
+  assert.equal(h.find(node => node.props?.entry), undefined);
+  assert.doesNotMatch(h.text, /Four stops\. A little more Shanghai|You have shared a meal|Voice tries|Help used/);
+  h.click(node => node.props?.['aria-label'] === 'Review: Shanghai Pear Candy Shop');
+  assert.equal(h.hash, 'review/candy');
+  assert.ok(h.find(node => node.props?.entry?.id === stationContentData.stationPlans.find(item => item.id === 'candy').reviewEntryIds[0]));
+});
+
+test('review details respond to browser back and forward within the same review view', async t => {
+  const attempts = ['restaurant', 'teahouse'].map(id => makeLessonAttempt(id, { status: 'completed' }));
+  const h = harness({ hash: '#review/restaurant', attempts, completedStationIds: ['restaurant', 'teahouse'] });
+  t.after(() => h.dispose()); await h.settle();
+  const restaurantId = stationContentData.stationPlans.find(item => item.id === 'restaurant').reviewEntryIds[0];
+  const teaId = stationContentData.stationPlans.find(item => item.id === 'teahouse').reviewEntryIds[0];
+  assert.ok(h.find(node => node.props?.entry?.id === restaurantId));
+  h.hashChange('#review'); await h.settle(); assert.ok(h.find(node => node.props?.className === 'review-stop-grid'));
+  h.hashChange('#review/teahouse'); await h.settle(); assert.ok(h.find(node => node.props?.entry?.id === teaId));
+  assert.equal(h.find(node => node.props?.entry?.id === restaurantId), undefined);
+  h.hashChange('#review/restaurant'); await h.settle(); assert.ok(h.find(node => node.props?.entry?.id === restaurantId));
+});
+
+test('each expression plays directly at its own speed, stops other audio and leaves task preferences unchanged', async t => {
+  const saved = makeAttempt({ status: 'completed' });
+  const h = harness({ hash: '#review/nanxiang', attempt: saved, completed: true, romanization: false, localStorage: storage({ 'shanghai-audio-speed': '0.75', 'shanghai-review-autovoice': 'off' }) });
+  t.after(() => h.dispose()); await h.settle();
+  assert.equal(h.find(node => node.props?.className === 'r2-speed'), undefined, 'there is no shared speed control');
+  assert.equal(h.find(node => node.props?.entry?.id === 'NX-Q1').props.romanization, false);
+  let pauses = h.audio.pauseCalls;
+  for (const [id, label, rate] of [['NX-Q1', 'Normal', 1], ['NX-Q1', 'Slow', 0.75], ['NX-Q2', 'Normal', 1]]) {
+    h.click(node => node.props?.['aria-label'] === `${label}: ${entry(id).hanzi}`); await h.settle();
+    assert.equal(h.audio.playbackRate, rate); assert.equal(h.audio.preservesPitch, true);
+    assert.ok(h.audio.pauseCalls > pauses, 'new playback stops the previous audio first'); pauses = h.audio.pauseCalls;
+    assert.equal(h.localStorage.getItem('shanghai-audio-speed'), '0.75', 'review never persists a task speed');
+  }
+  assert.equal(h.audio.playCalls, 3);
+  h.hashChange('#review'); await h.settle();
+  assert.ok(h.audio.pauseCalls > pauses, 'leaving a detail through browser history stops playback');
+  assert.equal(h.requests.length, 0, 'local review playback makes no speech service or preference request');
+  h.hashChange('#nanxiang'); await h.settle();
+  h.click(node => node.props?.['aria-label'] === `Listen to ${entry(saved.prompt_id).hanzi}`); await h.settle();
+  assert.equal(h.audio.playbackRate, 0.75, 'the lesson still uses its original speed');
+});
+
+test('review Continue enters the latest unfinished station attempt', async t => {
+  const latest = makeLessonAttempt('restaurant', { id: 'latest-restaurant', revision: 12 });
+  const h = harness({ hash: '#review', attempts: [makeLessonAttempt('restaurant', { id: 'earlier-restaurant' }), latest] });
+  t.after(() => h.dispose()); await h.settle();
+  h.click(node => node.props?.['aria-label'] === 'Continue: Shanghai Old Restaurant'); await h.settle();
+  assert.equal(h.hash, 'restaurant'); assert.equal(h.lesson.attempt.id, 'latest-restaurant');
+  assert.equal(h.requests.length, 0, 'continuing never creates or resets the attempt');
+});
+
+
+test('leaving a recording preserves the requested review detail through the leave guard', async t => {
+  const h = harness({ completed: true }); t.after(() => h.dispose()); await h.settle();
+  h.practice('NX-Q1'); h.recorder.onDraftChange(true); await h.settle();
+  h.hashChange('#review/nanxiang'); await h.settle();
+  assert.equal(h.hash, '#nanxiang');
+  assert.ok(h.find(node => node.type === 'button' && h.textOf(node) === 'Leave and discard recording'));
+  assert.equal(h.find(node => node.props?.className === 'review-expression-grid'), undefined);
+  h.click('Leave and discard recording'); await h.settle();
+  assert.equal(h.hash, 'review/nanxiang');
+  assert.ok(h.find(node => node.props?.entry?.id === 'NX-Q1'));
+});
+
+test('review playback events belong to its completed station rather than another active attempt', async t => {
+  const saved = makeLessonAttempt('candy', { status: 'completed' });
+  const h = harness({ hash: '#review/candy', attempts: [makeAttempt(), saved, makeLessonAttempt('candy', { id: 'candy-retry' })], completedStationIds: ['candy'] });
+  t.after(() => h.dispose()); await h.settle();
+  const phrase = stationContentData.entries.find(item => item.id === stationContentData.stationPlans.find(item => item.id === 'candy').reviewEntryIds[0]);
+  h.click(node => node.props?.['aria-label'] === `Normal: ${phrase.hanzi}`); await h.settle();
+  h.find(node => node.type === 'audio').props.onPlay(); await h.settle();
+  const event = h.requests.find(request => request.path === '/events');
+  assert.equal(event.body.attempt_id, saved.id);
+  assert.equal(event.body.metadata.text_id, phrase.id);
+});
+
+
+test('Nanxiang closing playback shows the speaking host, then keeps its completed pose and direct review', async t => {
+  const initial = makeAttempt({ status: 'confirming', prompt_id: 'NX-N09', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  assert.equal(h.audio.playCalls, 0, 'restoration is silent');
+  const callbacks = h.guided;
+  const completed = makeAttempt({ revision: 5, status: 'completed', prompt_id: 'NX-N10', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  callbacks.onAttempt(completed); callbacks.onAdvanced(completed); await h.settle(); h.runTimers(); await h.settle();
+  assert.equal(h.audio.playCalls, 1);
+  assert.equal(h.audio.src, manifest.clips.find(clip => clip.textId === 'NX-N10').file);
+  const audio = h.find(node => node.type === 'audio'); audio.props.onPlay(); await h.settle();
+  assert.equal(h.find(node => node.props?.pose === 'speaking').props.completed, true, 'the host animation keeps the saved-order presentation');
+  audio.props.onEnded(); await h.settle();
+  assert.ok(h.find(node => node.props?.pose === 'packed'));
+  const actions = h.find(node => node.props?.className === 'r1-completed-actions r4-completed-actions');
+  const reviewButton = actions.props.children.flat(Infinity).find(node => node?.type === 'button');
+  assert.equal(reviewButton.props.disabled, undefined, 'audio never locks the completed actions');
+  h.click(node => node === reviewButton); await h.settle(); assert.equal(h.hash, 'review/nanxiang');
+});
+
+
+test('Nanxiang keeps the saved serving and dining visuals while its completed host is speaking', async () => {
+  const source = await readFile(new URL('../src/components/SceneArt.tsx', import.meta.url), 'utf8');
+  const transformed = await transformWithOxc(source, 'SceneArt.tsx', { jsx: { runtime: 'classic' } });
+  const code = transformed.code.replace(/^import\b[\s\S]*?;?\n/gm, '').replace(/export (?=(?:function|const) )/g, '');
+  const runtime = vm.runInNewContext(`${code}\n({ NanxiangScene });`, {
+    useId: () => 'nanxiang-scene-test', React: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
+  });
+  const elements = node => !node || typeof node !== 'object' ? [] : [node, ...(node.props?.children ?? []).flat(Infinity).flatMap(elements)];
+  const savedOrder = props => elements(runtime.NanxiangScene(props)).find(node => node.props?.className === 'scene-completed-order');
+  for (const quantity of [1, 3, 5]) for (const takeaway of [true, false]) {
+    const props = { completed: true, pose: 'speaking', quantity, takeaway };
+    const tree = runtime.NanxiangScene(props);
+    assert.equal(tree.props['data-pose'], 'speaking');
+    const order = savedOrder(props); assert.ok(order);
+    assert.equal(order.props['data-servings'], quantity);
+    assert.equal(order.props['data-order-mode'], takeaway ? 'takeaway' : 'dine-in');
+    assert.equal(elements(order).filter(node => node.props?.['data-serving-index']).length, Math.min(quantity, 3));
+    assert.ok(elements(order).some(node => node.props?.className === (takeaway ? 'scene-takeaway-bag' : 'scene-dine-in-order')));
+  }
+  assert.ok(savedOrder({ pose: 'packed', quantity: 2, takeaway: true }), 'existing previews may still infer completion from their pose');
+  assert.equal(savedOrder({ completed: false, pose: 'packing', quantity: 2, takeaway: true }), undefined, 'explicit unsaved status takes precedence');
+  assert.equal(savedOrder({ pose: 'speaking', quantity: 2, takeaway: true }), undefined, 'speaking alone cannot imply a saved order');
+  assert.equal(savedOrder({ completed: true, pose: 'speaking', quantity: null, takeaway: true }), undefined, 'missing order data never draws an invented quantity');
+});
+
+
+test('turning off host audio during an unresolved Nanxiang save suppresses the captured completion callback', async t => {
+  const initial = makeAttempt({ status: 'confirming', prompt_id: 'NX-N09', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  const captured = h.guided;
+  captured.onBusyChange(true); await h.settle();
+  h.click(node => node.props?.['aria-label'] === 'Settings');
+  h.click(node => node.props?.['aria-label'] === 'Host audio');
+  assert.equal(h.localStorage.getItem('shanghai-review-autovoice'), 'off');
+  const completed = makeAttempt({ revision: 5, status: 'completed', prompt_id: 'NX-N10', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  captured.onAttempt(completed); captured.onAdvanced(completed); captured.onBusyChange(false);
+  await h.settle(); h.runTimers(); await h.settle();
+  assert.equal(h.audio.playCalls, 0, 'the callback captured while audio was on reads the latest muted preference');
+  assert.ok(h.find(node => node.props?.pose === 'packed'));
+  h.click(node => node.props?.['aria-label'] === 'Host audio');
+  h.runTimers(); await h.settle();
+  assert.equal(h.audio.playCalls, 0, 'reenabling host audio does not replay the completed interaction');
+  h.click(node => node.props?.['aria-label'] === `Listen to ${entry('NX-N10').hanzi}`); await h.settle();
+  assert.equal(h.audio.playCalls, 1, 'manual replay remains available');
+});
+
+test('turning off host audio after Nanxiang completion is queued cancels its pending playback', async t => {
+  const initial = makeAttempt({ status: 'confirming', prompt_id: 'NX-N09', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  const captured = h.guided;
+  const completed = makeAttempt({ revision: 5, status: 'completed', prompt_id: 'NX-N10', practice: guidedPractice({ step: 'confirm', step_id: 'last-confirm' }) });
+  captured.onAttempt(completed); captured.onAdvanced(completed); await h.settle();
+  h.click(node => node.props?.['aria-label'] === 'Settings');
+  h.click(node => node.props?.['aria-label'] === 'Host audio');
+  h.runTimers(); await h.settle();
+  assert.equal(h.audio.playCalls, 0);
+  assert.equal(h.localStorage.getItem('shanghai-review-autovoice'), 'off');
 });

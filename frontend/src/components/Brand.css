@@ -1,0 +1,15 @@
+.site-header .brand.brand-pavilion{flex:0 0 auto;min-width:0;padding:0}
+.brand-pavilion .brand-lockup{display:block;width:206px;height:auto;max-height:92px;object-fit:contain}
+.brand-pavilion .brand-compact{display:none}
+@media(max-width:680px){
+  .brand-pavilion .brand-lockup{display:none}
+  .brand-pavilion .brand-compact{display:flex;align-items:center;gap:8px}
+  .brand-pavilion .brand-compact img{display:block;width:44px;height:44px;object-fit:contain}
+  .brand-pavilion .brand-name{font-family:Georgia,"Songti SC","STSong",serif;font-weight:600;font-size:20px;line-height:1.15;letter-spacing:.05em;color:var(--green)}
+  .locale-en .brand-pavilion .brand-name{font-size:16px;letter-spacing:.01em}
+}
+@media(max-width:360px){
+  .brand-pavilion .brand-compact{gap:6px}
+  .brand-pavilion .brand-compact img{width:40px;height:40px}
+  .brand-pavilion .brand-name{font-size:19px}
+}

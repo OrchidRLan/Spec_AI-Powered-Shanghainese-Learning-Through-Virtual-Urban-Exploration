@@ -564,3 +564,41 @@ test('a late API error carrying older progress cannot overwrite newer props', as
   const unapplied = h.find(node => node.props?.['data-testid'] === 'practice-unapplied');
   assert.ok(unapplied); assert.ok(h.textOf(unapplied).includes('  两份。 '));
 });
+
+
+test('a locally continued final confirmation may announce completion once after recovering its lost response', async t => {
+  const initial = resultAttempt('correct', '对个', { status: 'confirming', summary_revision: 3 }, { step: 'confirm', step_id: 'confirmation-step', target: { type: 'confirm' } });
+  const completed = { ...initial, revision: 4, status: 'completed', confirmed_revision: 3, prompt_id: 'NX-N10' };
+  const h = harness({ attempt: initial, continueResponse: () => { throw new TypeError('Response lost'); }, readResponse: { status: 'applied', attempt: completed } });
+  t.after(() => h.dispose()); h.click('continue'); await h.settle();
+  assert.equal(h.advances.length, 0, 'an unknown save cannot announce completion');
+  assert.ok(h.action('recover'));
+  h.click('recover'); await h.settle();
+  assert.equal(h.attempt.status, 'completed');
+  assert.equal(h.advances.length, 1, "recovering this page's own final save triggers its closing line");
+  assert.equal(h.action('recover'), undefined);
+  assert.equal(h.sessionStorage.getItem('shanghai-practice-pending:attempt-r3'), null);
+  h.update({ attempt: { ...completed } }); await h.settle();
+  assert.equal(h.advances.length, 1, 'a repeated saved state cannot announce it again');
+});
+
+test('refreshing before a final save settles restores completion without replaying its closing line', async t => {
+  const initial = resultAttempt('correct', '对个', { status: 'confirming', summary_revision: 3 }, { step: 'confirm', step_id: 'confirmation-step', target: { type: 'confirm' } });
+  const completed = { ...initial, revision: 4, status: 'completed', confirmed_revision: 3, prompt_id: 'NX-N10' };
+  const response = deferred();
+  const original = harness({ attempt: initial, continueResponse: response });
+  original.click('continue'); await original.settle();
+  const requestId = original.operations('continue')[0].body.request_id;
+  assert.ok(original.sessionStorage.getItem('shanghai-practice-pending:attempt-r3'));
+  original.dispose();
+  const refreshed = harness({ attempt: initial, sessionStorage: original.sessionStorage, readResponse: { status: 'applied', attempt: completed } });
+  t.after(() => refreshed.dispose());
+  assert.ok(refreshed.action('recover'));
+  refreshed.click('recover'); await refreshed.settle();
+  assert.equal(refreshed.reads[0], `/attempts/attempt-r3/practice/${requestId}`);
+  assert.equal(refreshed.attempt.status, 'completed', 'the saved result is still applied to the new page');
+  assert.equal(refreshed.advances.length, 0, 'a recovered earlier-page receipt is silent');
+  assert.equal(refreshed.sessionStorage.getItem('shanghai-practice-pending:attempt-r3'), null);
+  response.resolve({ status: 'applied', attempt: completed }); await original.settle();
+  assert.equal(original.advances.length, 0, 'the abandoned page cannot play its late response either');
+});

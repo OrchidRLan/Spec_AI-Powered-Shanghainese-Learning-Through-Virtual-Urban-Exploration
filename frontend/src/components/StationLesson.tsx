@@ -70,6 +70,8 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   const mediaId = useRef<string | null>(null);
   const mediaGeneration = useRef(0);
   const introPlayStarted = useRef(false);
+  const activeContinuation = useRef<string | null>(null);
+  const closingPlayback = useRef<LearningEntry | null>(null);
   const mounted = useRef(true);
   const generation = useRef(0);
   const inputGeneration = useRef(0);
@@ -94,15 +96,16 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   const summary = stationSummary(station, lesson.answers, locale);
   const summaryEntryId = step.summaryEntryIds?.[lesson.answers.dish || lesson.answers.flavor];
   const hostEntry = stationEntryFor(completed ? plan.completedEntryId : summaryEntryId || attempt.prompt_id) || stationEntryFor(step.hostEntryId);
-  const pose: ScenePose = completed ? 'packed' : phase === 'recording' || phase === 'playback' ? 'listening' : working || phase === 'processing' ? 'thinking' : playing ? 'speaking' : lesson.step === 'confirm' ? 'checking' : 'idle';
+  const pose: ScenePose = playing ? 'speaking' : completed ? 'packed' : phase === 'recording' || phase === 'playback' ? 'listening' : working || phase === 'processing' ? 'thinking' : lesson.step === 'confirm' ? 'checking' : 'idle';
 
-  function stopAudio() { mediaGeneration.current += 1; introPlayStarted.current = false; stopAllAudio(); setPlaying(null); }
+  function stopAudio() { mediaGeneration.current += 1; introPlayStarted.current = false; activeContinuation.current = null; closingPlayback.current = null; stopAllAudio(); setPlaying(null); }
   useEffect(()=> {
     mounted.current = true;
     return ()=> { mounted.current = false; generation.current += 1; mediaGeneration.current += 1; requestController.current?.abort(); inFlight.current = false; stopAllAudio(); latest.current.onBusyChange(false); latest.current.onDraftChange(false); latest.current.onPhaseChange('idle'); };
   }, []);
   useEffect(()=> { setRetrying(false); setRecorderReset(value=>value + 1); setMessage(''); }, [currentKey]);
   useEffect(()=> { stopAudio(); setAudioError(false); }, [locale, stopSignal]);
+  useEffect(()=> { if(!autoVoice) stopAudio(); }, [autoVoice]);
   useEffect(()=> { if(player.current) { player.current.playbackRate = audioSpeed; player.current.preservesPitch = true; } }, [audioSpeed]);
   useEffect(()=> {
     if (pending && (lesson.result?.request_id === pending.requestId || (attempt.revision > pending.expectedRevision && lesson.step_id !== pending.stepId))) {
@@ -113,9 +116,18 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   }, [attempt.revision, lesson.step_id, lesson.target, lesson.result?.request_id, pending]);
   useEffect(()=> {
     if (!autoVoice || !hostEntry || lesson.result || completed || listenGate) return;
-    const timer = setTimeout(()=>{ if(latest.current.autoVoice && !pendingRef.current) void playEntry(hostEntry); }, 350);
+    const mediaTicket = mediaGeneration.current;
+    const timer = setTimeout(()=>{ if(latest.current.autoVoice && !pendingRef.current && mediaTicket === mediaGeneration.current && latest.current.attempt.status !== 'completed' && !latest.current.attempt.lesson?.result) void playEntry(hostEntry); }, 350);
     return ()=>clearTimeout(timer);
-  }, [lesson.step_id, autoVoice]);
+  }, [lesson.step_id, autoVoice, completed]);
+  useEffect(()=> {
+    const entry = closingPlayback.current;
+    if(!entry || !completed || blocked) return;
+    // Consume this local completion event once. A restored completed attempt has
+    // no such event, and manual playback or navigation cancels the pending sound.
+    closingPlayback.current = null;
+    if(autoVoice) void playEntry(entry);
+  }, [completed, blocked, autoVoice]);
 
   function updatePending(value: Pending | null) { pendingRef.current = value; setPending(value); savePending(attempt.id, value); }
   function keepUnapplied(value: string | null) { if(!value?.trim()) return; setUnapplied(value); try{sessionStorage.setItem(`shanghai-lesson-unapplied:${attempt.id}`,value);}catch{} }
@@ -124,6 +136,14 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   function accept(response: LessonResponse, operation: LessonRequest['operation']) {
     inputGeneration.current += 1;
     if (response.attempt.id !== latest.current.attempt.id || response.attempt.revision < latest.current.attempt.revision) { keepUnapplied(pendingRef.current?.transcript || null); updatePending(null); setRetrying(false); setMessage('changed'); return; }
+    const receipt = pendingRef.current;
+    if(operation === 'continue' && response.status === 'applied' && response.attempt.status === 'completed' && latest.current.attempt.status !== 'completed'
+      && response.request_id === activeContinuation.current && receipt?.requestId === response.request_id
+      && receipt.expectedRevision === latest.current.attempt.revision && receipt.stepId === latest.current.attempt.lesson?.step_id
+      && response.attempt.revision > latest.current.attempt.revision && latest.current.autoVoice) {
+      closingPlayback.current = stationEntryFor(plan.completedEntryId) || null;
+    }
+    activeContinuation.current = null;
     onAttempt(response.attempt); updatePending(null); setRetrying(false); setRecorderReset(value=>value + 1); onDraftChange(false);
     setMessage(response.status === 'cancelled' ? 'cancelled' : '');
     if (operation === 'continue' || operation === 'edit') document.getElementById('bc-current-turn')?.scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -133,6 +153,7 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
     inFlight.current = true; stopAudio(); setBusy(true); setMessage('');
     const body: LessonRequest = { request_id: crypto.randomUUID(), expected_revision: latest.current.attempt.revision, ...change };
     const receipt: Pending = { requestId: body.request_id, operation: body.operation, stepId: lesson.step_id, transcript: body.text ?? null, expectedRevision: body.expected_revision, target: lesson.target };
+    if(body.operation === 'continue') activeContinuation.current = body.request_id;
     updatePending(receipt);
     const ticket = ++generation.current;
     const controller = new AbortController(); requestController.current = controller;
@@ -201,7 +222,7 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
     <div className="scene-heading"><div><span className="eyebrow">{plan.theme[locale]}</span><h1>{plan.title[locale]}</h1></div></div>
     <div className="r1-conversation-grid bc-conversation-grid">
       <section className="bc-stage-column" aria-label={plan.title[locale]}>
-        <div className="r1-scene-stage bc-scene-stage"><StationScene station={station} pose={pose} selectedDish={lesson.answers.dish || null} selectedFlavor={lesson.answers.flavor || null} completed={completed} label={plan.title[locale]}/><div className="r1-scene-status"><span className={`phase-dot phase-${pose}`}/>{completed ? c.saved : playing ? locale === 'zh' ? '店员正在说话' : 'Your host is speaking' : phase === 'recording' ? locale === 'zh' ? '店员在听' : 'Your host is listening' : locale === 'zh' ? '轮到你回应' : 'Your turn'}</div></div>
+        <div className="r1-scene-stage bc-scene-stage"><StationScene station={station} pose={pose} selectedDish={lesson.answers.dish || null} selectedFlavor={lesson.answers.flavor || null} completed={completed} label={plan.title[locale]}/><div className="r1-scene-status"><span className={`phase-dot phase-${pose}`}/>{playing ? locale === 'zh' ? '店员正在说话' : 'Your host is speaking' : completed ? c.saved : phase === 'recording' ? locale === 'zh' ? '店员在听' : 'Your host is listening' : locale === 'zh' ? '轮到你回应' : 'Your turn'}</div></div>
         <p className="bc-mission">{plan.description[locale]}</p>
         {summary && <section className="bc-saved-summary"><span className="overline">{c.summary}</span><strong>{summary}</strong><small><Check size={14}/>{c.saved}</small></section>}
         {station === 'restaurant' && <section className="bc-display"><h2>{c.menu}</h2><div>{plan.items.map(item=><article key={item.id}><DishIllustration dish={item.id} label={item.title[locale]}/><div><strong>{item.title[locale]}</strong><p>{item.description[locale]}</p></div></article>)}</div></section>}
