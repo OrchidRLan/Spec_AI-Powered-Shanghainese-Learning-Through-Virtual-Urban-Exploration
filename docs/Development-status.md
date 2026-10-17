@@ -12,6 +12,8 @@
 
 ## 已交付与证据
 
+开发流程补充（2026-10-17）：按用户确认，将个人 fork 同步纳入每次 agent 推送合作仓库后的收尾。`npm run git:publish` 先发布并核验合作仓库 `main`，再将同一提交同步至 `hollis-yang/Spec-Virtual-Shanghainese-Learning` 的 `main`，最后核验双方提交一致；保留原 `origin`，不自动合并或强制覆盖独立提交。规则见 [AGENTS 第 8 节](../AGENTS.md#8-里程碑完成后自动提交与推送)，实现见 [同步脚本](../scripts/push-and-sync.mjs)。7 项临时本地 Git 仓库测试通过，覆盖成功／重试、主仓库拒绝、fork 分叉或领先、未提交修改、错误目标及其他分支；语法与差异检查通过。此项仅调整开发收尾，未实施部署或改动应用功能，最终实际同步结果以 Git 远端核验为准。
+
 | 范围 | 已完成 | 实际证据 |
 | --- | --- | --- |
 | A 修订 4 | 南翔固定题、完整订单核对、结果停留、点继续推进、字音对齐与双速 | [验收](archive/batches/Batch-A-revision-4-acceptance.md)，用户已通过 |
@@ -39,4 +41,4 @@
 
 保留原工作项编号：D 对应步骤 10，E 对应步骤 9，实际顺序为 D → E。`build:release` 目前仍会拦截待审教材；D 的待完整验收构建尚需实施，不能通过伪造批准状态解除门槛。
 
-本次仅修改文档。所有历史阶段、测试边界、已知限制及真实调用记录保留在 [历史索引](archive/README.md) 和 [整理前进度快照](archive/Development-history.md)；代码提交及推送结果以 Git 历史为准。
+所有历史阶段、测试边界、已知限制及真实调用记录保留在 [历史索引](archive/README.md) 和 [整理前进度快照](archive/Development-history.md)；代码提交及双仓库同步结果以 Git 历史和远端核验为准。

@@ -83,4 +83,17 @@
 - 推送后核验远端已包含本次提交；在交接中说明提交标识和同步结果。遇到网络、认证或分支保护问题时，在授权范围内尝试安全解决，保留本地提交并如实说明尚未同步的部分，不能把仅本地提交说成已上传。
 - 此授权针对已获准工作的 Git 保存与同步，不额外授权开始范围外开发、购买服务或部署应用。
 
+### 推送成功后立即同步个人 fork
+
+用户于 2026-10-17 确认：将 fork 同步纳入上述开发收尾流程，每次 agent 成功推送合作仓库 `main` 后立即执行，无需再次询问。
+
+- 开发主仓库固定为 `OrchidRLan/Spec_AI-Powered-Shanghainese-Learning-Through-Virtual-Urban-Exploration`，保留现有 `origin`。
+- 同步目标固定为 `hollis-yang/Spec-Virtual-Shanghainese-Learning` 的 `main`；不重新 fork、不改仓库归属、不自动同步其他分支或标签。
+- 完成检查、提交且工作区干净后，使用 `npm run git:publish` 作为标准收尾入口。脚本先推送合作仓库并读取远端核验，再普通推送同一提交到 fork，最后核验两个 `main` 的提交一致；不会自动提交文件或修改 Git remote。
+- 若合作仓库已通过其他方式推送，仍执行该入口补做 fork 同步。重复执行安全；原仓库没有新增提交时不会制造空提交。
+- 原仓库推送未确认成功时，不更新 fork。fork 存在独立提交、权限问题或同步后核验不一致时，保留已有提交，停止并报告两个仓库各自状态；不使用强制推送、自动合并或覆盖解决。
+- 可使用 GitHub 工具核验或在已确认的同一 fork 网络内执行等价同步：读取源和目标分支、核对提交关系，再以 `force:false` 更新目标，最后重新读取双方核验；不能只复制文件制造内容相同但提交不同的版本。
+- 这是 agent 开发流程的一部分，不是后台监听器。手动执行普通 `git push` 或其他协作者的提交不会单独触发它；没有新增 GitHub Actions、定时任务或 Git hook。
+- 修改同步脚本后运行 `npm run test:git-sync`。测试只使用临时本地仓库，不访问 GitHub。
+
 文件名与项目级放置方式参考 [OpenAI 官方 AGENTS.md 文档](https://learn.chatgpt.com/docs/agent-configuration/agents-md)；本项目具体规则以用户要求和上述项目文档为依据。

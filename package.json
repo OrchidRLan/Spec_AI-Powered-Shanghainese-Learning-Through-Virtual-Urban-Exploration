@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "git:publish": "node scripts/push-and-sync.mjs",
+    "test:git-sync": "node --test scripts/push-and-sync.test.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
