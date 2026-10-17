@@ -25,6 +25,7 @@ from .storage import Database, encode
 from . import lessons
 from .lesson_api import register as register_lessons
 from .auth import Authentication, cleanup_expired
+from .runtime import RuntimeSettings
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT.parent / ".env", override=False)
@@ -44,8 +45,13 @@ def problem(code: str, message: str, status: int = 409, **extra):
 
 
 def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
-    app = FastAPI(title="Shanghai learning — Four stations", version="0.2.0")
-    app.state.database = Database(database_path or os.environ.get("DATABASE_PATH", str(ROOT / "data" / "app.db")))
+    runtime = RuntimeSettings.from_env(str(ROOT / "data" / "app.db"), database_path)
+    app = FastAPI(title="Shanghai learning — Four stations", version="0.2.0",
+                  docs_url=None if runtime.production else "/docs",
+                  redoc_url=None if runtime.production else "/redoc",
+                  openapi_url=None if runtime.production else "/openapi.json")
+    app.state.runtime = runtime
+    app.state.database = Database(runtime.database_path)
     text_mode = os.environ.get("TEXT_INTERPRETER", "development_parser")
     selected_interpreter, interpreter_config_id = configure_interpreter(text_mode)
     app.state.interpreter = interpreter or selected_interpreter
@@ -55,19 +61,33 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     @app.middleware("http")
     async def same_origin(request: Request, call_next):
-        if request.url.path.startswith("/api/"):
-            with database.transaction() as connection:
-                cleanup_expired(connection)
+        def denied(code, message, status=403, **extra):
+            return JSONResponse({"detail": {"code": code, "message": message, **extra}}, status_code=status,
+                                headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+        health_request = request.url.path == "/api/health" and request.method in ("GET", "HEAD")
+        if runtime.production and not health_request:
+            address = runtime.proxy_client_ip(request)
+            if address is None:
+                return denied("proxy_required", "Use the application endpoint.")
+            request.state.client_ip = address
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             origin = request.headers.get("origin")
-            permitted = {str(request.base_url).rstrip("/")}
-            permitted.update(os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(","))
-            if origin and origin not in permitted:
-                return JSONResponse({"detail": {"code": "cross_origin_denied", "message": "Use the application origin."}}, status_code=403)
+            permitted = set(runtime.allowed_origins)
+            if not runtime.production:
+                permitted.add(str(request.base_url).rstrip("/"))
+            if (runtime.production and not origin) or (origin and origin not in permitted):
+                return denied("cross_origin_denied", "Use the application origin.")
             if request.headers.get("sec-fetch-site") == "cross-site":
-                return JSONResponse({"detail": {"code": "cross_origin_denied", "message": "Cross-site writes are not allowed."}}, status_code=403)
+                return denied("cross_origin_denied", "Cross-site writes are not allowed.")
             if request.url.path != "/api/asr" and request.headers.get("content-type", "").split(";")[0] != "application/json":
-                return JSONResponse({"detail": {"code": "json_required", "message": "Send JSON."}}, status_code=415)
+                return denied("json_required", "Send JSON.", 415)
+        if request.url.path.startswith("/api/") and not health_request:
+            try:
+                with database.transaction() as connection:
+                    cleanup_expired(connection)
+            except sqlite3.Error:
+                return denied("save_failed", "Progress could not be saved. Retry the same request ID.", 503, retryable=True)
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -144,9 +164,16 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         result["services"] = {"text": text_mode, "asr": "configured" if services()["asr"]["enabled"] else "unconfigured"}
         return result
 
+    @app.head("/api/health", include_in_schema=False)
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "mode": "development", "rule_version": RULE_VERSION}
+        try:
+            with database.transaction() as connection:
+                connection.execute("SELECT id FROM sessions LIMIT 1").fetchone()
+        except sqlite3.Error:
+            return JSONResponse({"status": "unavailable", "mode": runtime.environment}, status_code=503)
+        return {"status": "ok", "mode": runtime.environment, "content_version": CONTENT_VERSION,
+                "rule_version": RULE_VERSION}
 
     @app.get("/api/services")
     def get_services():
@@ -155,18 +182,18 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
     def create_session(connection, preferences: dict | None = None, reason: str = "initial") -> tuple[str, str]:
         token, sid = secrets.token_urlsafe(32), identifier()
         session = {"id": sid, "locale": "zh", "show_romanization": True, "reduced_motion": False,
-                   "mode": "development", "content_version": CONTENT_VERSION, "rule_version": RULE_VERSION,
+                   "mode": runtime.environment, "content_version": CONTENT_VERSION, "rule_version": RULE_VERSION,
                    "model_config_id": interpreter_config_id, "asr_config_id": services()["asr"].get("config_id"), "created_at": now()}
         if preferences:
             for field in ("locale", "show_romanization", "reduced_motion"):
                 session[field] = preferences[field]
         connection.execute("INSERT INTO sessions VALUES (?,?,?)", (sid, hashlib.sha256(token.encode()).hexdigest(), encode(session)))
-        database.event(connection, sid, None, identifier(), "session_started", {"mode": "development", "creation_reason": reason}, now())
+        database.event(connection, sid, None, identifier(), "session_started", {"mode": runtime.environment, "creation_reason": reason}, now())
         return sid, token
 
     def set_session_cookie(response: Response, token: str):
         response.set_cookie(COOKIE, token, max_age=60 * 60 * 24 * 30, httponly=True,
-                            secure=os.environ.get("COOKIE_SECURE", "false").lower() == "true",
+                            secure=runtime.cookie_secure,
                             samesite="strict", path="/")
 
     @app.get("/api/session")

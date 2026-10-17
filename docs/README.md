@@ -16,6 +16,8 @@ For local setup and commands, use the [project README](../README.md). Implementa
 
 | Reference | Purpose |
 | --- | --- |
+| [Deployment](engineering/Deployment.md) | Vercel/Render setup, environment variables, pending-acceptance builds, and rollout checks |
+| [Database maintenance](engineering/Database-maintenance.md) | Consistent SQLite backups, safe recovery, and guest cleanup |
 | [Backend API](../backend/API.md) | Authentication, guest sessions, progress, speech interfaces, and maintenance commands |
 | [Speech integration](engineering/Speech-integration.md) | Provider contracts, audio production, actual call history, and verification limits |
 | [Content review](content-review/README.md) | Current teaching materials, review evidence, and approval workflow |

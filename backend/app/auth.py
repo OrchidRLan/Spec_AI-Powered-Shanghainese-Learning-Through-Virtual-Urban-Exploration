@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import re
 import secrets
 import time
@@ -91,6 +90,7 @@ def cleanup_expired(connection, timestamp: float | None = None) -> int:
 class Authentication:
     def __init__(self, app, database, *, create_session, public_session, problem, identifier, now):
         self.database, self.create_session, self.public_session = database, create_session, public_session
+        self.cookie_secure = app.state.runtime.cookie_secure
         self.problem, self.identifier, self.now = problem, identifier, now
         self.register_routes(app)
 
@@ -135,7 +135,7 @@ class Authentication:
                 "legacy_available": self.legacy(request, connection) is not None}
 
     def limit(self, request, kind, username=""):
-        address = request.client.host if request.client else "unknown"
+        address = getattr(request.state, "client_ip", None) or (request.client.host if request.client else "unknown")
         timestamp = time.time()
         limits = [(f"{kind}:ip:{digest(address)}", 15 if kind == "register" else 50, 3600 if kind == "register" else 900)]
         if kind == "login":
@@ -218,7 +218,7 @@ class Authentication:
         token, timestamp = secrets.token_urlsafe(32), time.time()
         connection.execute("INSERT INTO auth_tokens VALUES (?,?,?,?)", (digest(token), user_id, timestamp + ACCOUNT_SECONDS, timestamp))
         response.set_cookie(ACCOUNT_COOKIE, token, max_age=ACCOUNT_SECONDS, httponly=True,
-                            secure=os.environ.get("COOKIE_SECURE", "false").lower() == "true", samesite="strict", path="/")
+                            secure=self.cookie_secure, samesite="strict", path="/")
 
     def reset_binding(self, connection, request, previous_id, next_id):
         mode, _sid, user = self.identity(request, connection, allow_legacy=True)

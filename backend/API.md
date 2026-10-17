@@ -1,6 +1,6 @@
-# 四站本地 API（批次 2 修改 3：账号与临时游客）
+# 四站 API（账号、临时游客与生产配置）
 
-Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
+Python 3.11+，FastAPI + SQLite。开发时数据库在本机；生产时必须将其放在后端的持久磁盘。配置实现不表示实际部署或验收已完成。
 
 ```sh
 cd backend
@@ -11,7 +11,23 @@ python3.11 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
-默认数据库 `backend/data/app.db`，可通过 `DATABASE_PATH` 改到独立目录。后端自动加载根 `.env`，不覆盖进程已有环境变量；配置修改后重启后端。数据库、录音、日志、虚拟环境都不提交。部署 HTTPS 后必须设置 `COOKIE_SECURE=true`；本地 HTTP 默认 false。Cookie 为随机 256 位 token（数据库只保存哈希），`HttpOnly; SameSite=Strict`。返回的 session ID 不是访问凭证。写请求检验 Origin / Fetch Metadata 并要求 JSON（ASR 除外）；`ALLOWED_ORIGINS` 为逗号分隔的开发源列表，默认 localhost/127.0.0.1:5173。对外部署还需 HTTPS、正式 DB、定时调用游客清理命令、代理层通用限速、备份和部署检查。ASR 已有会话每分钟 30 个请求的上限。
+默认数据库 `backend/data/app.db`，可通过 `DATABASE_PATH` 改到独立目录。后端自动加载根 `.env`，不覆盖进程已有环境变量；配置修改后重启后端。数据库、录音、日志、虚拟环境都不提交。Cookie 为随机 256 位 token（数据库只保存哈希），`HttpOnly; SameSite=Strict`；生产额外要求 `Secure`。返回的 session ID 不是访问凭证。写请求检验 Origin / Fetch Metadata 并要求 JSON（ASR 除外）。ASR 已有会话每分钟 30 个请求的上限。
+
+## 生产运行边界
+
+| 环境变量 | 开发默认值 | 生产要求 |
+| --- | --- | --- |
+| `APP_ENV` | `development` | `production`；其他值启动失败 |
+| `DATABASE_PATH` | `backend/data/app.db` | 显式绝对路径，部署配置负责挂载持久磁盘，例如 `/var/data/app.db` |
+| `COOKIE_SECURE` | `false` | 必须为 `true` |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | 显式 HTTPS 前端源，逗号分隔；无路径、凭据或通配符。不自动允许请求 Host 或预览域名 |
+| `BACKEND_PROXY_SECRET` | 不使用 | 至少 32 位无空白 ASCII 随机秘密；只在 Vercel 代理函数和 Render 后端环境中配置 |
+
+Vercel 以同源 `/api` 服务前端，服务端代理转发至 Render。生产后端除 `GET/HEAD /api/health` 外，均要求 `X-Shanghai-Proxy-Secret` 与配置值恒定时间比对成功，并要求 `X-Shanghai-Client-IP` 为单个有效 IP。代理必须覆盖这两个请求头，客户端 IP 从 Vercel 可信元数据取得；不能转发浏览器自报的 IP 或秘密。IPv4 映射的 IPv6 地址归一到同一限流桶。后端不依赖 `X-Forwarded-For`，部署启动使用 `--no-proxy-headers`；无秘密或 IP 格式错误返回 `403 proxy_required`。生产写请求还必须带允许的 `Origin`，保留浏览器的 `Sec-Fetch-Site` 检查，不由代理伪造一个始终通过的 Origin。
+
+`GET/HEAD /api/health` 检查数据库连接和表可访问，返回运行模式及内容／规则版本；数据库不可用返回 503，不返回数据路径、密钥或账号信息，不调用任何模型服务。生产关闭 `/docs`、`/redoc`、`/openapi.json`。新会话和创建事件记录实际 `production` 模式，旧会话模式不被重写。
+
+首次部署使用空数据库，由既有事务初始化创建表；重启与升级保留已有账号和进度。挂载路径、备份／恢复、游客清理、平台限额和实际 HTTPS 检查仍需按部署计划落实，配置校验本身不能证明磁盘已经持久挂载。
 
 ## 认证与临时进度
 
@@ -40,7 +56,7 @@ type AuthState = {
 
 合并在同一 SQLite 事务中移动尝试、事件、ASR 与使用记录；课程版本先固化到每条 attempt。合并保留历史成功和所有练习记录，撤销来源游客/旧匿名凭据，并留下账号来源归属。不同课程版本或会话内请求 ID 冲突返回 `merge_conflict`，两边原记录均不改变；旧版可单独关联新账号后通过原有升级入口继续。仍在处理的请求返回 `merge_in_progress`，完成后可重试；超过 30 秒的未完成 ASR 先存为 `asr_interrupted` 终态，避免进程重启后永远不能保存。旧版 turns 的 processing / prepared 同样以 30 秒为界：近期请求仍阻止合并，超时请求记录为 cancelled，只清除匹配的 pending_request_id；原始 payload、解释和记录保留，不自动应用订单。取消状态阻止迟到解释重新写成 prepared 或推进订单。迟到云端结果不能覆盖终态。ASR 上传完成和云端返回时重新核验身份；退出后的转写被丢弃，不改变练习进度。
 
-服务端 SQLite 限流：登录每用户名 10 次 / 15 分钟、每来源 IP 50 次 / 15 分钟；注册每 IP 15 次 / 小时；游客创建每 IP 50 次 / 15 分钟。账号不存在与密码错误统一 `invalid_credentials`。常用错误还包括 `invalid_username` / `invalid_password` (422)、`username_taken` (409)、`auth_rate_limited` (429)、`legacy_unavailable` (409)、`session_required` / `guest_expired` / `session_changed` (401)。
+服务端 SQLite 限流：登录每用户名 10 次 / 15 分钟、每来源 IP 50 次 / 15 分钟；注册每 IP 15 次 / 小时；游客创建每 IP 50 次 / 15 分钟。生产来源 IP 只取上述通过秘密校验的代理头；开发模式使用直接连接地址，忽略自报代理头。账号不存在与密码错误统一 `invalid_credentials`。常用错误还包括 `invalid_username` / `invalid_password` (422)、`username_taken` (409)、`auth_rate_limited` (429)、`legacy_unavailable` (409)、`session_required` / `guest_expired` / `session_changed` (401)。
 
 每次 API 请求惰性清理到期游客及其所有关联尝试、请求、事件与 ASR 数据，不清理旧匿名或账号记录。无访问时可从 backend 目录执行下列命令；部署时将其纳入定时维护：
 
@@ -54,6 +70,7 @@ type AuthState = {
 
 | 接口 | 请求 | 返回 |
 | --- | --- | --- |
+| GET/HEAD /api/health | 无，生产允许直接健康检查 | mode/content_version/rule_version；数据库不可用返回 503 |
 | GET /api/session | 当前身份 | 恢复 Session；没有身份返回 401，不再自动创建匿名 Cookie |
 | PATCH /api/session | locale?: zh/en, show_romanization?: bool, reduced_motion?: bool | Session |
 | POST /api/session/new | 当前身份；JSON `{}` | 明确升级旧课程时创建 Session；账号更新当前绑定，游客沿用原 token 与到期时刻，旧匿名才替换 Cookie；保留偏好与旧记录 |
@@ -109,7 +126,7 @@ type TurnResult = {request_id:string;status:'applied'|'pending'|'cancelled'|'fai
     reason:'understood'|'unrecognized'|'needs_clarification'|'repeat_requested'|'confirmation_required'}};
 type Session = {
   id:string;locale:'zh'|'en';show_romanization:boolean;reduced_motion:boolean;
-  mode:'development';content_version:string;rule_version:string;
+  mode:'development'|'production';content_version:string;rule_version:string;
   model_config_id:string;asr_config_id:string|null;created_at:string;attempts:Attempt[];
   completed_station_ids:string[];
   lesson_content_version?:string;lesson_rule_version?:string;

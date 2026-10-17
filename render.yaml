@@ -1,0 +1,45 @@
+# Review the paid compute and disk price before applying this Blueprint.
+services:
+  - type: web
+    name: a-little-shanghai-api
+    runtime: python
+    repo: https://github.com/hollis-yang/Spec-Virtual-Shanghainese-Learning
+    branch: main
+    region: virginia
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: off
+    buildCommand: pip install -r backend/requirements.lock
+    startCommand: python scripts/start-render.py
+    healthCheckPath: /api/health
+    disk:
+      name: shanghai-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_PATH
+        value: /var/data/app.db
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: BACKEND_PROXY_SECRET
+        sync: false
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: SPEECH_ENABLE_LIVE
+        value: "false"
+      - key: QWEN_ASR_ENABLE_LIVE
+        value: "true"
+      - key: QWEN_ASR_REGION
+        value: beijing
+      - key: QWEN_TTS_ENABLE_LIVE
+        value: "false"
+      - key: QWEN_LLM_ENABLE_LIVE
+        value: "false"
+      - key: TEXT_INTERPRETER
+        value: development_parser
+      - key: PYTHONUNBUFFERED
+        value: "1"

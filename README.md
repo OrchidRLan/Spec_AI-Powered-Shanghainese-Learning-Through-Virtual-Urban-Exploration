@@ -35,7 +35,9 @@ npm run build
 
 `check` runs type, content, UI, API, and audio checks. `build` creates the current draft frontend bundle. Automated checks do not replace language review or live speech evaluation.
 
-`npm run build:release` requires approved teaching content and audio and is currently blocked by pending review. Batch D will establish the deployment workflow for a version awaiting full acceptance; that workflow is not yet implemented.
+`npm run build:deployment` builds the version awaiting acceptance, checks teaching files and audio integrity, and writes a public version manifest. It preserves all review-draft labels. `npm run build:release` still requires approved teaching content and audio and is currently blocked by pending review.
+
+Deployment uses Vercel for the frontend/API proxy and Render for the Python API with persistent SQLite. See the [deployment guide](docs/engineering/Deployment.md) for platform settings, secrets, checks, and updates; see [database maintenance](docs/engineering/Database-maintenance.md) for backups and recovery. Never deploy the local database or `.env`.
 
 ## Documentation
 
