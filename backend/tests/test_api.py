@@ -126,7 +126,8 @@ def test_invalid_modification_blocks_old_confirmation(client):
     old_revision = attempt["summary_revision"]
     changed = submit(client, attempt, text="对，改成三份")
     assert changed["order"]["quantity"] == 3
-    assert changed["status"] == "collecting"
+    assert changed["status"] == "confirming"
+    assert changed["summary_revision"] != old_revision
     assert changed["confirmed_revision"] is None
     stale = client.post(f"/api/attempts/{attempt['id']}/turns", json={"request_id": str(uuid4()), "expected_revision": changed["revision"], "channel": "buttons", "action": {"type": "confirm"}, "summary_revision": old_revision})
     assert stale.status_code == 409
@@ -321,8 +322,7 @@ def test_invalid_provider_field_cannot_pass_rules(app, client):
 
 @pytest.mark.parametrize("text", [
     "-2份小笼包外带", "2.2份小笼包外带", "两份半小笼包外带", "一千零两份小笼包外带",
-    "不是小笼包，是面条，两份外带", "two servings xiaolongbao not takeaway",
-    "不要两份小笼包外带", "two servings xiaolongbao do not take away",
+    "不是小笼包，是面条，两份外带", "不要两份小笼包外带",
 ])
 def test_development_parser_negation_and_number_boundary_regressions(client, text):
     fresh = submit(client, start(client), text=text)
@@ -508,7 +508,7 @@ def mark_session_as_legacy(app, sid):
     from app.storage import encode
     with app.state.database.transaction() as connection:
         session = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
-        session.update(content_version=LEGACY_CONTENT_VERSION, model_config_id="development-parser.v1")
+        session.update(content_version=LEGACY_CONTENT_VERSION, rule_version="nanxiang-rules.v1", model_config_id="development-parser.v1")
         connection.execute("UPDATE sessions SET data=? WHERE id=?", (encode(session), sid))
         for row in connection.execute("SELECT id,data FROM attempts WHERE session_id=?", (sid,)).fetchall():
             attempt = json.loads(row["data"])
@@ -557,8 +557,8 @@ def test_r1_content_loading_preserves_legacy_bindings_and_cached_history(app, cl
         assert rejected.status_code == 409
         assert rejected.json()["detail"]["code"] == "configuration_changed"
         new_session = restarted.post("/api/session/new", json={}).json()
-        assert new_session["content_version"] == CONTENT_VERSION == "batch-a-r1.2026-10-17.v1"
-        assert new_session["model_config_id"] == "development-parser.v2"
+        assert new_session["content_version"] == CONTENT_VERSION == "batch-a-r2.2026-10-17.v1"
+        assert new_session["model_config_id"] == "development-parser.v3"
         current_content = restarted.get("/api/content").json()
         assert current_content["contentVersion"] == CONTENT_VERSION
         assert current_content["expressions"][0]["hanzi"] == "我要两份小笼馒头"
@@ -638,28 +638,32 @@ def test_r1_development_aliases_preserve_evidence_and_negation(client, phrase, f
         assert changed["order"][field] == expected
     assert changed["turns"][-1]["text"] == phrase
     assert changed["turns"][-1]["interpretation"]["evidence"][field] == phrase
-    assert changed["turns"][-1]["interpretation"]["model_config_id"] == "development-parser.v2"
-    if expected is None or expected is False:
+    assert changed["turns"][-1]["interpretation"]["model_config_id"] == "development-parser.v3"
+    if expected is None:
         assert changed["status"] == "collecting"
         assert changed["summary_revision"] is None
+    else:
+        assert changed["status"] == "confirming"
+        assert changed["confirmed_revision"] is None
 
 
 def test_r1_repeat_plus_correction_cannot_leave_old_summary_confirmable(client):
     attempt = order(client, start(client))
     changed = submit(client, attempt, text="请侬再讲一遍，改成三份")
     assert changed["order"]["quantity"] == 3
-    assert changed["status"] == "collecting"
-    assert changed["summary_revision"] is None
+    assert changed["status"] == "confirming"
+    assert changed["summary_revision"] != attempt["summary_revision"]
+    assert changed["confirmed_revision"] is None
     assert changed["turns"][-1]["interpretation"]["help_requested"] is True
 
 
-@pytest.mark.parametrize("phrase", ["我要两份小笼馒头，覅 打包", "我要两份小笼馒头，勿 打包", "two servings xiaolongbao not  takeaway"])
+@pytest.mark.parametrize("phrase", ["我要两份小笼馒头，覅 打包", "我要两份小笼馒头，勿 打包", "two servings xiaolongbao not  takeaway", "two servings xiaolongbao do not take away"])
 def test_r1_asr_spacing_does_not_turn_negation_into_takeaway(client, phrase):
     attempt = submit(client, start(client), text=phrase)
     assert attempt["order"]["takeaway"] is False
-    assert attempt["status"] == "collecting"
+    assert attempt["status"] == "confirming"
     assert attempt["turns"][-1]["text"] == phrase
-    assert submit(client, attempt, {"type": "confirm"})["status"] != "completed"
+    assert confirm(client, attempt)["status"] == "completed"
 
 
 def test_r1_negating_dine_in_does_not_negate_item_in_next_clause(client):
@@ -687,7 +691,8 @@ def test_r1_voice_alias_can_fill_multiple_fields_and_legacy_voice_edited_remains
     edited_text = "我要三份小笼馒头，打包带走"
     edited_body = {**body, "request_id": str(uuid4()), "expected_revision": updated["revision"], "channel": "voice_edited", "text": edited_text}
     edited = client.post(path, json=edited_body).json()["attempt"]
-    assert edited["status"] == "collecting"
+    assert edited["status"] == "confirming"
+    assert edited["confirmed_revision"] is None
     mark_session_as_legacy(app, client.get("/api/session").json()["id"])
     read = client.get(f"/api/attempts/{attempt['id']}").json()
     assert read["content_version"] == LEGACY_CONTENT_VERSION
@@ -695,3 +700,132 @@ def test_r1_voice_alias_can_fill_multiple_fields_and_legacy_voice_edited_remains
     assert read["turns"][-1]["text"] == edited_text
     assert read["turns"][-1]["asr_transcript"] == transcript
     assert client.get(path + "/" + edited_body["request_id"]).json()["attempt"]["turns"][-1]["asr_transcript"] == transcript
+
+
+@pytest.mark.parametrize("quantity,takeaway", [(1, False), (1, True), (3, False), (3, True), (20, False)])
+def test_r2_customer_decides_quantity_and_dining_but_must_confirm(client, quantity, takeaway):
+    attempt = submit(client, start(client), {"type": "set_order", "item": "xiaolongbao",
+                                            "quantity": quantity, "unit": "serving"})
+    assert attempt["prompt_id"] == "NX-N03"
+    assert attempt["order"]["takeaway"] is None
+    attempt = submit(client, attempt, {"type": "set_order", "takeaway": takeaway})
+    assert attempt["status"] == "confirming"
+    assert attempt["order"]["normalized_servings"] == quantity
+    assert attempt["order"]["takeaway"] is takeaway
+    assert attempt["confirmed_revision"] is None
+    completed = confirm(client, attempt)
+    assert completed["status"] == "completed"
+    assert completed["order"] == attempt["order"]
+
+
+@pytest.mark.parametrize("phrase,quantity", [
+    ("要两", 2), ("两吧", 2), ("两，谢谢", 2), ("嗯，两吧", 2),
+    ("can I have three please", 3), ("two, please", 2), ("十一", 11), ("二十份，谢谢", 20),
+    ("eleven servings please", 11), ("twenty servings", 20),
+])
+def test_r2_quantity_question_accepts_bounded_colloquial_replies(client, phrase, quantity):
+    attempt = submit(client, start(client), text="来小笼，堂吃")
+    assert attempt["prompt_id"] == "NX-N02"
+    attempt = submit(client, attempt, text=phrase)
+    assert attempt["order"]["quantity"] == quantity
+    assert attempt["order"]["unit"] == "serving"
+    assert attempt["status"] == "confirming"
+    assert attempt["turns"][-1]["text"] == phrase
+
+
+@pytest.mark.parametrize("phrase,issue", [
+    ("1/2份小笼堂吃", "ambiguous_quantity"), ("1–2份小笼堂吃", "ambiguous_quantity"),
+    ("one or two servings xiaolongbao for here", "ambiguous_quantity"),
+    ("一两份小笼堂吃", "ambiguous_quantity"), ("两三份小笼堂吃", "ambiguous_quantity"),
+    ("两份都不要", "ambiguous_quantity"), ("改成不要两份", "ambiguous_quantity"),
+    ("小笼两份，堂吃外带都不要", "ambiguous_takeaway"),
+    ("小笼两份，不要打包，也不要堂吃", "ambiguous_takeaway"),
+    ("小笼两份，堂吃外带", "ambiguous_takeaway"),
+    ("小笼二十一份堂吃", "quantity_out_of_range"),
+    ("twenty one servings xiaolongbao for here", "quantity_out_of_range"),
+    ("小笼两个堂吃", "unit_unknown"), ("小笼两只堂吃", "piece_not_serving"),
+    ("改成两份或者三份小笼堂吃", "ambiguous_quantity"),
+    ("改成一份小笼，堂吃外带", "ambiguous_takeaway"),
+    ("一份小笼，外带改成堂吃还是外带", "ambiguous_takeaway"),
+    ("one serving xiaolongbao, do not want to eat here", "ambiguous_takeaway"),
+    ("one hundred and two servings", "ambiguous_quantity"),
+    ("thirty one servings", "ambiguous_quantity"),
+    ("外带改成堂吃，两份三份", "ambiguous_quantity"),
+])
+def test_r2_looser_wording_never_erases_ambiguity_or_invalid_units(client, phrase, issue):
+    attempt = order(client, start(client))
+    attempt = submit(client, attempt, text=phrase)
+    assert issue in attempt["unresolved_issues"]
+    assert attempt["status"] == "collecting"
+    assert attempt["summary_revision"] is None
+    assert submit(client, attempt, {"type": "confirm"})["status"] != "completed"
+
+
+@pytest.mark.parametrize("phrase,expected", [
+    ("在这里吃", False), ("堂食", False), ("dine-in please", False),
+    ("不要打包，改成外带", True), ("外带，不，堂吃", False),
+    ("不堂吃，要打包", True),
+    ("不要打包带走", False), ("不要打包和外带", False),
+])
+def test_r2_dining_aliases_and_corrections_preserve_actual_choice(client, phrase, expected):
+    attempt = submit(client, start(client), text="一份小笼")
+    attempt = submit(client, attempt, text=phrase)
+    assert attempt["order"]["takeaway"] is expected
+    assert attempt["status"] == "confirming"
+    assert attempt["confirmed_revision"] is None
+
+
+@pytest.mark.parametrize("phrase", ["嗯，对个，谢谢", "好个", "yes, that's right, thanks"])
+def test_r2_confirmation_allows_politeness_but_requires_displayed_summary(client, phrase):
+    early = submit(client, start(client), text=phrase)
+    assert early["status"] == "collecting"
+    attempt = submit(client, early, text="一份小笼堂吃")
+    completed = submit(client, attempt, text=phrase, summary_revision=attempt["summary_revision"])
+    assert completed["status"] == "completed"
+
+
+@pytest.mark.parametrize("phrase,outcome,reason", [
+    ("小笼", "accepted", "understood"), ("勿要小笼", "accepted", "understood"),
+    ("没听清", "accepted", "repeat_requested"), ("对个", "accepted", "confirmation_required"),
+    ("banana weather", "retry", "unrecognized"), ("两份还是三份", "retry", "needs_clarification"),
+])
+def test_r2_voice_feedback_is_semantic_and_cached_not_a_pronunciation_score(client, monkeypatch, phrase, outcome, reason):
+    from app.providers import ASRResult, QwenASR
+    async def transcribe(_self, _request):
+        return ASRResult(phrase, "succeeded", 1, "mock-only", None, "test-only")
+    monkeypatch.setattr(QwenASR, "transcribe", transcribe)
+    asr_id = str(uuid4())
+    assert client.post("/api/asr", content=b"mock-audio", headers={"content-type": "audio/wav", "x-request-id": asr_id}).status_code == 200
+    attempt = start(client)
+    body = {"request_id": str(uuid4()), "expected_revision": 0, "channel": "voice", "text": phrase, "asr_request_id": asr_id}
+    path = f"/api/attempts/{attempt['id']}/turns"
+    result = client.post(path, json=body)
+    assert result.status_code == 200
+    assert result.json()["speech_feedback"] == {"outcome": outcome, "reason": reason}
+    assert client.post(path, json=body).json() == result.json()
+    assert client.get(path + "/" + body["request_id"]).json() == result.json()
+
+
+def test_r2_keeps_r1_content_and_fixed_target_rules_for_existing_sessions(app, client):
+    from app.rules import R1_CONTENT_VERSION, LEGACY_RULE_VERSION
+    from app.storage import encode
+    sid = client.get("/api/session").json()["id"]
+    with app.state.database.transaction() as connection:
+        session = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
+        session.update(content_version=R1_CONTENT_VERSION, rule_version=LEGACY_RULE_VERSION,
+                       model_config_id="development-parser.v2")
+        connection.execute("UPDATE sessions SET data=? WHERE id=?", (encode(session), sid))
+    old_content = client.get("/api/content")
+    assert old_content.status_code == 200
+    assert old_content.json()["contentVersion"] == R1_CONTENT_VERSION
+    attempt = submit(client, start(client), {"type": "set_order", "item": "xiaolongbao",
+                                            "quantity": 1, "unit": "serving", "takeaway": False})
+    assert attempt["rule_version"] == LEGACY_RULE_VERSION
+    assert attempt["status"] == "collecting"
+    assert set(attempt["unresolved_issues"]) == {"quantity_not_target", "takeaway_required"}
+    assert submit(client, attempt, {"type": "confirm"})["status"] != "completed"
+    rejected = client.post(f"/api/attempts/{attempt['id']}/turns", json={
+        "request_id": str(uuid4()), "expected_revision": attempt["revision"], "channel": "text", "text": "两份外带"})
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"]["code"] == "configuration_changed"
+    assert confirm(client, order(client, attempt))["status"] == "completed"

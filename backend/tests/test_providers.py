@@ -359,7 +359,7 @@ def test_review_manifest_check_and_subset_resume_without_paid_calls(tmp_path, mo
     entries = [{"id": f"T{i}", "version": "test-only", "hanzi": f"测试{i}", "pronunciation": "test-only",
                 "segments": [], "audio": {"normal": f"T{i}.normal"}, "review": {"status": "draft", "language": "pending"}}
                for i in range(20)]
-    pack = {"status": "draft", "expressions": entries}
+    pack = {"contentVersion": module.VERSION, "status": "draft", "expressions": entries}
     (folder / "batch-a.json").write_text(json.dumps(pack))
     monkeypatch.setattr(module, "ROOT", tmp_path)
     monkeypatch.setattr(module, "CACHE", tmp_path / "cache")

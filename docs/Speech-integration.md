@@ -1,8 +1,24 @@
 # 批次 A：语音服务边界与内容制作
 
-当前覆盖性决定（2026-10-17）：[批次 A 修订 1](Batch-A-revision-1.md) 已获用户确认。当前实现采用逐轮提问、语音/选择两种入口、直接显示沪语/注音/释义，允许先生成注音与 TTS 待审稿供用户审阅。以下旧稿中的 Type、仅点击查看当前表达、未审稿一律不可生成/显示等规定由本修订替代；其他未冲突要求保留。
+当前覆盖性决定（2026-10-17）：[批次 A 修订 2](Batch-A-revision-2.md) 已完成本轮可审阅实现，见 [修订 2 验收](Batch-A-revision-2-acceptance.md)。南翔改为有效数量、堂吃或外带的自由点单；每题先选练习内容再 Speak，结束录音自动识别提交，失败或技术不可用后允许按钮回答。字音对齐且隐藏声调，提供标准/保音高慢速；移除 Phrase book 按钮，完成南翔后提供 Review。以下固定两份外带、始终开放按钮、手动提交、进行中表达合集等旧规定由修订 2 覆盖。其余沿用 [修订 1](Batch-A-revision-1.md)，实际交付以进度与验收记录为准。
 
-核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`，修订 1 待审稿入口为 `scripts/speech-review.py`。已生成 **20 条常速 Jada 沪语待审音频，共 29.84 秒**，可由前端本地静态资源播放；[逐句注音与声音审阅表](content-review/Pronunciation-draft-r1.md) 供用户核对。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+
+## 修订 2：自由点单改稿与慢速播放
+
+先冻结内容 `batch-a-r2.2026-10-17.v1`，再按用户已授权的修订制作必要样音。20 条中 17 条复用 R1 原音频；NX-N05 与旧 N02 同文、NX-N06 与旧 N03 同文，清单记录来源和当前版本，不复制旧文件。新增 NX-N04「侬讲个是只，还是份？」、NX-N09「对伐？」、NX-N10「好个。」三条，避免旧台词仍要求固定两份外带。
+
+实际 **3 次北京 `qwen3-tts-flash` + Jada TTS，无重试**；API 返回 `usage.characters` 合计 **28**。按 [官方北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **¥0.00224**，未查询账单或免费额度。没有新增 ASR/LLM 请求，没有使用麦克风。新文件在 `frontend/public/audio/review-r2/`，全部维持待审；R1 清单与源内容快照保留用于旧会话及历史核验。
+
+制作工具固定三条新句、最多三次请求、¥1 上限，并核对冻结哈希；复用前验证 WAV/哈希/原文来源，不对不明结果自动重试。14 项工具测试使用模拟提供商。生成后的离线 `check` 通过 20 条，`plan` 为零新请求、零新增费用：
+
+```sh
+backend/.venv/bin/python scripts/speech-review-r2.py check
+backend/.venv/bin/python scripts/speech-review-r2.py plan
+npm run audio:check
+```
+
+`audio:check` 同时核验历史 R1 与当前 R2。前端慢速只改变已有文件的播放速度至 0.75×，并设置保音高；不重复调用 TTS、不生成伪造的独立慢速文件，也不将慢放听感标为已审核。标准与慢速偏好本地保存。自动录音结束→ASR→提交原转写、取消/迟到隔离由媒体与事件处理模拟回归覆盖，本轮未声称真人浏览器录音成功；具体证据见 [修订 2 验收](Batch-A-revision-2-acceptance.md)。
 
 ## 官方合约与初选配置
 

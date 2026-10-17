@@ -1,0 +1,2946 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "batch-a-r1.2026-10-17.v1",
+  "status": "draft",
+  "createdAt": "2026-10-17",
+  "localeKeys": [
+    "zh",
+    "en"
+  ],
+  "notice": {
+    "zh": "上海话审阅稿：汉字、注音及样音均待人工审阅；可以查看和试听，不代表正式教材已批准。",
+    "en": "Shanghainese review draft: wording, romanization, and sample audio await human review. Available for review, not approved teaching material."
+  },
+  "sources": [
+    {
+      "id": "route-common",
+      "path": "docs/Route-drafts-index.md",
+      "version": "0.1",
+      "sections": [
+        "2",
+        "3",
+        "6"
+      ],
+      "kind": "project-specification",
+      "note": "共同约定；不是流利使用者审核证据。"
+    },
+    {
+      "id": "nanxiang-draft",
+      "path": "docs/Nanxiang-experience-draft.md",
+      "version": "0.2",
+      "sections": [
+        "1",
+        "4",
+        "5",
+        "6",
+        "7",
+        "9",
+        "13"
+      ],
+      "kind": "project-specification",
+      "note": "上海话汉字为原文候选；店员台词为普通话语义稿。"
+    },
+    {
+      "id": "blueprint",
+      "path": "docs/Development-blueprint.md",
+      "version": "0.7",
+      "sections": [
+        "8",
+        "9"
+      ],
+      "kind": "project-specification",
+      "note": "表达、审核阶段和版本要求；未据此推定任何语言内容已获批准。"
+    },
+    {
+      "id": "restaurant-draft",
+      "path": "docs/Shanghai-old-restaurant-draft.md",
+      "version": "0.1",
+      "sections": [
+        "1",
+        "2.1"
+      ],
+      "kind": "project-specification",
+      "note": "仅用于地图双语任务元数据。"
+    },
+    {
+      "id": "candy-draft",
+      "path": "docs/Pear-candy-shop-draft.md",
+      "version": "0.1",
+      "sections": [
+        "1",
+        "2"
+      ],
+      "kind": "project-specification",
+      "note": "仅用于地图双语任务元数据；不提前揭示听辨目标。"
+    },
+    {
+      "id": "teahouse-draft",
+      "path": "docs/Huxinting-teahouse-draft.md",
+      "version": "0.1",
+      "sections": [
+        "1",
+        "2.1"
+      ],
+      "kind": "project-specification",
+      "note": "仅用于地图双语任务元数据。"
+    },
+    {
+      "id": "r1-language-draft",
+      "path": "docs/content-review/Pronunciation-draft-r1.md",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "sections": [
+        "1",
+        "2",
+        "3"
+      ],
+      "kind": "project-review-draft",
+      "note": "本轮可审候选、词组注音及存疑清单；不是审核人批准。"
+    },
+    {
+      "id": "wugniu-official",
+      "path": "docs/content-review/Pronunciation-draft-r1.md",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "sections": [
+        "1",
+        "2",
+        "3"
+      ],
+      "kind": "lexical-reference",
+      "note": "2026-10-17 实际查询上海中派字音；单字读法不能证明整句连读。",
+      "url": "https://www.wugniu.com/search?char=侬啥小笼馒头包份&table=shanghai"
+    },
+    {
+      "id": "ngli-lexicon",
+      "path": "docs/content-review/Pronunciation-draft-r1.md",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "sections": [
+        "1",
+        "2",
+        "3"
+      ],
+      "kind": "lexical-reference",
+      "note": "官方词库及音系表；辅助核对对个、好个、还是等。字库无调词条不补造调号。",
+      "url": "https://github.com/NGLI/rime-wugniu_zaonhe"
+    },
+    {
+      "id": "nanxiang-food-name",
+      "path": "docs/content-review/Pronunciation-draft-r1.md",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "sections": [
+        "1",
+        "2",
+        "3"
+      ],
+      "kind": "cultural-reference",
+      "note": "上海市公开非遗条目用于商品称呼；不是语音或语言审核依据。",
+      "url": "https://www.shanghai.gov.cn/hpfy/20260615/964f8e046e624a3a99bb4c9a12dbc407.html"
+    }
+  ],
+  "stations": [
+    {
+      "id": "restaurant",
+      "version": "1.0.0-draft.1",
+      "name": {
+        "zh": "上海老饭店",
+        "en": "Shanghai Old Restaurant"
+      },
+      "taskTitle": {
+        "zh": "找一道合口味的菜",
+        "en": "Find a dish you'll enjoy"
+      },
+      "taskDescription": {
+        "zh": "你想点一道不辣的菜。告诉店员你的口味，问问有什么推荐，再选一道并确认。",
+        "en": "You'd like a dish that isn't spicy. Tell the server your preference, ask for a recommendation, then choose and confirm a dish."
+      },
+      "recommendedOrder": 1,
+      "estimatedMinutes": [
+        5,
+        6
+      ],
+      "expressionIds": [
+        "E02",
+        "E03",
+        "E04",
+        "E05"
+      ],
+      "implementedInBatchA": false,
+      "availableWithoutUnlock": true,
+      "sourceIds": [
+        "restaurant-draft",
+        "route-common"
+      ],
+      "copyReview": {
+        "status": "pending",
+        "recordIds": []
+      }
+    },
+    {
+      "id": "candy",
+      "version": "1.0.0-draft.1",
+      "name": {
+        "zh": "上海梨膏糖商店",
+        "en": "Shanghai Pear Candy Shop"
+      },
+      "taskTitle": {
+        "zh": "听听是哪种口味",
+        "en": "Listen for the flavor"
+      },
+      "taskDescription": {
+        "zh": "听店员介绍，选出对应口味的梨膏糖，再要两包。需要时可以重听、看读音或查看介绍文字。",
+        "en": "Listen to the shopkeeper, choose the matching pear candy, and ask for two packs. You can replay the audio, use the pronunciation help, or read what was said."
+      },
+      "recommendedOrder": 2,
+      "estimatedMinutes": [
+        5,
+        7
+      ],
+      "expressionIds": [
+        "E06",
+        "E07",
+        "E05"
+      ],
+      "implementedInBatchA": false,
+      "availableWithoutUnlock": true,
+      "sourceIds": [
+        "candy-draft",
+        "route-common"
+      ],
+      "copyReview": {
+        "status": "pending",
+        "recordIds": []
+      }
+    },
+    {
+      "id": "nanxiang",
+      "version": "1.0.0-draft.1",
+      "name": {
+        "zh": "南翔馒头店",
+        "en": "Nanxiang Steamed Bun Restaurant"
+      },
+      "taskTitle": {
+        "zh": "两份小笼包，打包带走",
+        "en": "Two servings of xiaolongbao to go"
+      },
+      "taskDescription": {
+        "zh": "给自己和同行的人买两份小笼包，打包带走，并核对订单。",
+        "en": "Order two servings of xiaolongbao to take away, one for you and one for your companion. Check and confirm your order."
+      },
+      "recommendedOrder": 3,
+      "estimatedMinutes": [
+        5,
+        6
+      ],
+      "expressionIds": [
+        "E08",
+        "E09",
+        "E05"
+      ],
+      "implementedInBatchA": true,
+      "availableWithoutUnlock": true,
+      "sourceIds": [
+        "nanxiang-draft",
+        "route-common"
+      ],
+      "copyReview": {
+        "status": "pending",
+        "recordIds": []
+      }
+    },
+    {
+      "id": "teahouse",
+      "version": "1.0.0-draft.1",
+      "name": {
+        "zh": "湖心亭茶楼",
+        "en": "Huxin Pavilion Teahouse"
+      },
+      "taskTitle": {
+        "zh": "喝一盏茶，说声谢谢",
+        "en": "Enjoy some tea and say thank you"
+      },
+      "taskDescription": {
+        "zh": "想象你刚尝过这杯茶，而且很喜欢。试着告诉店家茶很好喝，并谢谢对方。",
+        "en": "Imagine you've just tasted this tea and really enjoyed it. Tell your host that the tea is good and thank them."
+      },
+      "recommendedOrder": 4,
+      "estimatedMinutes": [
+        3,
+        4
+      ],
+      "expressionIds": [
+        "E10",
+        "E11"
+      ],
+      "implementedInBatchA": false,
+      "availableWithoutUnlock": true,
+      "sourceIds": [
+        "teahouse-draft",
+        "route-common"
+      ],
+      "copyReview": {
+        "status": "pending",
+        "recordIds": []
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "id": "E08",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "我要两份小笼馒头",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要两份小笼包。",
+        "en": "Two servings of xiaolongbao, please."
+      },
+      "segments": [
+        {
+          "id": "E08-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu6 iau5",
+          "approximateZh": null
+        },
+        {
+          "id": "E08-S02",
+          "hanzi": "两份",
+          "meaning": {
+            "zh": "两份",
+            "en": "two servings"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "E08-S03",
+          "hanzi": "小笼馒头",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu6 iau5 / lian6 ven6 / shiau5 lon6 moe6 deu6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "blueprint",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon",
+        "nanxiang-food-name"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "expression",
+      "intent": "order_quantity_item",
+      "usage": {
+        "zh": "向店员说明商品和份数；外带需另外说明或同轮补充。",
+        "en": "Say which item you want and how many servings; add takeaway in the same reply or a later one."
+      },
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      },
+      "audio": {
+        "normal": "E08.normal",
+        "slow": "E08.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1"
+    },
+    {
+      "id": "E09",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "打包带走",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "打包带走。",
+        "en": "To go, please."
+      },
+      "segments": [
+        {
+          "id": "E09-S01",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack it up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "E09-S02",
+          "hanzi": "带走",
+          "meaning": {
+            "zh": "带走",
+            "en": "to take away"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "tan5 pau1 / ta5 tseu5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "blueprint",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "expression",
+      "intent": "set_takeaway",
+      "usage": {
+        "zh": "用于表达外带。堂吃、不要打包与不堂吃要分别解释，不能仅凭关键词判断。",
+        "en": "Use to ask for takeaway. Eating in, refusing packing, and not eating in have different meanings."
+      },
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      },
+      "audio": {
+        "normal": "E09.normal",
+        "slow": "E09.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1"
+    },
+    {
+      "id": "E05",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "restaurant",
+        "candy",
+        "nanxiang"
+      ],
+      "hanzi": "对个",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "对的。",
+        "en": "Yes, that's right."
+      },
+      "segments": [
+        {
+          "id": "E05-S01",
+          "hanzi": "对个",
+          "meaning": {
+            "zh": "对的",
+            "en": "that is right"
+          },
+          "pronunciation": "te5 gheq",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "te5 gheq",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 个的助词读法暂记 gheq，独立调号未定，不表示零调。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. The particle 个 is provisionally gheq without a tone number; this does not assert a neutral tone."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "blueprint",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "expression",
+      "intent": "confirm_current_summary",
+      "usage": {
+        "zh": "仅在已展示有效订单摘要后确认当前版本；首轮附带肯定或修改后的旧肯定均不算确认。",
+        "en": "Confirm only the valid order summary already shown. An initial yes or a yes followed by a change does not confirm an unseen or outdated order."
+      },
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对助词个的读法与声调。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      },
+      "audio": {
+        "normal": "E05.normal",
+        "slow": "E05.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1"
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "NX-N01",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "侬好，要买啥？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "您好，想买什么？",
+        "en": "Hello. What would you like?"
+      },
+      "segments": [
+        {
+          "id": "NX-N01-S01",
+          "hanzi": "侬好，",
+          "meaning": {
+            "zh": "您好",
+            "en": "hello"
+          },
+          "pronunciation": "non6 hau5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N01-S02",
+          "hanzi": "要买啥？",
+          "meaning": {
+            "zh": "想买什么？",
+            "en": "what would you like?"
+          },
+          "pronunciation": "iau5 ma6 sa5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non6 hau5 / iau5 ma6 sa5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "start",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N01.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N02",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "要几份？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "要几份？",
+        "en": "How many servings?"
+      },
+      "segments": [
+        {
+          "id": "NX-N02-S01",
+          "hanzi": "要",
+          "meaning": {
+            "zh": "要",
+            "en": "would like"
+          },
+          "pronunciation": "iau5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N02-S02",
+          "hanzi": "几份？",
+          "meaning": {
+            "zh": "几份？",
+            "en": "how many servings?"
+          },
+          "pronunciation": "ci5 ven6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iau5 / ci5 ven6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "quantity_unknown",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N02.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N03",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "堂吃，还是打包带走？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "堂吃还是外带？",
+        "en": "For here or to go?"
+      },
+      "segments": [
+        {
+          "id": "NX-N03-S01",
+          "hanzi": "堂吃，",
+          "meaning": {
+            "zh": "堂吃",
+            "en": "for here"
+          },
+          "pronunciation": "daon6 chiq7",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N03-S02",
+          "hanzi": "还是",
+          "meaning": {
+            "zh": "还是",
+            "en": "or"
+          },
+          "pronunciation": "ghe6 zy6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N03-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "packed"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N03-S04",
+          "hanzi": "带走？",
+          "meaning": {
+            "zh": "带走？",
+            "en": "to go?"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "daon6 chiq7 / ghe6 zy6 / tan5 pau1 / ta5 tseu5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "takeaway_unknown",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N03.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N04",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "侬讲个是两只，还是两份？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "你说的是两只，还是两份？",
+        "en": "Do you mean two dumplings or two servings?"
+      },
+      "segments": [
+        {
+          "id": "NX-N04-S01",
+          "hanzi": "侬讲个",
+          "meaning": {
+            "zh": "您说的",
+            "en": "what you said"
+          },
+          "pronunciation": "non6 kaon5 gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N04-S02",
+          "hanzi": "是两只，",
+          "meaning": {
+            "zh": "是两只",
+            "en": "is two dumplings"
+          },
+          "pronunciation": "zy6 lian6 tsaq7",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N04-S03",
+          "hanzi": "还是",
+          "meaning": {
+            "zh": "还是",
+            "en": "or"
+          },
+          "pronunciation": "ghe6 zy6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N04-S04",
+          "hanzi": "两份？",
+          "meaning": {
+            "zh": "两份？",
+            "en": "two servings?"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non6 kaon5 gheq / zy6 lian6 tsaq7 / ghe6 zy6 / lian6 ven6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 个的助词读法暂记 gheq，独立调号未定，不表示零调。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. The particle 个 is provisionally gheq without a tone number; this does not assert a neutral tone."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "unit_ambiguous",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N04.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对助词个的读法与声调。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N05",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "搿趟要两份，改一改好伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "这次需要两份，改一下好吗？",
+        "en": "This time you need two servings. Shall we change that?"
+      },
+      "segments": [
+        {
+          "id": "NX-N05-S01",
+          "hanzi": "搿趟",
+          "meaning": {
+            "zh": "这次",
+            "en": "this time"
+          },
+          "pronunciation": "geq8 thaon5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N05-S02",
+          "hanzi": "要两份，",
+          "meaning": {
+            "zh": "需要两份",
+            "en": "you need two servings"
+          },
+          "pronunciation": "iau5 lian6 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N05-S03",
+          "hanzi": "改一改",
+          "meaning": {
+            "zh": "改一下",
+            "en": "change that"
+          },
+          "pronunciation": "ke5 iq7 ke5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N05-S04",
+          "hanzi": "好伐？",
+          "meaning": {
+            "zh": "好吗？",
+            "en": "all right?"
+          },
+          "pronunciation": "hau5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "geq8 thaon5 / iau5 lian6 ven6 / ke5 iq7 ke5 / hau5 va6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 句末伐借写疑问助词𠲎，按该助词字音暂记 va6，不按砍伐读 vaq8。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. Sentence-final 伐 writes the question particle 𠲎 here, provisionally va6, not the lexical reading vaq8."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "quantity_mismatch",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N05.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对疑问助词伐的语气与实际声音。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N06",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "搿趟要带走，打包好伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "这次要带走，打包好吗？",
+        "en": "This order is to go. Shall we pack it up?"
+      },
+      "segments": [
+        {
+          "id": "NX-N06-S01",
+          "hanzi": "搿趟",
+          "meaning": {
+            "zh": "这次",
+            "en": "this time"
+          },
+          "pronunciation": "geq8 thaon5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N06-S02",
+          "hanzi": "要带走，",
+          "meaning": {
+            "zh": "要带走",
+            "en": "it is to go"
+          },
+          "pronunciation": "iau5 ta5 tseu5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N06-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack it up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N06-S04",
+          "hanzi": "好伐？",
+          "meaning": {
+            "zh": "好吗？",
+            "en": "all right?"
+          },
+          "pronunciation": "hau5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "geq8 thaon5 / iau5 ta5 tseu5 / tan5 pau1 / hau5 va6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 句末伐借写疑问助词𠲎，按该助词字音暂记 va6，不按砍伐读 vaq8。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. Sentence-final 伐 writes the question particle 𠲎 here, provisionally va6, not the lexical reading vaq8."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "takeaway_false",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N06.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对疑问助词伐的语气与实际声音。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N07",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "搿个练习里，可以点小笼馒头。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "这个练习里可以点小笼包。",
+        "en": "In this activity, you can order xiaolongbao."
+      },
+      "segments": [
+        {
+          "id": "NX-N07-S01",
+          "hanzi": "搿个",
+          "meaning": {
+            "zh": "这个",
+            "en": "this"
+          },
+          "pronunciation": "geq8 gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N07-S02",
+          "hanzi": "练习里，",
+          "meaning": {
+            "zh": "练习中",
+            "en": "in the activity"
+          },
+          "pronunciation": "li6 zhiq8 li6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N07-S03",
+          "hanzi": "可以点",
+          "meaning": {
+            "zh": "可以点",
+            "en": "you can order"
+          },
+          "pronunciation": "khu5 i5 ti5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N07-S04",
+          "hanzi": "小笼馒头。",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "geq8 gheq / li6 zhiq8 li6 / khu5 i5 ti5 / shiau5 lon6 moe6 deu6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 个的助词读法暂记 gheq，独立调号未定，不表示零调。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. The particle 个 is provisionally gheq without a tone number; this does not assert a neutral tone."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon",
+        "nanxiang-food-name"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "item_out_of_scope",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N07.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对助词个的读法与声调。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N08",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "要几份？侬再讲一遍。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "要几份？请再说一遍。",
+        "en": "How many servings? Please say that again."
+      },
+      "segments": [
+        {
+          "id": "NX-N08-S01",
+          "hanzi": "要几份？",
+          "meaning": {
+            "zh": "要几份？",
+            "en": "how many servings?"
+          },
+          "pronunciation": "iau5 ci5 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N08-S02",
+          "hanzi": "侬再讲",
+          "meaning": {
+            "zh": "请再说",
+            "en": "please say it again"
+          },
+          "pronunciation": "non6 tse1 kaon5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N08-S03",
+          "hanzi": "一遍。",
+          "meaning": {
+            "zh": "一遍",
+            "en": "once more"
+          },
+          "pronunciation": "iq7 pi5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iau5 ci5 ven6 / non6 tse1 kaon5 / iq7 pi5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "quantity_unclear",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N08.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N09",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "两份小笼馒头，打包带走，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两份小笼包，外带，对吗？",
+        "en": "Two servings of xiaolongbao to go. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-N09-S01",
+          "hanzi": "两份",
+          "meaning": {
+            "zh": "两份",
+            "en": "two servings of"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N09-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N09-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "packed"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N09-S04",
+          "hanzi": "带走，",
+          "meaning": {
+            "zh": "带走",
+            "en": "to go"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N09-S05",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian6 ven6 / shiau5 lon6 moe6 deu6 / tan5 pau1 / ta5 tseu5 / te5 va6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 句末伐借写疑问助词𠲎，按该助词字音暂记 va6，不按砍伐读 vaq8。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. Sentence-final 伐 writes the question particle 𠲎 here, provisionally va6, not the lexical reading vaq8."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon",
+        "nanxiang-food-name"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N09.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对疑问助词伐的语气与实际声音。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N10",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "好个，帮侬打包。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "好的，给你打包。",
+        "en": "All right. We'll pack them for you."
+      },
+      "segments": [
+        {
+          "id": "NX-N10-S01",
+          "hanzi": "好个，",
+          "meaning": {
+            "zh": "好的",
+            "en": "all right"
+          },
+          "pronunciation": "hau5 gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N10-S02",
+          "hanzi": "帮侬",
+          "meaning": {
+            "zh": "给您",
+            "en": "for you"
+          },
+          "pronunciation": "paon1 non6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N10-S03",
+          "hanzi": "打包。",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack them up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "hau5 gheq / paon1 non6 / tan5 pau1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。 个的助词读法暂记 gheq，独立调号未定，不表示零调。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio. The particle 个 is provisionally gheq without a tone number; this does not assert a neutral tone."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "completion_saved",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N10.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。 核对助词个的读法与声调。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N11",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "侬想改啥？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "您想改什么？",
+        "en": "What would you like to change?"
+      },
+      "segments": [
+        {
+          "id": "NX-N11-S01",
+          "hanzi": "侬想",
+          "meaning": {
+            "zh": "您想",
+            "en": "would you like"
+          },
+          "pronunciation": "non6 shian5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N11-S02",
+          "hanzi": "改啥？",
+          "meaning": {
+            "zh": "改什么？",
+            "en": "to change what?"
+          },
+          "pronunciation": "ke5 sa5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non6 shian5 / ke5 sa5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "change_unclear",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N11.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-N12",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "请侬再讲一遍。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "请您再说一遍。",
+        "en": "Please say that again."
+      },
+      "segments": [
+        {
+          "id": "NX-N12-S01",
+          "hanzi": "请侬",
+          "meaning": {
+            "zh": "请您",
+            "en": "please"
+          },
+          "pronunciation": "chin5 non6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N12-S02",
+          "hanzi": "再讲",
+          "meaning": {
+            "zh": "再说",
+            "en": "say it again"
+          },
+          "pronunciation": "tse1 kaon5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-N12-S03",
+          "hanzi": "一遍。",
+          "meaning": {
+            "zh": "一遍",
+            "en": "once more"
+          },
+          "pronunciation": "iq7 pi5",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "chin5 non6 / tse1 kaon5 / iq7 pi5",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "no_understood_information",
+      "parameters": {},
+      "audio": {
+        "normal": "NX-N12.normal"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    }
+  ],
+  "supportTerms": [
+    {
+      "id": "NX-Q1",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "一份",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "一份",
+        "en": "One serving"
+      },
+      "segments": [
+        {
+          "id": "NX-Q1-S01",
+          "hanzi": "一份",
+          "meaning": {
+            "zh": "一份",
+            "en": "one serving"
+          },
+          "pronunciation": "iq7 ven6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iq7 ven6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "support-term",
+      "description": {
+        "zh": "一个练习份量；本练习的一笼示意对应一份。",
+        "en": "One activity serving; one illustrated basket represents one serving in this activity."
+      },
+      "semanticValue": {
+        "type": "quantity",
+        "value": 1
+      },
+      "audio": {
+        "normal": "NX-Q1.normal",
+        "slow": "NX-Q1.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-Q2",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "两份",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两份",
+        "en": "Two servings"
+      },
+      "segments": [
+        {
+          "id": "NX-Q2-S01",
+          "hanzi": "两份",
+          "meaning": {
+            "zh": "两份",
+            "en": "two servings"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian6 ven6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "support-term",
+      "description": {
+        "zh": "一个练习份量；本练习的一笼示意对应一份。",
+        "en": "One activity serving; one illustrated basket represents one serving in this activity."
+      },
+      "semanticValue": {
+        "type": "quantity",
+        "value": 2
+      },
+      "audio": {
+        "normal": "NX-Q2.normal",
+        "slow": "NX-Q2.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-Q3",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "三份",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "三份",
+        "en": "Three servings"
+      },
+      "segments": [
+        {
+          "id": "NX-Q3-S01",
+          "hanzi": "三份",
+          "meaning": {
+            "zh": "三份",
+            "en": "three servings"
+          },
+          "pronunciation": "se1 ven6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "se1 ven6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "support-term",
+      "description": {
+        "zh": "一个练习份量；本练习的一笼示意对应一份。",
+        "en": "One activity serving; one illustrated basket represents one serving in this activity."
+      },
+      "semanticValue": {
+        "type": "quantity",
+        "value": 3
+      },
+      "audio": {
+        "normal": "NX-Q3.normal",
+        "slow": "NX-Q3.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-MODE-HERE",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "堂吃",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "堂吃",
+        "en": "For here"
+      },
+      "segments": [
+        {
+          "id": "NX-MODE-HERE-S01",
+          "hanzi": "堂吃",
+          "meaning": {
+            "zh": "堂吃",
+            "en": "for here"
+          },
+          "pronunciation": "daon6 chiq7",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "daon6 chiq7",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "support-term",
+      "description": {
+        "zh": "表示在店内吃，不表示未知。",
+        "en": "Means eating in; it is an explicit choice, not missing information."
+      },
+      "semanticValue": {
+        "type": "mode",
+        "value": false
+      },
+      "audio": {
+        "normal": "NX-MODE-HERE.normal",
+        "slow": "NX-MODE-HERE.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    },
+    {
+      "id": "NX-ITEM-XLB",
+      "version": "batch-a-r1.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "hanzi": "小笼馒头",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "小笼包",
+        "en": "Xiaolongbao"
+      },
+      "segments": [
+        {
+          "id": "NX-ITEM-XLB-S01",
+          "hanzi": "小笼馒头",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "shiau5 lon6 moe6 deu6",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+        "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "sourceIds": [
+        "nanxiang-draft",
+        "r1-language-draft",
+        "wugniu-official",
+        "ngli-lexicon",
+        "nanxiang-food-name"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "kind": "support-term",
+      "description": {
+        "zh": "蒸制汤包；本练习唯一教学商品。",
+        "en": "Steamed soup dumplings; the only item in this activity."
+      },
+      "semanticValue": {
+        "type": "item",
+        "value": "xiaolongbao"
+      },
+      "audio": {
+        "normal": "NX-ITEM-XLB.normal",
+        "slow": "NX-ITEM-XLB.slow"
+      },
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "reviewFocus": {
+        "zh": "核对自然口语、词组边界、字音与连读；文字和音频均未获人工批准。",
+        "en": "Check natural wording, grouping, citation readings, and connected speech. Neither the text nor the audio has human approval."
+      }
+    }
+  ],
+  "nanxiangTask": {
+    "id": "NX-TASK",
+    "version": "1.0.0-draft.1",
+    "item": "xiaolongbao",
+    "target": {
+      "quantity": 2,
+      "normalizedServings": 2,
+      "unit": "serving",
+      "takeaway": true
+    },
+    "quantityOptions": [
+      1,
+      2,
+      3
+    ],
+    "units": [
+      {
+        "id": "serving",
+        "label": {
+          "zh": "份",
+          "en": "serving"
+        },
+        "normalization": "identity"
+      },
+      {
+        "id": "basket",
+        "label": {
+          "zh": "笼",
+          "en": "basket"
+        },
+        "normalization": "requires_unit_explanation_viewed"
+      },
+      {
+        "id": "piece",
+        "label": {
+          "zh": "只",
+          "en": "dumpling"
+        },
+        "normalization": "never_serving"
+      },
+      {
+        "id": "unknown",
+        "label": {
+          "zh": "单位待说明",
+          "en": "Unit not specified"
+        },
+        "normalization": "clarify"
+      }
+    ],
+    "unitExplanation": {
+      "zh": "本练习里，一笼示意代表一份；两份不等于两只。",
+      "en": "In this activity, one basket represents one serving. Two servings are not two dumplings."
+    },
+    "allowedActions": [
+      "set_item",
+      "set_quantity",
+      "set_takeaway",
+      "confirm",
+      "request_repeat",
+      "request_change",
+      "skip"
+    ],
+    "initialOrder": {
+      "item": null,
+      "quantity": null,
+      "unit": null,
+      "normalizedServings": null,
+      "takeaway": null
+    },
+    "completionRequires": [
+      "item_xiaolongbao",
+      "normalized_servings_2",
+      "takeaway_true",
+      "no_unresolved_issues",
+      "current_summary_displayed",
+      "later_confirmation_matches_revision",
+      "completion_saved"
+    ],
+    "copyReview": {
+      "status": "pending",
+      "recordIds": []
+    },
+    "sourceIds": [
+      "nanxiang-draft"
+    ]
+  },
+  "ruleExamples": [
+    {
+      "id": "NX-T01",
+      "input": {
+        "zh": "两份小笼包 → 外带 → 确认",
+        "en": "Two servings of xiaolongbao → to go → confirm"
+      },
+      "expected": {
+        "zh": "商品/份数/外带齐全后展示摘要，后续确认且保存成功才完成。",
+        "en": "Show a valid summary, then complete only after later confirmation and successful saving."
+      },
+      "assertions": {
+        "normalizedServings": 2,
+        "takeaway": true,
+        "needsDisplayedSummary": true,
+        "needsSubsequentConfirmation": true
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T02",
+      "input": {
+        "zh": "两份小笼包外带",
+        "en": "Two servings of xiaolongbao to go"
+      },
+      "expected": {
+        "zh": "同轮保留完整字段，直接核对。",
+        "en": "Keep all fields from this turn and show the summary."
+      },
+      "assertions": {
+        "normalizedServings": 2,
+        "takeaway": true,
+        "complete": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T03",
+      "input": {
+        "zh": "先说外带，再补商品和数量",
+        "en": "Say to go, then item and quantity"
+      },
+      "expected": {
+        "zh": "保留外带；只追问仍缺少的字段。",
+        "en": "Keep takeaway and ask only for remaining information."
+      },
+      "assertions": {
+        "takeaway": true,
+        "mustNotPrepopulateTarget": true
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T04",
+      "input": {
+        "zh": "全程使用选择回应按钮",
+        "en": "Use reply buttons throughout"
+      },
+      "expected": {
+        "zh": "不要求语音失败；保存完成后成功，语音尝试为零。",
+        "en": "No prior voice failure required; saving completes the task with zero voice attempts."
+      },
+      "assertions": {
+        "voiceRequired": false,
+        "voiceAttempts": 0
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T05",
+      "input": {
+        "zh": "两个（没有份数上下文）",
+        "en": "Two (without a serving context)"
+      },
+      "expected": {
+        "zh": "单位待澄清，不归一为两份。",
+        "en": "Clarify the unit; do not infer two servings."
+      },
+      "assertions": {
+        "normalizedServings": null,
+        "unresolvedIssue": "unit_ambiguous"
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T06",
+      "input": {
+        "zh": "店员刚问几份，回答两",
+        "en": "Answer two immediately after how many servings"
+      },
+      "expected": {
+        "zh": "结合明确问题理解为两份，并记录上下文依据。",
+        "en": "Interpret two servings using the explicit question, and record that basis."
+      },
+      "assertions": {
+        "normalizedServings": 2,
+        "basis": "explicit_quantity_question"
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T07",
+      "input": {
+        "zh": "两笼，已看过一笼对应一份的说明",
+        "en": "Two baskets after seeing the basket-to-serving explanation"
+      },
+      "expected": {
+        "zh": "可归一两份，保留原单位及说明事件；未展示说明时继续澄清。",
+        "en": "Normalize to two servings while preserving the original unit and explanation event; otherwise clarify."
+      },
+      "assertions": {
+        "unit": "basket",
+        "normalizedServings": 2,
+        "requiresEvent": "unit_explanation_viewed"
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T08",
+      "input": {
+        "zh": "堂吃",
+        "en": "For here"
+      },
+      "expected": {
+        "zh": "保留 false，提示任务要求外带，不得改为 true 或 unknown。",
+        "en": "Keep false, explain the takeaway target, and never silently change it."
+      },
+      "assertions": {
+        "takeaway": false,
+        "complete": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T09",
+      "input": {
+        "zh": "不堂吃，要打包",
+        "en": "Not for here; to go"
+      },
+      "expected": {
+        "zh": "识别否定范围与外带意图，保留其他已知字段。",
+        "en": "Recognize negation and the takeaway intent; keep other known fields."
+      },
+      "assertions": {
+        "takeaway": true
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T10",
+      "input": {
+        "zh": "不要打包",
+        "en": "Do not pack it to go"
+      },
+      "expected": {
+        "zh": "不得仅因出现打包二字记 true；拒绝外带或冲突语境需澄清。",
+        "en": "Never infer takeaway from the packing keyword; preserve the refusal or clarify a conflict."
+      },
+      "assertions": {
+        "takeawayMustNotBe": true
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T11",
+      "input": {
+        "zh": "核对时说对，改三份",
+        "en": "At confirmation: yes, change it to three"
+      },
+      "expected": {
+        "zh": "修改优先，旧确认失效；三份不满足目标。",
+        "en": "Apply the change first; invalidate confirmation because three does not meet the target."
+      },
+      "assertions": {
+        "normalizedServings": 3,
+        "confirmedRevision": null,
+        "complete": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T12",
+      "input": {
+        "zh": "核对时说没听清",
+        "en": "At confirmation: I did not hear that"
+      },
+      "expected": {
+        "zh": "重播或提供文字，仍待确认。",
+        "en": "Replay or show text; confirmation remains pending."
+      },
+      "assertions": {
+        "complete": false,
+        "confirmedRevision": null
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T13",
+      "input": {
+        "zh": "首轮两份外带，对的",
+        "en": "First reply: two servings to go, yes"
+      },
+      "expected": {
+        "zh": "只生成摘要；未见过摘要的肯定不生效。",
+        "en": "Create a summary only; a yes cannot confirm an unseen summary."
+      },
+      "assertions": {
+        "complete": false,
+        "confirmedRevision": null
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T14",
+      "input": {
+        "zh": "二百份",
+        "en": "Two hundred servings"
+      },
+      "expected": {
+        "zh": "保留原文并澄清，不改成目标两份。",
+        "en": "Keep the original input and clarify; do not change it to the target."
+      },
+      "assertions": {
+        "mustPreserveInput": true,
+        "complete": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T15",
+      "input": {
+        "zh": "点蒸笼、袋子或未提交的两份选项",
+        "en": "Click a basket, bag, or unsent two-servings option"
+      },
+      "expected": {
+        "zh": "只打开帮助或修改本地草稿；不写订单。",
+        "en": "Open help or change a local draft only; do not update the saved order."
+      },
+      "assertions": {
+        "mutatesOrder": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T16",
+      "input": {
+        "zh": "重复确认或断网后重试相同请求",
+        "en": "Repeat confirmation or retry the same request after disconnect"
+      },
+      "expected": {
+        "zh": "依请求 ID 去重，完成只保存一次。",
+        "en": "Deduplicate by request ID; save completion once."
+      },
+      "assertions": {
+        "completionEvents": 1
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T17",
+      "input": {
+        "zh": "使用旧版本摘要确认新订单",
+        "en": "Confirm a new order using an old summary revision"
+      },
+      "expected": {
+        "zh": "拒绝过期确认并展示当前有效摘要。",
+        "en": "Reject stale confirmation and show the current summary."
+      },
+      "assertions": {
+        "complete": false,
+        "rejectReason": "stale_revision"
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    },
+    {
+      "id": "NX-T18",
+      "input": {
+        "zh": "完成保存失败",
+        "en": "Completion save fails"
+      },
+      "expected": {
+        "zh": "不递袋，不显示完成；查询或重试相同请求。",
+        "en": "Do not hand over the bag or show success; query or retry the same request."
+      },
+      "assertions": {
+        "complete": false,
+        "successVisual": false
+      },
+      "sourceIds": [
+        "nanxiang-draft"
+      ],
+      "purpose": "engineering-fixture-not-language-certification"
+    }
+  ],
+  "audioClips": [
+    {
+      "id": "E08.normal",
+      "textId": "E08",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "E08.slow",
+      "textId": "E08",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "E09.normal",
+      "textId": "E09",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "E09.slow",
+      "textId": "E09",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "E05.normal",
+      "textId": "E05",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "E05.slow",
+      "textId": "E05",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N01.normal",
+      "textId": "NX-N01",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N02.normal",
+      "textId": "NX-N02",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N03.normal",
+      "textId": "NX-N03",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N04.normal",
+      "textId": "NX-N04",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N05.normal",
+      "textId": "NX-N05",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N06.normal",
+      "textId": "NX-N06",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N07.normal",
+      "textId": "NX-N07",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N08.normal",
+      "textId": "NX-N08",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N09.normal",
+      "textId": "NX-N09",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N10.normal",
+      "textId": "NX-N10",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N11.normal",
+      "textId": "NX-N11",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-N12.normal",
+      "textId": "NX-N12",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q1.normal",
+      "textId": "NX-Q1",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q1.slow",
+      "textId": "NX-Q1",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q2.normal",
+      "textId": "NX-Q2",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q2.slow",
+      "textId": "NX-Q2",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q3.normal",
+      "textId": "NX-Q3",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-Q3.slow",
+      "textId": "NX-Q3",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-MODE-HERE.normal",
+      "textId": "NX-MODE-HERE",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-MODE-HERE.slow",
+      "textId": "NX-MODE-HERE",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-ITEM-XLB.normal",
+      "textId": "NX-ITEM-XLB",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "normal",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    },
+    {
+      "id": "NX-ITEM-XLB.slow",
+      "textId": "NX-ITEM-XLB",
+      "textVersion": "batch-a-r1.2026-10-17.v1",
+      "speed": "slow",
+      "status": "pending",
+      "file": null,
+      "sha256": null,
+      "durationMs": null,
+      "source": null,
+      "provider": null,
+      "deployment": null,
+      "model": null,
+      "voice": null,
+      "voiceConfigVersion": null,
+      "generationConfig": null,
+      "generatedAt": null,
+      "reviewIds": []
+    }
+  ],
+  "release": {
+    "approved": false,
+    "reviewLedger": "content/reviews.json",
+    "minimumIndependentLanguageReviewers": 2,
+    "requiredStages": [
+      "language",
+      "pronunciation",
+      "approximation",
+      "audio"
+    ],
+    "allowedInDevelopment": true,
+    "blockProductionUntilApproved": true,
+    "notes": {
+      "zh": "审核账本为空，语言、读音、近似读音与正式教学音频仍待批准。修订1的独立常速审阅样音清单不等于本包28条生产音频或正式听审通过。",
+      "en": "The review ledger is empty. Language, pronunciation, approximation, and production teaching audio still need approval. The separate revision-1 normal-speed review-audio manifest does not approve this pack’s 28 production clips."
+    }
+  },
+  "pronunciationScheme": {
+    "id": "wugniu-shanghai-citation-draft-v1",
+    "name": {
+      "zh": "吴语学堂中派上海话·单字调审阅稿",
+      "en": "Wugniu urban Shanghai · citation-tone review draft"
+    },
+    "version": "batch-a-r1.2026-10-17.v1",
+    "toneNotation": "citation-category-suffix",
+    "toneCategories": {
+      "1": "53",
+      "5": "34",
+      "6": "23",
+      "7": "5",
+      "8": "12"
+    },
+    "syllableSeparator": " ",
+    "teachingGroupSeparator": " / ",
+    "unnumberedSyllables": [
+      {
+        "hanzi": "个",
+        "romanization": "gheq",
+        "reason": "The source phrase entry supplies the particle spelling without a citation tone. The missing number is unresolved, not an asserted neutral tone."
+      }
+    ],
+    "sandhiStatus": "pending",
+    "sourceIds": [
+      "wugniu-official",
+      "ngli-lexicon",
+      "r1-language-draft"
+    ],
+    "notice": {
+      "zh": "审阅稿：吴语学堂中派字音。数字为单字调类，不是整句连读曲线；斜线仅划分教学词组。请结合待审音频核对。",
+      "en": "Review draft: Wugniu urban Shanghai citation readings. Digits identify citation-tone categories, not the pitch of connected speech. Slashes only separate teaching groups. Compare with the draft audio."
+    }
+  }
+}

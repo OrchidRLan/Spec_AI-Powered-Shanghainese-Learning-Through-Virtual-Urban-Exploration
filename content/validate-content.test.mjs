@@ -69,8 +69,9 @@ const validate = (candidate = pack, reviews = ledger) => validateContent(candida
 const clone = () => structuredClone(pack);
 
 test('draft development accepts explicit pending', () => assert.equal(validateContent(draft, empty).ok, true));
-test('revision 1 supplies all 20 reviewable texts without manufacturing approval', () => {
-  const version = 'batch-a-r1.2026-10-17.v1';
+test('revision 2 retains reviewable text and versioned approval boundaries', () => {
+  const version = 'batch-a-r2.2026-10-17.v1';
+  const changedIds = new Set(['NX-N04', 'NX-N05', 'NX-N06', 'NX-N09', 'NX-N10']);
   const expectedIds = [
     'E08', 'E09', 'E05',
     ...Array.from({ length: 12 }, (_, i) => `NX-N${String(i + 1).padStart(2, '0')}`),
@@ -80,7 +81,7 @@ test('revision 1 supplies all 20 reviewable texts without manufacturing approval
   assert.equal(draft.contentVersion, version);
   assert.deepEqual(texts.map((text) => text.id).sort(), expectedIds.sort());
   for (const text of texts) {
-    assert.equal(text.version, version, text.id);
+    assert.equal(text.version, changedIds.has(text.id) ? version : 'batch-a-r1.2026-10-17.v1', text.id);
     assert.equal(text.textKind, 'shanghainese-candidate', text.id);
     assert.equal(typeof text.hanzi, 'string', text.id);
     assert.ok(text.hanzi.trim(), text.id);
@@ -103,11 +104,43 @@ test('revision 1 supplies all 20 reviewable texts without manufacturing approval
   assert.deepEqual(empty, { schemaVersion: 1, reviewers: [], records: [], releaseApprovals: [] });
   assert.equal(draft.audioClips.length, 28);
   for (const clip of draft.audioClips) {
-    assert.equal(clip.textVersion, version, clip.id);
+    assert.equal(clip.textVersion, texts.find(text => text.id === clip.textId).version, clip.id);
     assert.equal(clip.status, 'pending', clip.id);
     assert.equal(clip.file, null, clip.id);
     assert.deepEqual(clip.reviewIds, [], clip.id);
   }
+});
+test('revision 2 does not reuse audio for changed quantities or dining prompts', () => {
+  const archive = JSON.parse(readFileSync(join(repo, 'content/versions/batch-a-r1.2026-10-17.v1.json')));
+  const manifest = JSON.parse(readFileSync(join(repo, 'content/audio-review-r1.json')));
+  const historicalTexts = teachingTexts(archive);
+  const currentTexts = teachingTexts(draft);
+  assert.equal(manifest.clips.length, 20);
+  for (const clip of manifest.clips) {
+    const historical = historicalTexts.find(text => text.id === clip.textId);
+    assert.equal(clip.textVersion, historical.version);
+    assert.equal(clip.text, historical.hanzi);
+    assert.equal(clip.pronunciation, historical.pronunciation);
+  }
+  const available = currentTexts.filter(text => manifest.clips.some(clip => clip.textId === text.id && clip.textVersion === text.version && clip.text === text.hanzi));
+  assert.equal(available.length, 15);
+  for (const id of ['NX-Q1', 'NX-Q2', 'NX-Q3', 'NX-MODE-HERE', 'NX-ITEM-XLB', 'E09', 'E05']) {
+    assert(available.some(text => text.id === id), `${id}: core speaking choices retain matching audio`);
+  }
+  for (const id of ['NX-N04', 'NX-N05', 'NX-N06', 'NX-N09', 'NX-N10']) {
+    assert(!available.some(text => text.id === id), `${id}: changed text must not play R1 wording`);
+  }
+  assert.equal(validateContent(archive, empty).ok, true, 'the archived rule definition remains valid for historical sessions');
+});
+test('revision 2 rejects reinstating a fixed quantity or dining requirement', () => {
+  for (const [field, value] of [['quantity', 2], ['normalizedServings', 2], ['takeaway', true]]) {
+    const candidate = structuredClone(draft);
+    candidate.nanxiangTask.target[field] = value;
+    assert.equal(validateContent(candidate, empty).ok, false, field);
+  }
+  const candidate = structuredClone(draft);
+  candidate.nanxiangTask.diningOptions = [true];
+  assert.equal(validateContent(candidate, empty).ok, false);
 });
 test('draft production blocks', () => assert.equal(validateContent(draft, empty, { mode: 'production' }).ok, false));
 test('flags alone cannot approve language', () => {

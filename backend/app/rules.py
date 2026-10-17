@@ -4,8 +4,10 @@ from __future__ import annotations
 from copy import deepcopy
 from .models import Interpretation
 
-RULE_VERSION = "nanxiang-rules.v1"
-CONTENT_VERSION = "batch-a-r1.2026-10-17.v1"
+RULE_VERSION = "nanxiang-rules.v2"
+LEGACY_RULE_VERSION = "nanxiang-rules.v1"
+CONTENT_VERSION = "batch-a-r2.2026-10-17.v1"
+R1_CONTENT_VERSION = "batch-a-r1.2026-10-17.v1"
 LEGACY_CONTENT_VERSION = "batch-a.2026-10-17.v1"
 ORDER_FIELDS = {"item", "quantity", "unit", "takeaway"}
 DERIVED_ISSUES = {"unsupported_item", "quantity_out_of_range", "unit_unknown", "piece_not_serving",
@@ -26,7 +28,7 @@ def new_attempt(attempt_id: str, now: str, *, content_version: str = CONTENT_VER
     }
 
 
-def issues_for(order: dict, unit_seen: bool) -> list[str]:
+def issues_for(order: dict, unit_seen: bool, rule_version: str = RULE_VERSION) -> list[str]:
     issues = []
     if order["item"] is not None and order["item"] != "xiaolongbao":
         issues.append("unsupported_item")
@@ -42,17 +44,22 @@ def issues_for(order: dict, unit_seen: bool) -> list[str]:
             issues.append("basket_unit_unexplained")
         elif unit not in ("serving", "basket"):
             issues.append("unit_unknown")
-        if order["normalized_servings"] is not None and order["normalized_servings"] != 2:
+        if (rule_version == LEGACY_RULE_VERSION and order["normalized_servings"] is not None
+                and order["normalized_servings"] != 2):
             issues.append("quantity_not_target")
-    if order["takeaway"] is False:
+    if rule_version == LEGACY_RULE_VERSION and order["takeaway"] is False:
         issues.append("takeaway_required")
     return issues
 
 
 def ready(attempt: dict) -> bool:
     order = attempt["order"]
-    return (order["item"] == "xiaolongbao" and order["normalized_servings"] == 2
-            and order["takeaway"] is True and not attempt["unresolved_issues"])
+    if attempt.get("rule_version", LEGACY_RULE_VERSION) == LEGACY_RULE_VERSION:
+        return (order["item"] == "xiaolongbao" and order["normalized_servings"] == 2
+                and order["takeaway"] is True and not attempt["unresolved_issues"])
+    return (order["item"] == "xiaolongbao" and type(order["normalized_servings"]) is int
+            and 1 <= order["normalized_servings"] <= 20
+            and type(order["takeaway"]) is bool and not attempt["unresolved_issues"])
 
 
 def choose_prompt(attempt: dict) -> str:
@@ -115,7 +122,8 @@ def apply_interpretation(current: dict, parsed: Interpretation, summary_revision
             quantity if type(quantity) is int and 1 <= quantity <= 20 and
             (unit == "serving" or (unit == "basket" and result["unit_convention_seen"])) else None
         )
-        problems = issues_for(order, result["unit_convention_seen"])
+        problems = issues_for(order, result["unit_convention_seen"],
+                              result.get("rule_version", LEGACY_RULE_VERSION))
         # Ambiguous / invalid edits block an older valid order until explicitly resolved.
         problems.extend(rejected)
         problems.extend(parsed.uncertainties)

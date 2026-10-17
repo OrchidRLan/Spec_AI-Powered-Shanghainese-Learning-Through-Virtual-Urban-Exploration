@@ -7,20 +7,21 @@ import { api, post, ApiError, type Action, type Attempt, type Locale, type Sessi
 import { strings } from './lib/i18n';
 import content from '../../content/batch-a.json';
 import LearningText, { type LearningEntry } from './components/LearningText';
-import { transcriptGuide } from './lib/transcriptGuide';
+import { cursorForQuestion, readQuestionCursors, saveQuestionCursors, readOrderEdit, saveOrderEdit, readFallbacks, writeFallback, canReviewNanxiang } from './lib/conversation';
 import { reviewClipFor } from './lib/reviewAudio';
 import { stopAllAudio } from './lib/audio';
 import './styles.css';
 import './styles-revision1.css';
+import './styles-revision2.css';
 
 type View = 'map' | 'nanxiang' | 'review' | 'design';
-type Panel = 'help' | 'settings' | 'intro' | 'units' | 'about' | 'skip' | 'leaveRecording' | 'newSession' | null;
+type Panel = 'settings' | 'intro' | 'units' | 'about' | 'skip' | 'leaveRecording' | 'newSession' | null;
 type StationId = 'restaurant' | 'candy' | 'nanxiang' | 'teahouse';
 const stationIds: StationId[] = ['restaurant', 'candy', 'nanxiang', 'teahouse'];
 const stationPositions = [{ x: 25, y: 47 }, { x: 69, y: 42 }, { x: 30, y: 85 }, { x: 76, y: 78 }];
 const labelNames = { zh: ['上海老饭店', '上海梨膏糖商店', '南翔馒头店', '湖心亭茶楼'], en: ['Shanghai Old Restaurant', 'Shanghai Pear Candy Shop', 'Nanxiang Steamed Bun Restaurant', 'Huxin Pavilion Teahouse'] };
 const shortNames = { zh: ['老饭店', '梨膏糖商店', '南翔馒头店', '湖心亭茶楼'], en: ['Old Restaurant', 'Pear Candy Shop', 'Nanxiang', 'Huxin Pavilion'] };
-const themes = { zh: ['偏好与推荐', '听辨与挑选', '数量与外带', '赞茶与道谢'], en: ['Preferences & recommendations', 'Listen & choose', 'Quantity & takeaway', 'Tea & a little gratitude'] };
+const themes = { zh: ['偏好与推荐', '听辨与挑选', '点单与核对', '赞茶与道谢'], en: ['Preferences & recommendations', 'Listen & choose', 'Order & confirm', 'Tea & a little gratitude'] };
 const durations = ['5–6', '5–7', '5–6', '3–4'];
 type QuestionFocus = 'item' | 'quantity' | 'mode' | 'confirm' | 'edit';
 const learningEntries: LearningEntry[] = [...content.dialogues, ...content.expressions, ...content.supportTerms];
@@ -51,17 +52,19 @@ export default function App() {
   const [error, setError] = useState('');
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [awaitingReplyResolution, setAwaitingReplyResolution] = useState(false);
   const [savingPreferences, setSavingPreferences] = useState(false);
   const preferencesInFlight = useRef(false);
   const sessionResetInFlight = useRef(false);
-  const [channel, setChannel] = useState<'speak' | 'choose'>('choose');
+  const [channel, setChannel] = useState<'speak' | 'choose'>('speak');
   const [draft, setDraft] = useState<{ item?: string; quantity?: number; unit?: string; takeaway?: boolean }>({});
   const [asrSource, setAsrSource] = useState<{text:string;requestId:string}|null>(null);
   const [asrEnabled, setAsrEnabled] = useState(false);
   const [lastText, setLastText] = useState('');
-  const [showApproximate, setShowApproximate] = useState<string | null>(null);
   const [recordingDraft, setRecordingDraft] = useState(false);
   const [stopSignal, setStopSignal] = useState(0);
+  const editSummary = useRef<number | null>(null);
+  const questionCursors = useRef(readQuestionCursors());
   const [editing, setEditing] = useState(false);
   const [editFocus, setEditFocus] = useState<QuestionFocus | null>(null);
   const [recordingPhase, setRecordingPhase] = useState<'idle'|'recording'|'processing'|'playback'>('idle');
@@ -70,6 +73,14 @@ export default function App() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioMessage, setAudioMessage] = useState('');
   const [autoVoice, setAutoVoice] = useState(() => {try {return localStorage.getItem('shanghai-review-autovoice') !== 'off';} catch {return true;}});
+  const [audioSpeed, setAudioSpeed] = useState<1 | 0.75>(() => {try {return localStorage.getItem('shanghai-audio-speed') === '0.75' ? 0.75 : 1;} catch {return 1;}});
+  const audioSpeedRef = useRef(audioSpeed);
+  audioSpeedRef.current = audioSpeed;
+  const [speakTarget, setSpeakTarget] = useState<string | null>(null);
+  const [fallbacks, setFallbacks] = useState<Record<string, boolean>>(readFallbacks);
+  const [speechNotice, setSpeechNotice] = useState<'recognition' | 'technical' | ''>('');
+  const questionRef = useRef('');
+  const submittingRef = useRef(false);
   const teachingAudio = useRef<HTMLAudioElement | null>(null);
   const audioRole = useRef<'host'|'example'>('host');
   const audioEntryId = useRef<string | null>(null);
@@ -93,18 +104,19 @@ export default function App() {
   const s = strings[locale];
   const attempt = session?.attempts.find(a => a.id === activeAttemptId) || [...(session?.attempts || [])].reverse().find(a => a.station_id === 'nanxiang') || null;
   const legacyContent = Boolean(session && session.content_version !== content.contentVersion);
+  const reviewUnlocked = !legacyContent && canReviewNanxiang(session);
   const completeCount = session?.completed_station_ids.length || 0;
   const selectedIndex = stationIds.indexOf(selected);
   const selectedData = content.stations.find(station => station.id === selected);
 
   async function loadSession() {
     setBooting(true); setError('');
-    try { const next = await api<Session>('/session'); setSession(next); setLocale(next.locale); const services = await api<{asr:{enabled:boolean}}>('/services'); setAsrEnabled(services.asr.enabled); }
+    try { const next = await api<Session>('/session'); setSession(next); setLocale(next.locale); const savedAttempt=[...next.attempts].reverse().find(item=>item.station_id === 'nanxiang') || null; const edit=readOrderEdit(savedAttempt); if(edit){setEditing(true);setEditFocus(edit.focus);editSummary.current=edit.summary;} const services = await api<{asr:{enabled:boolean}}>('/services'); setAsrEnabled(services.asr.enabled); }
     catch { setError(strings[locale].offline); }
     finally { setBooting(false); }
   }
   useEffect(() => { void loadSession(); const update = () => {const next = getView(); if(next !== viewRef.current) navigationHandler.current(next);}; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
-  useEffect(() => { document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'; document.title = `${s.brand} · ${view === 'nanxiang' ? shortNames[locale][2] : s.map}`; setShowApproximate(null); setStopSignal(n => n + 1); }, [locale, view]);
+  useEffect(() => { document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'; document.title = `${s.brand} · ${view === 'nanxiang' ? shortNames[locale][2] : s.map}`; setStopSignal(n => n + 1); }, [locale, view]);
   useEffect(() => { const warn = (e:BeforeUnloadEvent) => {if(recordingDraft){e.preventDefault();e.returnValue='';}}; window.addEventListener('beforeunload',warn); return () => window.removeEventListener('beforeunload',warn); },[recordingDraft]);
   useEffect(() => { document.documentElement.dataset.reducedMotion = String(session?.reduced_motion || false); }, [session?.reduced_motion]);
   function replaceAttempt(next: Attempt, allowCreate = false) {
@@ -125,10 +137,12 @@ export default function App() {
     finally {preferencesInFlight.current=false;setSavingPreferences(false);}
   }
   function navigate(next: View, force = false) {
+    if(next === 'review' && !canReviewNanxiang(sessionRef.current)) next = 'map';
     if (recordingDraft && view === 'nanxiang' && next !== view && !force) { stopTeachingAudio();setStopSignal(n=>n+1);destination.current = next; window.history.replaceState(null,'',`#${view}`); setPanel('leaveRecording'); return; }
-    generation.current += 1; stopTeachingAudio(); controller.current?.abort(); if(!sessionResetInFlight.current) setBusy(false); setPanel(null); setError(''); setStopSignal(n => n + 1);
+    generation.current += 1; submittingRef.current=false; stopTeachingAudio(); controller.current?.abort(); if(!sessionResetInFlight.current) setBusy(false); setAwaitingReplyResolution(false); setPanel(null); setError(''); setStopSignal(n => n + 1);
     const pendingId = lastRequest.current?.body.request_id || attempt?.pending_request_id;
     if(pendingId && attempt) { void post<TurnResult>(`/attempts/${attempt.id}/turns/${pendingId}/cancel`, {expected_revision:attempt.revision}).then(result=>replaceAttempt(result.attempt)).catch(()=>setError(s.error)); lastRequest.current=null; }
+    if(next === 'map') setActiveAttemptId(null);
     viewRef.current = next; window.location.hash = next; setView(next); window.scrollTo({ top: 0, behavior: 'instant' }); requestAnimationFrame(() => document.getElementById('main-content')?.focus({preventScroll:true}));
   }
   navigationHandler.current = navigate;
@@ -140,7 +154,7 @@ export default function App() {
     try {
       const next = await post<Attempt>('/attempts', { station_id: 'nanxiang', restart });
       if(ticket !== generation.current) return;
-      replaceAttempt(next, true); setActiveAttemptId(next.id); setDraft({}); setAsrSource(null); setLastText(''); setEditing(false); setEditFocus(null); setRecordingDraft(false); setRecorderReset(n=>n+1); setTransientPose(null); lastRequest.current = null;
+      replaceAttempt(next, true); setActiveAttemptId(next.id); setDraft({}); setSpeakTarget(null); setChannel('speak'); setSpeechNotice(''); setAsrSource(null); setLastText(''); setEditing(false); setEditFocus(null); setRecordingDraft(false); setRecorderReset(n=>n+1); setTransientPose(null); lastRequest.current = null;
       navigate('nanxiang', true);
       scheduleQuestion(next, 200);
     } catch { if(ticket === generation.current) setError(s.error); } finally { if(ticket === generation.current) setBusy(false); }
@@ -153,40 +167,55 @@ export default function App() {
       const pendingId = lastRequest.current?.body.request_id || attempt?.pending_request_id;
       if(pendingId && attempt) await post(`/attempts/${attempt.id}/turns/${pendingId}/cancel`, {expected_revision:attempt.revision});
       const next = await post<Session>('/session/new', {});
-      lastRequest.current = null; setSession(next); setLocale(next.locale); setActiveAttemptId(null); setDraft({}); setAsrSource(null); setLastText(''); setEditing(false); setEditFocus(null); setRecorderReset(n=>n+1); setTransientPose(null); setOrderExpanded(false); setRecordingDraft(false); setLoggingGap(false); setPanel(null);
+      lastRequest.current = null; setSession(next); setLocale(next.locale); setActiveAttemptId(null); setDraft({}); setSpeakTarget(null); setChannel('speak'); setSpeechNotice(''); setAsrSource(null); setLastText(''); setEditing(false); setEditFocus(null); setRecorderReset(n=>n+1); setTransientPose(null); setOrderExpanded(false); setRecordingDraft(false); setLoggingGap(false); setPanel(null);
       viewRef.current = 'map'; window.location.hash = 'map'; setView('map'); window.scrollTo({top:0,behavior:'instant'}); requestAnimationFrame(() => document.getElementById('main-content')?.focus({preventScroll:true}));
     } catch { setPanel(null); setError(s.error); }
     finally {generation.current += 1; sessionResetInFlight.current = false;setBusy(false);}
+  }
+  function viewCompletedOrder() {
+    const completed=[...(session?.attempts || [])].reverse().find(item=>item.station_id === 'nanxiang' && item.status === 'completed');
+    if(completed){setActiveAttemptId(completed.id);navigate('nanxiang');} else navigate('map');
   }
   function enter() { if(attempt && attempt.status !== 'skipped') navigate('nanxiang'); else setPanel('intro'); }
   function applyTurnResult(result:TurnResult, body?:TurnRequest) {
     const previous = sessionRef.current?.attempts.find(current => current.id === result.attempt.id);
     replaceAttempt(result.attempt);
+    if(['applied','failed','cancelled'].includes(result.status)) setAwaitingReplyResolution(false);
     if(result.status === 'applied') {
+      const retryReply=result.speech_feedback?.outcome === 'retry' || (Boolean(editing || editFocus) && result.speech_feedback?.reason === 'confirmation_required');
+      const keepEditing=Boolean(editing || editFocus) && (retryReply || result.speech_feedback?.reason === 'repeat_requested');
       if(body?.channel === 'buttons') setDraft(current => Object.entries(current).every(([key,value]) => (body.action as unknown as Record<string,unknown>)?.[key] === value) ? {} : current);
       else if(body?.text) {setLastText(body.text);setAsrSource(current => current?.requestId === body.asr_request_id ? null : current);setRecorderReset(n=>n+1);}
-      setEditing(false);setEditFocus(null);lastRequest.current=null;setError('');
+      if(retryReply) {
+        unlockFallback('recognition');
+        const nextCursor=cursorForQuestion(result.attempt, (editing || editFocus) ? focus : focusFor(result.attempt), Boolean(editing || editFocus), questionCursors.current[result.attempt.id]);
+        questionCursors.current[result.attempt.id]=nextCursor;
+        setFallbacks(current=>writeFallback(current,nextCursor.key));
+      } else {if(!keepEditing){setEditing(false);setEditFocus(null);}setSpeechNotice('');}
+      lastRequest.current=null;setError('');
       if(previous && previous.revision <= result.attempt.revision && viewRef.current === 'nanxiang') {
-        if(poseTimer.current) clearTimeout(poseTimer.current);
         if(result.attempt.status === 'completed' && previous.status !== 'completed') {
           setTransientPose('packing');
-          poseTimer.current=setTimeout(()=>setTransientPose(null),1850);
+
         } else if(result.attempt.status !== 'completed') {
           setTransientPose('acknowledging');
-          poseTimer.current=setTimeout(()=>setTransientPose(null),550);
+
         }
-        scheduleQuestion(result.attempt, result.attempt.status === 'completed' ? 250 : 550);
+        scheduleQuestion(result.attempt, result.attempt.status === 'completed' ? 250 : 550, keepEditing ? localPrompt : result.attempt.prompt_id);
       }
-    } else if(result.status === 'failed') {if(lastRequest.current) lastRequest.current={...lastRequest.current,body:{...lastRequest.current.body,request_id:crypto.randomUUID()}};setError(s.error);}
+    } else if(result.status === 'failed') {if(lastRequest.current) lastRequest.current={...lastRequest.current,body:{...lastRequest.current.body,request_id:crypto.randomUUID()}};setError(s.error);if(body?.channel === 'voice') unlockFallback('technical');}
     else if(result.status === 'cancelled') {lastRequest.current=null;setError('');}
   }
-  async function submit(action?: Action, repeat = false) {
+  async function submit(action?: Action, repeat = false, spoken?: {text:string;requestId:string}) {
     if(legacyContent) {setPanel('newSession');return;}
-    if (!attempt || busy || sessionResetInFlight.current || (!action && !repeat && !asrSource)) return;
+    const source=spoken || asrSource;
+    if (!attempt || booting || busy || submittingRef.current || (!repeat && pendingRecovery) || sessionResetInFlight.current || (!action && !repeat && !source)) return;
+    if(action && !repeat && !canChoose) return;
+    submittingRef.current=true;
     stopTeachingAudio();
-    setBusy(true); setError('');
+    setBusy(true); setError('');setAwaitingReplyResolution(false);
     const ticket = ++generation.current;
-    const body: TurnRequest = repeat && lastRequest.current ? lastRequest.current.body : { request_id: crypto.randomUUID(), expected_revision: attempt.revision, channel: action ? 'buttons' : 'voice', ...(action ? {action} : {text: asrSource!.text, asr_request_id:asrSource!.requestId}), ...(attempt.summary_revision !== null ? { summary_revision: attempt.summary_revision } : {}) };
+    const body: TurnRequest = repeat && lastRequest.current ? lastRequest.current.body : { request_id: crypto.randomUUID(), expected_revision: attempt.revision, channel: action ? 'buttons' : 'voice', ...(action ? {action} : {text: source!.text, asr_request_id:source!.requestId}), ...(focus === 'confirm' && !editing && !editFocus && attempt.summary_revision !== null ? { summary_revision: attempt.summary_revision } : {}) };
     lastRequest.current = { attemptId: attempt.id, body };
     controller.current = new AbortController();
     try {
@@ -197,21 +226,42 @@ export default function App() {
       if(ticket !== generation.current) return;
       if(e instanceof ApiError && e.terminal && e.retryable) { lastRequest.current = {attemptId:attempt.id,body:{...body,request_id:crypto.randomUUID()}}; setError(s.error); }
       else if(e instanceof ApiError && e.attempt) { replaceAttempt(e.attempt); lastRequest.current = null; setError(s.conflict); }
-      else if(!(e instanceof DOMException && e.name === 'AbortError')) setError(s.error);
-    } finally { if(ticket === generation.current) setBusy(false); }
+      else if(!(e instanceof DOMException && e.name === 'AbortError')) {setError(s.error);setAwaitingReplyResolution(true);}
+      if(body.channel === 'voice' && !(e instanceof DOMException && e.name === 'AbortError')) unlockFallback('technical');
+    } finally { if(ticket === generation.current) {setBusy(false);submittingRef.current=false;} }
   }
   async function cancelTurn() {
     if(!attempt) return;
-    const requestId = lastRequest.current?.body.request_id || attempt.pending_request_id;
+    const attemptId=attempt.id;
+    const snapshot=lastRequest.current?.attemptId === attemptId ? lastRequest.current : null;
+    const requestId=snapshot?.body.request_id || attempt.pending_request_id;
     if(!requestId) return;
-    generation.current += 1; controller.current?.abort();
-    try { await post(`/attempts/${attempt.id}/turns/${requestId}/cancel`, { expected_revision: attempt.revision }); const next = await api<Attempt>(`/attempts/${attempt.id}`); replaceAttempt(next); lastRequest.current = null; }
-    catch { setError(s.error); }
-    setBusy(false);
+    const ticket=++generation.current;
+    const isCurrent=()=>ticket === generation.current && (snapshot ? lastRequest.current === snapshot : !lastRequest.current && sessionRef.current?.attempts.find(item=>item.id === attemptId)?.pending_request_id === requestId);
+    submittingRef.current=false;controller.current?.abort();setBusy(true);setAwaitingReplyResolution(true);
+    try {
+      await post(`/attempts/${attemptId}/turns/${requestId}/cancel`, {expected_revision:attempt.revision});
+      if(!isCurrent()) return;
+      const next=await api<Attempt>(`/attempts/${attemptId}`);
+      if(!isCurrent()) return;
+      replaceAttempt(next);lastRequest.current=null;setAwaitingReplyResolution(false);setAsrSource(null);setRecorderReset(n=>n+1);setError('');
+    } catch {
+      if(isCurrent()){setError(s.error);setAwaitingReplyResolution(true);}
+    } finally {if(ticket === generation.current) setBusy(false);}
   }
   async function recoverPending() {
-    if(!attempt?.pending_request_id) return;
-    try { const result = await api<TurnResult>(`/attempts/${attempt.id}/turns/${attempt.pending_request_id}`); applyTurnResult(result,lastRequest.current?.body); } catch {setError(s.error);}
+    if(!attempt) return;
+    const attemptId=attempt.id;
+    const snapshot=lastRequest.current?.attemptId === attemptId ? lastRequest.current : null;
+    const requestId=snapshot?.body.request_id || attempt.pending_request_id;
+    if(!requestId) return;
+    const body=snapshot?.body;
+    const ticket=generation.current;
+    const isCurrent=()=>ticket === generation.current && (snapshot ? lastRequest.current === snapshot : !lastRequest.current && sessionRef.current?.attempts.find(item=>item.id === attemptId)?.pending_request_id === requestId);
+    try {
+      const result=await api<TurnResult>(`/attempts/${attemptId}/turns/${requestId}`);
+      if(isCurrent()) applyTurnResult(result,body);
+    } catch {if(isCurrent()) setError(s.error);}
   }
   async function skip() {
     if(!attempt || sessionResetInFlight.current) return;
@@ -219,15 +269,27 @@ export default function App() {
     try { const next = await post<Attempt>(`/attempts/${attempt.id}/skip`, { expected_revision: attempt.revision }); replaceAttempt(next); setRecordingDraft(false); navigate('map', true); }
     catch { setError(s.error); } finally { setBusy(false); }
   }
-  function help() { stopTeachingAudio(); setStopSignal(n => n + 1); setPanel('help'); void event('expression_opened', { expression_ids: ['E08', 'E09', 'E05'] }); }
   function unitHelp() { stopTeachingAudio(); setStopSignal(n=>n+1); setPanel('units'); void event('unit_explanation_viewed'); }
   const statusFor = (id: string) => session?.completed_station_ids.includes(id) ? s.completed : [...(session?.attempts || [])].reverse().find(a => a.station_id === id)?.status === 'skipped' ? s.skipped : session?.attempts.some(a => a.station_id === id) ? s.inProgress : s.notStarted;
-  const turnBlocked = busy || Boolean(attempt?.pending_request_id);
+  const pendingRecovery = attempt?.pending_request_id || (awaitingReplyResolution ? lastRequest.current?.body.request_id : null);
+  const turnBlocked = booting || busy || Boolean(pendingRecovery);
   const captureActive = recordingPhase === 'recording' || recordingPhase === 'processing';
   const focus = editing ? (editFocus || 'edit') : (editFocus || focusFor(attempt));
   const localPrompt = editFocus ? (editFocus === 'quantity' ? 'NX-N02' : editFocus === 'mode' ? 'NX-N03' : 'NX-N01') : editing ? 'NX-N11' : attempt?.prompt_id || 'NX-N01';
   const promptEntry = entryFor(localPrompt);
-  const transcriptMeaning = asrSource ? transcriptGuide(asrSource.text,locale,learningEntries) : null;
+  const questionCursor = cursorForQuestion(attempt, focus, Boolean(editing || editFocus), attempt ? questionCursors.current[attempt.id] : undefined);
+  if(attempt) questionCursors.current[attempt.id]=questionCursor;
+  const questionKey = questionCursor.key;
+  questionRef.current = questionKey;
+  const canChoose = !booting && (!asrEnabled || Boolean(fallbacks[questionKey]));
+  const selectedPractice = speakTarget ? entryFor(speakTarget) : null;
+  const practiceIds = focus === 'item' ? ['NX-ITEM-XLB'] : focus === 'quantity' ? ['NX-Q1','NX-Q2','NX-Q3'] : focus === 'mode' ? ['NX-MODE-HERE','E09'] : focus === 'confirm' ? ['E05'] : [];
+  useEffect(() => {
+    setChannel('speak');setSpeakTarget(null);setDraft({});setSpeechNotice('');setAsrSource(null);setRecordingDraft(false);setRecorderReset(n=>n+1);
+    saveQuestionCursors(questionCursors.current);
+  },[questionKey]);
+  useEffect(()=>{if(attempt) saveOrderEdit(attempt.id, editing || editFocus ? {focus:editFocus,summary:editSummary.current} : null);},[attempt?.id,editing,editFocus]);
+  useEffect(() => {if(session && view === 'review' && !reviewUnlocked) navigate('map',true);},[session?.id,reviewUnlocked,view]);
   const showRomanization = session?.show_romanization ?? true;
   const questionDraft = focus === 'item' ? (draft.item ? {item:draft.item} : {})
     : focus === 'quantity' ? (draft.quantity !== undefined ? {quantity:draft.quantity,unit:draft.unit} : {})
@@ -243,10 +305,11 @@ export default function App() {
   const phaseLabel = scenePose === 'speaking' ? (locale === 'zh' ? '店员正在说话' : 'Your host is speaking')
     : scenePose === 'listening' ? (locale === 'zh' ? '店员在听' : 'Your host is listening')
       : scenePose === 'thinking' ? s.waiting
-        : scenePose === 'packing' ? (locale === 'zh' ? '两份，打包带走' : 'Packing two servings to go')
+        : scenePose === 'packing' ? (attempt?.order.takeaway ? (locale === 'zh' ? '正在准备你的外带订单' : 'Preparing your takeaway order') : (locale === 'zh' ? '正在准备你的餐点' : 'Preparing your order'))
           : scenePose === 'acknowledging' ? (locale === 'zh' ? '收到你的回应了' : 'Reply received')
             : scenePose === 'packed' ? s.stamp : (locale === 'zh' ? '轮到你回应' : 'Your turn');
   const quantityLabel = attempt?.order.quantity != null ? `${attempt.order.quantity} ${attempt.order.unit === 'piece' ? s.piece : attempt.order.unit === 'basket' ? s.basket : attempt.order.unit === 'serving' ? (locale === 'en' && attempt.order.quantity === 1 ? 'serving' : s.serving) : ''}` : s.unknown;
+  const orderDescription = `${s.xlb} · ${quantityLabel} · ${attempt?.order.takeaway === true ? s.go : attempt?.order.takeaway === false ? s.here : s.unknown}`;
   const orderSummary = <dl className="order-fields" id="saved-order-fields"><div><dt>{s.item}</dt><dd>{attempt?.order.item === 'xiaolongbao' ? s.xlb : s.unknown}</dd></div><div><dt>{s.quantity}</dt><dd>{quantityLabel}</dd></div><div><dt>{s.mode}</dt><dd>{attempt?.order.takeaway === true ? s.go : attempt?.order.takeaway === false ? s.here : s.unknown}</dd></div></dl>;
 
   function stopTeachingAudio() {
@@ -265,33 +328,46 @@ export default function App() {
     const ticket = audioGeneration.current;
     const player=teachingAudio.current;
     audioRole.current=role; audioEntryId.current=entry.id; setAudioMessage('');
-    player.src=clip.file;
+    player.src=clip.file;player.playbackRate=audioSpeedRef.current;player.preservesPitch=true;
     try {await player.play();}
     catch {if(ticket === audioGeneration.current) {setPlayingId(null);setAudioMessage(locale === 'zh' ? '声音未能播放。请点句子旁的播放键重听。' : 'Audio could not play. Use the sentence’s Listen button to try again.');}}
   }
-  function scheduleQuestion(next:Attempt, delay:number) {
+  function scheduleQuestion(next:Attempt, delay:number, promptId = next.prompt_id) {
     if(!autoVoice) return;
     if(promptTimer.current) clearTimeout(promptTimer.current);
     const ticket=generation.current;
     promptTimer.current=setTimeout(()=>{
-      if(ticket === generation.current && viewRef.current === 'nanxiang' && recordingPhaseRef.current === 'idle') void playEntry(entryFor(next.prompt_id),'host');
+      if(ticket === generation.current && viewRef.current === 'nanxiang' && recordingPhaseRef.current === 'idle') void playEntry(entryFor(promptId),'host');
     },delay);
   }
   useEffect(() => {
     audioGeneration.current += 1;stopAllAudio();setPlayingId(null);setAudioMessage('');
   },[locale,view]);
+  useEffect(()=>{if(!transientPose) return;poseTimer.current=setTimeout(()=>setTransientPose(null),transientPose === 'packing' ? 1850 : 550);return()=>{if(poseTimer.current) clearTimeout(poseTimer.current);};},[transientPose]);
   useEffect(()=>()=>{if(promptTimer.current) clearTimeout(promptTimer.current);if(poseTimer.current) clearTimeout(poseTimer.current);stopAllAudio();},[]);
   function listenButton(entry:LearningEntry, role:'host'|'example'='example') {
     const available=Boolean(reviewClipFor(entry));
     return <button type="button" className={`sentence-listen ${playingId === entry.id ? 'is-playing' : ''}`} disabled={!available || captureActive}
       aria-label={`${locale === 'zh' ? '试听' : 'Listen to'} ${entry.hanzi || entry.meaning[locale]}`}
-      title={available ? s.normal : s.audioPending} onClick={()=>void playEntry(entry,role)}><Volume2 size={18}/><span>{available ? s.normal : s.audioPending}</span></button>;
+      title={available ? (audioSpeed === 1 ? s.normal : s.slow) : s.audioPending} onClick={()=>void playEntry(entry,role)}><Volume2 size={18}/><span>{available ? (audioSpeed === 1 ? s.normal : s.slow) : s.audioPending}</span></button>;
+  }
+  function speedControls() {
+    return <div className="r2-speed" role="group" aria-label={locale === 'zh' ? '播放速度' : 'Playback speed'}>{([1,0.75] as const).map(speed=><button type="button" key={speed} aria-pressed={audioSpeed === speed} disabled={captureActive} onClick={()=>{setAudioSpeed(speed);audioSpeedRef.current=speed;if(teachingAudio.current){teachingAudio.current.playbackRate=speed;teachingAudio.current.preservesPitch=true;}try{localStorage.setItem('shanghai-audio-speed',String(speed));}catch{}}}>{speed === 1 ? s.normal : s.slow}<small>{speed}×</small></button>)}</div>;
+  }
+  function unlockFallback(reason:'recognition'|'technical', key = questionRef.current) {
+    setFallbacks(current=>writeFallback(current,key));
+    setSpeechNotice(reason);
   }
   function selectChannel(next:'speak'|'choose') {
-    setChannel(next);stopTeachingAudio();if(next !== 'speak') setStopSignal(n=>n+1);void event('input_channel_changed',{channel:next});
+    if(next === 'choose' && !canChoose) return;
+    setChannel(next);stopTeachingAudio();setAsrSource(null);setRecordingDraft(false);setRecorderReset(n=>n+1);setStopSignal(n=>n+1);void event('input_channel_changed',{channel:next});
   }
-  function chooseEdit(next:'quantity'|'mode') {stopTeachingAudio();setEditFocus(next);setDraft({});setChannel('choose');}
-  function discardTranscript() {setAsrSource(null);setRecordingDraft(false);setRecorderReset(n=>n+1);setAudioMessage('');}
+  function chooseEdit(next:'quantity'|'mode') {stopTeachingAudio();setEditFocus(next);setDraft({});setSpeakTarget(null);setChannel('speak');setRecorderReset(n=>n+1);}
+  function selectPractice(id:string) {
+    if(turnBlocked || captureActive) return;
+    stopTeachingAudio();setSpeakTarget(id);setAsrSource(null);setRecordingDraft(false);setRecorderReset(n=>n+1);setError('');
+  }
+  function changeOrder() {stopTeachingAudio();editSummary.current=attempt?.summary_revision ?? null;setEditing(true);setEditFocus(null);setDraft({});setSpeakTarget(null);setChannel('speak');setRecordingDraft(false);setRecorderReset(n=>n+1);}
   function option(entryId:string, value: { item?:string;quantity?:number;unit?:string;takeaway?:boolean }) {
     const entry=entryFor(entryId);
     const chosen=Object.entries(value).every(([key,v])=>draft[key as keyof typeof draft] === v);
@@ -311,8 +387,7 @@ export default function App() {
       <button className="brand" onClick={() => navigate('map')} aria-label={s.brand}><span className="brand-mark"><span>沪</span></span><span><strong>{s.brand}</strong><small>{s.tagline}</small></span></button>
       <nav className="main-nav" aria-label={locale === 'zh' ? '主导航' : 'Main navigation'}>
         <button className={view === 'map' || view === 'nanxiang' ? 'active' : ''} onClick={() => navigate('map')}><Compass size={18}/>{s.map}</button>
-        <button onClick={help}><BookOpen size={18}/>{s.phrases}</button>
-        <button className={view === 'review' ? 'active' : ''} onClick={() => navigate('review')}><Footprints size={18}/>{s.journey}</button>
+        {reviewUnlocked && <button className={view === 'review' ? 'active' : ''} onClick={() => navigate('review')}><BookOpen size={18}/>{s.review}</button>}
       </nav>
       <div className="header-tools"><button className="language-button" disabled={savingPreferences} onClick={() => void preferences({locale: locale === 'zh' ? 'en' : 'zh'})} aria-label={locale === 'zh' ? 'Switch to English' : '切换为中文'}><Globe2 size={17}/><span>{locale === 'zh' ? 'EN' : '中文'}</span></button><span className="tool-divider"/><button className="icon-button" onClick={() => {stopTeachingAudio();setPanel('settings'); setStopSignal(n => n + 1);}} aria-label={s.settings}><Settings2 size={20}/></button></div>
     </header>
@@ -332,7 +407,7 @@ export default function App() {
             <div className="station-detail-heading"><span className="overline">{s.explore}</span><span className="station-counter">0{selectedIndex + 1}<span> / 04</span></span></div>
             <div className={`landmark-preview art-${selected}`}><Landmark kind={selected} label={labelNames[locale][selectedIndex]}/><span className="landmark-caption">{themes[locale][selectedIndex]}</span></div>
             <div className="station-detail-body"><div className="station-meta"><span><Clock3 size={14}/>{locale === 'zh' ? `约 ${durations[selectedIndex]} 分钟` : `${durations[selectedIndex]} minutes`}</span><span className="status-dot">{statusFor(selected)}</span></div><h2>{labelNames[locale][selectedIndex]}</h2><p>{selectedData?.taskDescription[locale]}</p>
-              {selected === 'nanxiang' ? <><div className="phrase-tags"><span>{locale === 'zh' ? '两份' : 'Two servings'}</span><span>{s.go}</span><span>{locale === 'zh' ? '确认' : 'Confirm'}</span></div><button className="primary full" disabled={booting || !session} onClick={enter}>{attempt?.status === 'completed' ? s.reviewOrder : attempt && attempt.status !== 'skipped' ? s.resume : s.enter}<ArrowRight size={19}/></button></> : <><div className="in-making"><Leaf size={16}/><span>{s.comingText}</span></div><button className="secondary full" onClick={() => setSelected('nanxiang')}>{s.available}<ArrowRight size={18}/></button></>}
+              {selected === 'nanxiang' ? <><div className="phrase-tags"><span>{s.quantity}</span><span>{s.mode}</span><span>{locale === 'zh' ? '确认' : 'Confirm'}</span></div><button className="primary full" disabled={booting || !session} onClick={enter}>{attempt?.status === 'completed' ? s.reviewOrder : attempt && attempt.status !== 'skipped' ? s.resume : s.enter}<ArrowRight size={19}/></button></> : <><div className="in-making"><Leaf size={16}/><span>{s.comingText}</span></div><button className="secondary full" onClick={() => setSelected('nanxiang')}>{s.available}<ArrowRight size={18}/></button></>}
               <button className="preview-link" onClick={() => setPanel('about')}><span className="small-dot"/>{s.preview}<CircleHelp size={13}/></button>
             </div>
           </aside>
@@ -343,32 +418,38 @@ export default function App() {
 
       {view === 'nanxiang' && <div className="scene-page r1-scene-page page-shell">
         <div className="scene-topline"><button className="text-button" onClick={()=>navigate('map')}><ChevronLeft size={18}/>{s.back}</button><span className="scene-breadcrumb">YU GARDEN <span>/</span> 03 · NANXIANG</span><button className="text-button" onClick={()=>{stopTeachingAudio();setPanel('skip');setStopSignal(n=>n+1);}} disabled={!attempt || busy || attempt.status === 'completed'}>{s.leave}<ArrowUpRight size={16}/></button></div>
-        <div className="scene-heading"><div><span className="eyebrow">{s.conversation}</span><h1>{labelNames[locale][2]}</h1></div><button className="help-button" onClick={help}><BookOpen size={19}/>{s.phrases}</button></div>
+        <div className="scene-heading"><div><span className="eyebrow">{s.conversation}</span><h1>{labelNames[locale][2]}</h1></div></div>
         {legacyContent ? <div className="r1-old-record"><div className="r1-version-note"><p>{locale === 'zh' ? '课程已有新版本。开始新的探索即可使用逐轮交流、沪语注音和试听稿，语言与显示偏好会保留。' : 'A new lesson version is available. Start a new journey for guided turns, Shanghainese readings, and audio drafts. Your language and display preferences will be kept.'}</p><button className="secondary" disabled={busy} onClick={()=>setPanel('newSession')}>{locale === 'zh' ? '开始新的探索' : 'Start a new journey'}<ArrowRight size={17}/></button></div>{attempt && <><p>{locale === 'zh' ? '以下为旧版探索中已保存的订单，记录不会删除或转入新探索。' : 'This order was saved in your previous lesson version. Its record will remain saved separately.'}</p>{orderSummary}</>}</div> : !attempt || attempt.status === 'skipped' ? <div className="empty-scene"><NanxiangScene label={s.sceneLabel}/><button className="primary" disabled={busy || !session} onClick={()=>setPanel('intro')}>{s.start}<ArrowRight size={18}/></button></div> : <>
-          {attempt.pending_request_id && !busy && <div className="pending-recovery" role="status"><CircleHelp size={18}/><span>{locale === 'zh' ? '有一条回应尚未结束。可以查询结果，或取消后重新回应。' : 'A reply is pending. Check its result, or cancel it before replying again.'}</span><button className="secondary" onClick={()=>void recoverPending()}>{locale === 'zh' ? '查询结果' : 'Check result'}</button><button className="text-button" onClick={()=>void cancelTurn()}>{s.cancel}</button></div>}
+          {pendingRecovery && !busy && <div className="pending-recovery" role="status"><CircleHelp size={18}/><span>{locale === 'zh' ? '有一条回应尚未结束。可以查询结果，或取消后重新回应。' : 'A reply is pending. Check its result, or cancel it before replying again.'}</span><button className="secondary" onClick={()=>void recoverPending()}>{locale === 'zh' ? '查询结果' : 'Check result'}</button><button className="text-button" onClick={()=>void cancelTurn()}>{s.cancel}</button></div>}
           <div className="r1-conversation-grid">
             <section className="r1-stage-column" aria-label={s.sceneLabel}>
-              <div className="r1-scene-stage"><NanxiangScene label={s.sceneLabel} pose={scenePose}/><div className="r1-scene-label"><span>南翔</span><small>NANXIANG</small></div><div className="r1-scene-status" role="status"><span className={`phase-dot phase-${scenePose}`}/>{phaseLabel}</div></div>
+              <div className="r1-scene-stage"><NanxiangScene label={s.sceneLabel} pose={scenePose} quantity={attempt.order.normalized_servings ?? attempt.order.quantity} takeaway={attempt.order.takeaway}/><div className="r1-scene-label"><span>南翔</span><small>NANXIANG</small></div><div className="r1-scene-status" role="status"><span className={`phase-dot phase-${scenePose}`}/>{phaseLabel}</div></div>
               <div className="r1-mission"><MapPin size={18}/><span><small>{s.task}</small><strong>{s.taskShort}</strong></span><button className="icon-button" onClick={unitHelp} aria-label={s.units}><CircleHelp size={19}/></button></div>
               <section className="r1-saved-order" aria-label={s.heard}><button className="r1-order-toggle" aria-expanded={orderExpanded} aria-controls="r1-order-details" onClick={()=>setOrderExpanded(value=>!value)}><span><ShoppingBag size={17}/><strong>{s.heard}</strong><small>{attempt.order.item === 'xiaolongbao' ? s.xlb : s.unknown} · {quantityLabel} · {attempt.order.takeaway === true ? s.go : attempt.order.takeaway === false ? s.here : s.unknown}</small></span><ChevronRight size={18} className={orderExpanded ? 'rotated' : ''}/></button><div id="r1-order-details" hidden={!orderExpanded}>{orderSummary}<span className="saved-note"><Check size={13}/>{s.saved}</span></div></section>
             </section>
             <section className="r1-turn-panel" aria-label={locale === 'zh' ? '当前交流' : 'Current conversation'}>
               <div className="r1-turn-heading"><span className="overline">{s.server}</span><span className="review-label">{s.candidate}</span></div>
               <div className="r1-question" aria-live="polite"><LearningText entry={promptEntry} locale={locale} romanization={showRomanization}/>{listenButton(promptEntry,'host')}</div>
-              <div className="r1-reading-tools"><button className="text-button" aria-pressed={showRomanization} disabled={savingPreferences} onClick={()=>void preferences({show_romanization:!showRomanization})}><span className={`toggle ${showRomanization ? 'on' : ''}`}/>{s.pronunciation}</button><small>{locale === 'zh' ? '沪语 · 常速声音审阅稿' : 'Shanghainese · Normal-speed audio draft'}</small></div>
+              <div className="r1-reading-tools"><button className="text-button" aria-pressed={showRomanization} disabled={savingPreferences} onClick={()=>void preferences({show_romanization:!showRomanization})}><span className={`toggle ${showRomanization ? 'on' : ''}`}/>{s.pronunciation}</button>{speedControls()}</div>
               {audioMessage && <p className="audio-notice" role="status">{audioMessage}</p>}
-              {attempt.status === 'completed' ? <div className="r1-completed" role="status"><PackageCheck size={32}/><h2>{s.successTitle}</h2><p>{s.successText}</p><div className="r1-completed-actions"><button className="primary" onClick={()=>navigate('map')}>{s.backExplore}<ArrowRight size={18}/></button><button className="secondary" disabled={busy} onClick={()=>void begin(true)}><RotateCcw size={17}/>{s.again}</button></div><small>{s.successFoot}</small></div> : <>
-                <div className="input-tabs r1-input-tabs" role="tablist" aria-label={locale === 'zh' ? '回应方式' : 'Reply method'} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;event.preventDefault();const next=event.key === 'Home' ? 'speak' : event.key === 'End' ? 'choose' : channel === 'speak' ? 'choose' : 'speak';selectChannel(next);(event.currentTarget.querySelector(`#tab-${next}`) as HTMLButtonElement)?.focus();}}>{([['speak',Mic,s.speak],['choose',MessageCircle,s.choose]] as const).map(([id,Icon,label])=><button key={id} id={`tab-${id}`} role="tab" aria-controls={`input-${id}`} aria-selected={channel === id} tabIndex={channel === id ? 0 : -1} onClick={()=>selectChannel(id)}><Icon size={17}/>{label}</button>)}</div>
-                <div hidden={channel !== 'speak'} role="tabpanel" id="input-speak" aria-labelledby="tab-speak">
-                  <div className="r1-speaking-example"><span className="overline">{locale === 'zh' ? '这轮可以这样回应' : 'A reply for this turn'}</span><LearningText entry={entryFor(focus === 'item' ? 'NX-ITEM-XLB' : focus === 'quantity' ? 'NX-Q2' : focus === 'mode' ? 'E09' : focus === 'confirm' ? 'E05' : 'E08')} locale={locale} romanization={showRomanization} compact/>{listenButton(entryFor(focus === 'item' ? 'NX-ITEM-XLB' : focus === 'quantity' ? 'NX-Q2' : focus === 'mode' ? 'E09' : focus === 'confirm' ? 'E05' : 'E08'))}</div>
-                  <div hidden={Boolean(asrSource)}><Recorder locale={locale} enabled={asrEnabled} disabled={turnBlocked} stopSignal={stopSignal} resetSignal={recorderReset} onPhaseChange={setRecordingPhase} onTranscript={(value,requestId)=>{stopTeachingAudio();setAsrSource({text:value,requestId});setRecordingDraft(false);}} onDraftChange={setRecordingDraft} onEvent={name=>void event(name)} onError={message=>setError(message)}/></div>
-                  {asrSource && <div className="r1-transcript" role="status"><span className="overline">{locale === 'zh' ? '识别到的原话' : 'Original transcript'}</span><p lang="zh">{asrSource.text}</p><div className="r1-transcript-meaning"><strong>{locale === 'zh' ? '教材对照释义' : 'Textbook meaning guide'}</strong>{transcriptMeaning ? <><p>{transcriptMeaning.meanings.join(locale === 'zh' ? '；' : ' · ')}</p><small>{locale === 'zh' ? '来自已知教材原句；仍为审阅稿，不代表订单已经保存。' : 'Matched to textbook wording. This is a draft meaning guide; your order has not been saved.'}</small></> : <><p>{locale === 'zh' ? '暂时没有这句话的对照释义。' : 'Meaning guide unavailable for this wording.'}</p><small>{locale === 'zh' ? '可以重录或使用选项；如原转写符合你的意思，也可以明确使用后查看订单核对。' : 'You can record again or choose a reply. If the transcript is what you intended, use it and check the resulting order.'}</small></>}</div><small>{locale === 'zh' ? '核对意思后再使用。识别结果不代表发音评分。' : 'Check the meaning before using it. Recognition is not a pronunciation score.'}</small><div className="r1-transcript-actions"><button className="primary" disabled={turnBlocked} onClick={()=>void submit()}>{locale === 'zh' ? '使用这句话' : 'Use this reply'}<ArrowRight size={18}/></button><button className="secondary" disabled={turnBlocked} onClick={()=>{discardTranscript();setChannel('speak');}}><RotateCcw size={17}/>{locale === 'zh' ? '重新录音' : 'Record again'}</button><button className="text-button" disabled={turnBlocked} onClick={()=>{discardTranscript();selectChannel('choose');}}>{locale === 'zh' ? '改用选项' : 'Choose instead'}</button></div></div>}
-                </div>
-                <div hidden={channel !== 'choose'} role="tabpanel" id="input-choose" aria-labelledby="tab-choose">
-                  {asrSource && <div className="r1-retained-transcript"><span>{locale === 'zh' ? '还有一条未使用的语音转写。' : 'You have an unused transcript.'}</span><button className="text-button" disabled={turnBlocked} onClick={discardTranscript}>{locale === 'zh' ? '丢弃转写' : 'Discard transcript'}</button></div>}
-                  {focus === 'edit' ? <div className="r1-edit-options"><button className="secondary" disabled={turnBlocked} onClick={()=>chooseEdit('quantity')}>{s.quantity}<ArrowRight size={17}/></button><button className="secondary" disabled={turnBlocked} onClick={()=>chooseEdit('mode')}>{s.mode}<ArrowRight size={17}/></button></div> : focus === 'confirm' ? <div className="r1-confirmation"><div className="r1-confirm-summary"><ShoppingBag size={20}/><strong>{s.xlb} · 2 {s.serving} · {s.go}</strong></div><div className="r1-confirm-reply"><LearningText entry={entryFor('E05')} locale={locale} romanization={showRomanization} compact/>{listenButton(entryFor('E05'))}</div><button className="primary full" disabled={turnBlocked || captureActive || Boolean(asrSource) || recordingDraft} onClick={()=>void submit({type:'confirm'})}>{s.confirm}<Check size={18}/></button><button className="text-button centered" disabled={turnBlocked} onClick={()=>{stopTeachingAudio();setEditing(true);setDraft({});setChannel('choose');}}><PencilLine size={16}/>{s.change}</button>{recordingDraft && <button className="text-button" onClick={()=>{setRecorderReset(n=>n+1);setRecordingDraft(false);}}>{locale === 'zh' ? '丢弃未使用的录音' : 'Discard unused recording'}</button>}</div> : <><div className="r1-answer-options">{focus === 'item' ? option('NX-ITEM-XLB',{item:'xiaolongbao'}) : focus === 'quantity' ? [1,2,3].map(quantity=>option(`NX-Q${quantity}`,{quantity,unit:'serving'})) : <>{option('NX-MODE-HERE',{takeaway:false})}{option('E09',{takeaway:true})}</>}</div>{focus === 'quantity' && <button className="text-button r1-unit-help" onClick={unitHelp}><CircleHelp size={16}/>{s.units}</button>}<div className="r1-answer-footer"><small>{hasSelection ? s.draft : s.draftHint}</small><div>{hasSelection && <button className="text-button" disabled={turnBlocked} onClick={()=>setDraft({})}>{s.clear}</button>}<button className="primary" disabled={turnBlocked || captureActive || !hasSelection} onClick={()=>void submit({type:'set_order',...questionDraft})}>{s.submit}<ArrowRight size={17}/></button></div></div></>}
-                  {(editing || editFocus) && <button className="text-button r1-cancel-edit" disabled={turnBlocked} onClick={()=>{setEditing(false);setEditFocus(null);setDraft({});}}>{locale === 'zh' ? '返回当前核对' : 'Back to the current question'}</button>}
-                </div>
+              {attempt.status === 'completed' ? <div className="r1-completed" role="status"><PackageCheck size={32}/><h2>{s.successTitle}</h2><p>{s.successText}<br/><strong>{orderDescription}</strong></p><div className="r1-completed-actions"><button className="primary" onClick={()=>navigate('review')}><BookOpen size={18}/>{s.review}</button><button className="primary" onClick={()=>navigate('map')}>{s.backExplore}<ArrowRight size={18}/></button><button className="secondary" disabled={busy} onClick={()=>void begin(true)}><RotateCcw size={17}/>{s.again}</button></div><small>{s.successFoot}</small></div> : <>
+                {focus === 'confirm' && <div className="r1-confirm-summary r2-confirm-summary"><ShoppingBag size={20}/><strong>{orderDescription}</strong></div>}
+                {focus === 'edit' ? <div className="r2-edit-prompt"><p>{s.editPrompt}</p><div className="r1-edit-options"><button className="secondary" disabled={turnBlocked || captureActive} onClick={()=>chooseEdit('quantity')}>{s.quantity}<ArrowRight size={17}/></button><button className="secondary" disabled={turnBlocked || captureActive} onClick={()=>chooseEdit('mode')}>{s.mode}<ArrowRight size={17}/></button></div></div> : <>
+                  <div className="input-tabs r1-input-tabs" role="tablist" aria-label={locale === 'zh' ? '回应方式' : 'Reply method'} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key) || !canChoose) return;event.preventDefault();const next=event.key === 'Home' ? 'speak' : event.key === 'End' ? 'choose' : channel === 'speak' ? 'choose' : 'speak';selectChannel(next);(event.currentTarget.querySelector(`#tab-${next}`) as HTMLButtonElement)?.focus();}}>{([['speak',Mic,s.speak],['choose',MessageCircle,s.choose]] as const).map(([id,Icon,label])=><button key={id} id={`tab-${id}`} role="tab" aria-controls={`input-${id}`} aria-selected={channel === id} disabled={turnBlocked || captureActive || (id === 'choose' && !canChoose)} tabIndex={channel === id ? 0 : -1} onClick={()=>selectChannel(id)}><Icon size={17}/>{label}</button>)}</div>
+                  {!canChoose && <p className="r2-first-speak">{s.firstSpeak}</p>}
+                  {speechNotice && <p className="r2-speech-notice" role="status">{speechNotice === 'technical' ? s.speechUnavailable : s.speechRetry}</p>}
+                  <div hidden={channel !== 'speak'} role="tabpanel" id="input-speak" aria-labelledby="tab-speak">
+                    <div className="r2-practice-picker"><span className="overline">{s.wantToSay}</span><div>{practiceIds.map(id=><button type="button" className={speakTarget === id ? 'selected' : ''} key={id} aria-pressed={speakTarget === id} disabled={turnBlocked || captureActive} onClick={()=>selectPractice(id)}>{entryFor(id).meaning[locale]}{speakTarget === id && <Check size={16}/>}</button>)}</div><small>{s.practiceHint}</small></div>
+                    {selectedPractice ? <><div className="r1-speaking-example"><span className="overline">{s.sayThis}</span><LearningText entry={selectedPractice} locale={locale} romanization={showRomanization}/>{listenButton(selectedPractice)}</div>{channel === 'speak' && <Recorder key={questionKey} locale={locale} enabled={asrEnabled} disabled={turnBlocked} stopSignal={stopSignal} resetSignal={recorderReset} onPhaseChange={setRecordingPhase} onTranscript={(value,requestId)=>{if(questionRef.current !== questionKey || viewRef.current !== 'nanxiang') return;stopTeachingAudio();const source={text:value,requestId};setAsrSource(source);setRecordingDraft(false);void submit(undefined,false,source);}} onDraftChange={setRecordingDraft} onEvent={name=>void event(name)} onFailure={reason=>unlockFallback(reason)} onError={message=>setError(message)}/>}</> : <div className="r2-select-first"><Mic size={23}/><p>{s.selectBeforeSpeak}</p></div>}
+                    {asrSource && <div className="r2-heard" role="status"><span>{s.heardSpeech}</span><p lang="zh">{asrSource.text}</p></div>}
+                  </div>
+                  {canChoose && <div hidden={channel !== 'choose'} role="tabpanel" id="input-choose" aria-labelledby="tab-choose">
+                    {focus === 'confirm' ? <div className="r1-confirmation"><div className="r1-confirm-reply"><LearningText entry={entryFor('E05')} locale={locale} romanization={showRomanization} compact/>{listenButton(entryFor('E05'))}</div><button className="primary full" disabled={turnBlocked || captureActive} onClick={()=>void submit({type:'confirm'})}>{s.confirm}<Check size={18}/></button></div> : <><div className="r1-answer-options">{focus === 'item' ? option('NX-ITEM-XLB',{item:'xiaolongbao'}) : focus === 'quantity' ? [1,2,3].map(quantity=>option(`NX-Q${quantity}`,{quantity,unit:'serving'})) : <>{option('NX-MODE-HERE',{takeaway:false})}{option('E09',{takeaway:true})}</>}</div><div className="r1-answer-footer"><small>{hasSelection ? s.draft : s.draftHint}</small><div>{hasSelection && <button className="text-button" disabled={turnBlocked} onClick={()=>setDraft({})}>{s.clear}</button>}<button className="primary" disabled={turnBlocked || captureActive || !hasSelection} onClick={()=>void submit({type:'set_order',...questionDraft})}>{s.submit}<ArrowRight size={17}/></button></div></div></>}
+                  </div>}
+                </>}
+                {focus === 'quantity' && <button className="text-button r1-unit-help" onClick={unitHelp}><CircleHelp size={16}/>{s.units}</button>}
+                {focus === 'confirm' && <button className="text-button r2-change-order" disabled={turnBlocked || captureActive} onClick={changeOrder}><PencilLine size={16}/>{s.change}</button>}
+                {(editing || editFocus) && <button className="text-button r1-cancel-edit" disabled={turnBlocked || captureActive} onClick={()=>{setEditing(false);setEditFocus(null);setDraft({});setSpeakTarget(null);setRecorderReset(n=>n+1);}}>{locale === 'zh' ? '返回当前核对' : 'Back to the current question'}</button>}
                 {busy && <div className="processing-bar" role="status"><span className="spinner"/>{s.saving}<button className="text-button" onClick={()=>void cancelTurn()}>{s.cancel}</button></div>}
                 {lastText && <details className="r1-last-reply"><summary>{locale === 'zh' ? '上一条语音回应' : 'Previous spoken reply'}</summary><p>{lastText}</p></details>}
               </>}
@@ -377,18 +458,17 @@ export default function App() {
         </>}
       </div>}
 
-      {view === 'review' && <div className="review-page page-shell"><div className="page-heading"><div><span className="eyebrow">YOUR SHANGHAI, ONE MOMENT AT A TIME</span><h1>{s.reviewTitle}</h1><p>{s.reviewText}</p></div><span className="review-seal"><Footprints size={36}/></span></div><div className="review-stats"><strong>{completeCount}<small>/ 4 {s.completedCount}</small></strong><strong>{session?.attempts.reduce((n,a) => n + a.metrics.voice_attempts, 0) || 0}<small>{s.voiceTries}</small></strong><strong>{session?.attempts.reduce((n,a) => n + a.metrics.help_used, 0) || 0}<small>{s.helped}</small></strong></div><div className="review-grid">{stationIds.map((id,i) => <article className="review-stop" key={id}><div className="review-art"><Landmark kind={id} label={labelNames[locale][i]}/></div><span className="overline">0{i + 1} · {statusFor(id)}</span><h2>{labelNames[locale][i]}</h2><p>{themes[locale][i]}</p>{id === 'nanxiang' ? <button className="secondary" onClick={enter}>{attempt?.status === 'completed' ? s.reviewOrder : s.enter}<ArrowUpRight size={16}/></button> : <span className="in-making-text">{s.coming}</span>}</article>)}</div><p className="review-disclaimer">{s.noMastery}</p><button className="primary" onClick={() => navigate('map')}>{s.continue}<ArrowRight size={18}/></button></div>}
+      {view === 'review' && reviewUnlocked && <div className="review-page page-shell"><div className="page-heading"><div><span className="eyebrow">YOUR SHANGHAI, ONE MOMENT AT A TIME</span><h1>{s.reviewTitle}</h1><p>{s.reviewText}</p></div><span className="review-seal"><Footprints size={36}/></span></div><div className="review-stats"><strong>{completeCount}<small>/ 4 {s.completedCount}</small></strong><strong>{session?.attempts.reduce((n,a) => n + a.metrics.voice_attempts, 0) || 0}<small>{s.voiceTries}</small></strong><strong>{session?.attempts.reduce((n,a) => n + a.metrics.help_used, 0) || 0}<small>{s.helped}</small></strong></div><section className="r2-review-expressions"><div className="r2-review-heading"><div><span className="overline">NANXIANG · REVIEW</span><h2>{s.supportTitle}</h2><p>{s.supportDesc}</p></div>{speedControls()}</div><button className="text-button" disabled={savingPreferences} aria-pressed={showRomanization} onClick={()=>void preferences({show_romanization:!showRomanization})}><span className={`toggle ${showRomanization ? 'on' : ''}`}/>{s.pronunciation}</button><div className="r2-review-cards">{['NX-ITEM-XLB','NX-Q1','NX-Q2','NX-Q3','NX-MODE-HERE','E09','E05'].map(id=>{const entry=entryFor(id);return <article className="phrase-card" key={id}><span className="review-label">{s.candidate}</span><LearningText entry={entry} locale={locale} romanization={showRomanization}/>{listenButton(entry)}</article>;})}</div>{audioMessage && <p className="audio-notice" role="status">{audioMessage}</p>}</section><div className="r2-review-actions"><button className="secondary" onClick={viewCompletedOrder}><ChevronLeft size={18}/>{s.reviewOrder}</button></div><p className="review-disclaimer">{s.noMastery}</p><button className="primary" onClick={() => navigate('map')}>{s.continue}<ArrowRight size={18}/></button></div>}
 
-      {view === 'design' && <div className="design-page page-shell"><div className="page-heading"><div><span className="eyebrow">DESIGN SYSTEM · 01</span><h1>{s.designTitle}</h1><p>{s.designText}</p></div></div><div className="design-swatches">{['#214f46','#a04d3b','#d9bd8d','#f4eee3','#292f2a'].map(color => <div key={color}><span style={{background:color}}/>{color}</div>)}</div><div className="design-state-grid"><article><span className="overline">01 · INPUT</span><h2>{s.stateRecording}</h2><div className="sample-recording"><Mic size={24}/><span>00:08 / 00:20</span><AudioLines size={54}/></div><p>{locale === 'zh' ? '主动开始，停止后先回听。' : 'Start deliberately. Listen back before sending.'}</p><button className="secondary" onClick={() => setPanel('about')}>{s.about}</button></article><article><span className="overline">02 · WAITING</span><h2>{s.stateProcessing}</h2><div className="processing-sample"><span className="spinner"/>{s.waiting}</div><p>{locale === 'zh' ? '保存前不展示完成，回应草稿仍保留。' : 'Keep the reply draft. Show completion only after saving.'}</p></article><article><span className="overline">03 · RECOVERY</span><h2>{s.stateError}</h2><div className="sample-error"><CircleHelp size={20}/>{s.error}</div><p>{s.permissionError}</p></article><article><span className="overline">04 · CONFIRMATION</span><h2>{s.stateConfirm}</h2><div className="sample-order"><ShoppingBag size={25}/><strong>{s.xlb} · 2 {s.serving} · {s.go}</strong></div><p>{s.confirmText}</p></article><article><span className="overline">05 · SAVED</span><h2>{s.stateSuccess}</h2><div className="completion-stamp"><Check size={24}/>{s.stamp}</div><p>{s.successFoot}</p></article><article><span className="overline">06 · LEARNING SUPPORT</span><h2>{s.supportTitle}</h2><p>{s.supportDesc}</p><button className="secondary" onClick={help}>{s.how}<ArrowRight size={17}/></button></article></div></div>}
+      {view === 'design' && <div className="design-page page-shell"><div className="page-heading"><div><span className="eyebrow">DESIGN SYSTEM · 01</span><h1>{s.designTitle}</h1><p>{s.designText}</p></div></div><div className="design-swatches">{['#214f46','#a04d3b','#d9bd8d','#f4eee3','#292f2a'].map(color => <div key={color}><span style={{background:color}}/>{color}</div>)}</div><div className="design-state-grid"><article><span className="overline">01 · INPUT</span><h2>{s.stateRecording}</h2><div className="sample-recording"><Mic size={24}/><span>00:08 / 00:20</span><AudioLines size={54}/></div><p>{locale === 'zh' ? '主动开始，结束录音后自动识别并回应。' : 'Start deliberately. Stopping sends your speech automatically.'}</p><button className="secondary" onClick={() => setPanel('about')}>{s.about}</button></article><article><span className="overline">02 · WAITING</span><h2>{s.stateProcessing}</h2><div className="processing-sample"><span className="spinner"/>{s.waiting}</div><p>{locale === 'zh' ? '保存前不展示完成，回应草稿仍保留。' : 'Keep the reply draft. Show completion only after saving.'}</p></article><article><span className="overline">03 · RECOVERY</span><h2>{s.stateError}</h2><div className="sample-error"><CircleHelp size={20}/>{s.error}</div><p>{s.permissionError}</p></article><article><span className="overline">04 · CONFIRMATION</span><h2>{s.stateConfirm}</h2><div className="sample-order"><ShoppingBag size={25}/><strong>{s.xlb} · 2 {s.serving} · {s.go}</strong></div><p>{s.confirmText}</p></article><article><span className="overline">05 · SAVED</span><h2>{s.stateSuccess}</h2><div className="completion-stamp"><Check size={24}/>{s.stamp}</div><p>{s.successFoot}</p></article><article><span className="overline">06 · LEARNING SUPPORT</span><h2>{s.supportTitle}</h2><p>{s.supportDesc}</p>{reviewUnlocked && <button className="secondary" onClick={()=>navigate('review')}>{s.review}<ArrowRight size={17}/></button>}</article></div></div>}
     </main>
     <footer className="site-footer"><span>沪语漫游 <span className="footer-dot">·</span> A LITTLE SHANGHAI</span><div><button onClick={() => setPanel('about')}>{s.about}</button><span>/</span><button onClick={() => navigate('design')}>{s.design}</button></div></footer>
 
-    {panel && <Dialog title={{help:s.supportTitle, settings:s.settings, intro:s.introTitle, units:s.unitTitle, about:s.about, skip:s.skipTitle, leaveRecording:s.leaveRecording, newSession:locale === 'zh' ? '开始新的探索' : 'Start a new journey'}[panel]} closeLabel={s.close} onClose={() => setPanel(null)} className={panel === 'help' ? 'help-dialog' : panel === 'intro' ? 'intro-dialog' : ''}>
-      {panel === 'help' && <><p className="dialog-description">{s.supportDesc}</p><button className="roman-toggle" disabled={savingPreferences} aria-pressed={showRomanization} onClick={()=>void preferences({show_romanization:!showRomanization})}><span className={`toggle ${showRomanization ? 'on' : ''}`}/>{s.pronunciation}</button><div className="phrase-cards">{learningEntries.map(entry=><article className="phrase-card" key={entry.id}><div className="phrase-card-top"><span className="overline">{entry.id}</span><span className="review-label">{s.candidate}</span></div><LearningText entry={entry} locale={locale} romanization={showRomanization}/><div className="audio-buttons">{listenButton(entry)}<small>{s.slow}</small></div>{locale === 'zh' && <div className="approximation"><button onClick={()=>{setShowApproximate(showApproximate === entry.id ? null : entry.id);void event('pronunciation_support_changed',{expression_id:entry.id,kind:'approximation'});}} aria-expanded={showApproximate === entry.id}>{s.approximate}<ChevronRight size={16}/></button>{showApproximate === entry.id && <p><strong>{s.approximateLabel}</strong><br/>{s.approximatePending}</p>}</div>}</article>)}</div>{audioMessage && <p className="audio-notice" role="status">{audioMessage}</p>}<p className="dialog-footnote">{locale === 'zh' ? '沪语、词组注音和常速声音均为审阅稿。慢速声音将在常速读法选定后制作。' : 'Shanghainese, grouped readings, and normal-speed audio are review drafts. Slow recordings will follow after the normal readings are reviewed.'}</p></>}
+    {panel && <Dialog title={{settings:s.settings, intro:s.introTitle, units:s.unitTitle, about:s.about, skip:s.skipTitle, leaveRecording:s.leaveRecording, newSession:locale === 'zh' ? '开始新的探索' : 'Start a new journey'}[panel]} closeLabel={s.close} onClose={() => setPanel(null)} className={panel === 'intro' ? 'intro-dialog' : ''}>
       {panel === 'settings' && <><div className="setting-row"><div><h3>{s.language}</h3><p>{s.languageText}</p></div><div className="segmented"><button className={locale === 'zh' ? 'selected' : ''} disabled={savingPreferences} onClick={() => void preferences({locale:'zh'})}>中文</button><button className={locale === 'en' ? 'selected' : ''} disabled={savingPreferences} onClick={() => void preferences({locale:'en'})}>English</button></div></div>{[{key:'show_romanization',label:s.pronunciation,description:s.romanHelp},{key:'reduced_motion',label:s.motion,description:s.motionText}].map(option => <div className="setting-row" key={option.key}><div><h3>{option.label}</h3><p>{option.description}</p></div><button className={`toggle ${session?.[option.key as 'show_romanization' | 'reduced_motion'] ? 'on' : ''}`} role="switch" disabled={savingPreferences} aria-checked={Boolean(session?.[option.key as 'show_romanization' | 'reduced_motion'])} aria-label={option.label} onClick={() => void preferences({[option.key]:!session?.[option.key as 'show_romanization' | 'reduced_motion']})}/></div>)}<div className="setting-row"><div><h3>{locale === 'zh' ? '店员声音' : 'Host audio'}</h3><p>{locale === 'zh' ? '你开始交流或提交回应后，播放下一句审阅声音。' : 'Play the next review recording when you start or send a reply.'}</p></div><button className={`toggle ${autoVoice ? 'on' : ''}`} role="switch" aria-checked={autoVoice} aria-label={locale === 'zh' ? '店员声音' : 'Host audio'} onClick={()=>{const next=!autoVoice;setAutoVoice(next);try {localStorage.setItem('shanghai-review-autovoice',next ? 'on':'off');} catch {}if(!next) stopTeachingAudio();}}/></div><p className="dialog-footnote">{s.aboutSpeech}</p><button className="secondary full" disabled={busy || savingPreferences || !session} onClick={() => setPanel('newSession')}><RotateCcw size={17}/>{locale === 'zh' ? '开始新的探索' : 'Start a new journey'}</button></>}
       {panel === 'newSession' && <><p className="intro-description">{locale === 'zh' ? '将从 0 个地点重新开始，并保留语言和显示偏好。当前探索的记录仍会保存，但不会带入新的探索。' : 'Start again from 0 places while keeping your language and display preferences. Your previous journey remains saved, but its progress will not carry into this one.'}</p><p className="dialog-description">{locale === 'zh' ? '当前未使用的转写、选择和录音会清除。确定开始吗？' : 'Unused transcripts, choices, and recordings will be cleared. Ready to begin?'}</p><div className="dialog-actions"><button className="secondary" disabled={busy} onClick={() => setPanel('settings')}>{s.cancel}</button><button className="primary" disabled={busy || savingPreferences} onClick={() => void startNewSession()}>{locale === 'zh' ? '开始新的探索' : 'Start a new journey'}<ArrowRight size={18}/></button></div></>}
-      {panel === 'intro' && <><div className="intro-art"><Landmark kind="nanxiang" label={labelNames[locale][2]}/></div><span className="eyebrow">{s.introduction}</span><p className="intro-description">{s.introText}</p><div className="intro-steps"><span>01 <strong>{locale === 'zh' ? '说数量' : 'Say how many'}</strong></span><ChevronRight size={16}/><span>02 <strong>{s.go}</strong></span><ChevronRight size={16}/><span>03 <strong>{locale === 'zh' ? '核对' : 'Confirm'}</strong></span></div><p className="dialog-description">{s.modes}</p><button className="primary full" disabled={busy || !session} onClick={() => void begin()}>{s.start}<ArrowRight size={18}/></button></>}
-      {panel === 'units' && <><div className="unit-baskets"><ServingIllustration/><span>+</span><ServingIllustration/><strong>2 {s.serving}</strong></div><p className="intro-description">{s.unitText}</p><button className="primary full" onClick={() => setPanel(null)}>{s.understood}<Check size={18}/></button></>}
+      {panel === 'intro' && <><div className="intro-art"><Landmark kind="nanxiang" label={labelNames[locale][2]}/></div><span className="eyebrow">{s.introduction}</span><p className="intro-description">{s.introText}</p><div className="intro-steps"><span>01 <strong>{locale === 'zh' ? '说数量' : 'Say how many'}</strong></span><ChevronRight size={16}/><span>02 <strong>{s.mode}</strong></span><ChevronRight size={16}/><span>03 <strong>{locale === 'zh' ? '核对' : 'Confirm'}</strong></span></div><p className="dialog-description">{s.modes}</p><button className="primary full" disabled={busy || !session} onClick={() => void begin()}>{s.start}<ArrowRight size={18}/></button></>}
+      {panel === 'units' && <><div className="unit-baskets"><ServingIllustration/><strong>1 {s.serving}</strong></div><p className="intro-description">{s.unitText}</p><button className="primary full" onClick={() => setPanel(null)}>{s.understood}<Check size={18}/></button></>}
       {panel === 'about' && <><span className="preview-badge">{s.preview}</span><p className="intro-description">{s.aboutText}</p><p className="dialog-description">{s.aboutSpeech}</p>{loggingGap && <p className="sample-error">{locale === 'zh' ? '部分帮助记录未能保存，练习统计可能不完整。' : 'Some help events were not saved; practice statistics may be incomplete.'}</p>}<button className="secondary full" onClick={() => navigate('design')}>{s.design}<ArrowRight size={18}/></button></>}
       {panel === 'skip' && <><p className="intro-description">{s.skipText}</p><div className="dialog-actions"><button className="secondary" onClick={() => setPanel(null)}>{s.keep}</button><button className="primary" disabled={busy} onClick={() => void skip()}>{s.skipConfirm}<ArrowRight size={18}/></button></div></>}
       {panel === 'leaveRecording' && <><p className="intro-description">{s.leaveRecordingText}</p><div className="dialog-actions"><button className="secondary" onClick={() => setPanel(null)}>{s.keep}</button><button className="primary" onClick={() => {setRecordingDraft(false); navigate(destination.current, true);}}>{s.leaveAnyway}<ArrowRight size={18}/></button></div></>}

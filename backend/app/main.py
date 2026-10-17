@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 from .interpreter import parse_development
 from .models import AttemptInput, EventInput, Interpretation, NewSessionInput, Preferences, RevisionInput, TurnInput
-from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
+from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, R1_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
 from .semantic import configure_interpreter
 from .storage import Database, encode
 
@@ -83,7 +83,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         row = connection.execute("SELECT data FROM attempts WHERE id=? AND session_id=?", (attempt_id, sid)).fetchone()
         if row is None:
             problem("attempt_not_found", "Attempt not found.", 404)
-        return json.loads(row["data"])
+        attempt = json.loads(row["data"])
+        add_bound_versions(connection, attempt)
+        return attempt
 
     def public_attempt(connection, attempt: dict) -> dict:
         result = dict(attempt)
@@ -207,6 +209,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
             bound = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
         content_paths = {
             CONTENT_VERSION: ROOT.parent / "content" / "batch-a.json",
+            R1_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{R1_CONTENT_VERSION}.json",
             LEGACY_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{LEGACY_CONTENT_VERSION}.json",
         }
         version = bound["content_version"]
@@ -287,6 +290,20 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                     metadata["metrics"] = result["metrics"]
                 database.event(connection, sid, attempt_id, identifier(), event, metadata, now())
             response = {"request_id": request_id, "status": "applied", "attempt": public_attempt(connection, result), "interpretation_source": parsed.source}
+            if body.channel == "voice":
+                # This describes text understanding, never acoustic accuracy or
+                # pronunciation. A clear denial / correction is still understood.
+                if parsed.intent == "repeat" and not parsed.changes and not parsed.uncertainties:
+                    feedback = {"outcome": "accepted", "reason": "repeat_requested"}
+                elif parsed.uncertainties or result["unresolved_issues"]:
+                    feedback = {"outcome": "retry", "reason": "needs_clarification"}
+                elif parsed.intent == "unknown" or "interpretation_unrecognized" in events:
+                    feedback = {"outcome": "retry", "reason": "unrecognized"}
+                elif "confirmation_rejected" in events:
+                    feedback = {"outcome": "accepted", "reason": "confirmation_required"}
+                else:
+                    feedback = {"outcome": "accepted", "reason": "understood"}
+                response["speech_feedback"] = feedback
             connection.execute("UPDATE turns SET response=? WHERE attempt_id=? AND request_id=?", (encode(response), attempt_id, request_id))
             return response
 

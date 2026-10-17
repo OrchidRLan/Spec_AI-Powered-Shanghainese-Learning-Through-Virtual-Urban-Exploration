@@ -184,6 +184,10 @@ def check_manifest(pack: dict) -> dict:
 
 async def generate(args) -> dict:
     pack = load_pack(args.pack)
+    # R1's recorded inputs and approval hashes belong to its immutable snapshot.
+    # A later content revision must use its own explicit generation workflow.
+    if pack.get("contentVersion") != VERSION:
+        raise ProviderError("review_pack_version_mismatch")
     if args.command == "check":
         return check_manifest(pack)
     ids = selection(pack, args.text_ids)
@@ -251,7 +255,7 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     for command in ("plan", "generate", "check"):
         sub = commands.add_parser(command)
-        sub.add_argument("--pack", default="content/batch-a.json")
+        sub.add_argument("--pack", default=f"content/versions/{VERSION}.json")
         sub.add_argument("--text-ids", nargs="+")
         if command == "generate":
             sub.add_argument("--expect-input-sha256", required=True)

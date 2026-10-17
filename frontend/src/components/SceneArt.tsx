@@ -409,9 +409,11 @@ function TakeawayBox({ x, y }: { x: number; y: number }) {
 }
 
 /** Presentation only: the parent may select packing after a successful save, and packed on restore. */
-export function NanxiangScene({ label = 'A welcoming server at a warm wooden dumpling counter', className, pose = 'welcome' }: ArtProps & { pose?: ScenePose }) {
+export function NanxiangScene({ label = 'A welcoming server at a warm wooden dumpling counter', className, pose = 'welcome', quantity, takeaway }: ArtProps & { pose?: ScenePose; quantity?: number | null; takeaway?: boolean | null }) {
   const id = `nanxiang-${useId().replace(/:/g, '')}`
-  const completed = pose === 'packing' || pose === 'packed'
+  const servingCount = typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 1 && quantity <= 20 ? quantity : 0
+  const completed = (pose === 'packing' || pose === 'packed') && servingCount > 0 && typeof takeaway === 'boolean'
+  const visibleServings = Math.min(servingCount, 3)
   return <svg className={`nanxiang-scene${className ? ` ${className}` : ''}`} data-pose={pose} viewBox="0 0 1100 580" role="img" aria-labelledby={`${id}-title`} preserveAspectRatio="xMidYMid slice">
     <title id={`${id}-title`}>{label}</title><ArtDefs id={id} />
     <rect width="1100" height="580" fill="#ead9b8" />
@@ -474,15 +476,31 @@ export function NanxiangScene({ label = 'A welcoming server at a warm wooden dum
       <Steamer x={285} y={350} scale={.88} lid />
       <Steamer x={285} y={319} scale={.88} lid />
       <Steamer x={410} y={391} scale={1.12} />
-      {!completed && <><Steamer x={650} y={394} scale={1.04} /><PaperBag x={841} y={302} scale={.91} /></>}
+      {!completed && <><Steamer x={650} y={394} scale={1.04} />{takeaway !== false && <PaperBag x={841} y={302} scale={.91} />}</>}
       <g transform="translate(178 386)"><ellipse cy="4" rx="41" ry="12" fill="#69482f" opacity=".15" /><path d="M-35-5q35-9 70 0l-7 14q-29 13-58 0Z" fill="#e2dcc2" stroke="#818d71" strokeWidth="1.5" /><ellipse cy="-5" rx="35" ry="10" fill="#f5edd2" stroke="#818d71" /><ellipse cy="-5" rx="23" ry="6" fill="#7d5234" /><path d="m12-7 11 2m-31-1 12 3" stroke="#c39a5f" strokeWidth="1.4" /></g>
       <path d="m910 376 86 29m-89-22 86 29" stroke="#503e2b" strokeWidth="4" strokeLinecap="round" /><path d="m909 376 22 7m-22 0 20 7" stroke="#c4a26d" strokeWidth="4" strokeLinecap="round" />
     </g>
-    {completed && <g className="scene-completed-order" data-servings="2">
+    {completed && <g className="scene-completed-order" data-servings={servingCount} data-order-mode={takeaway ? 'takeaway' : 'dine-in'}>
       <g className="scene-packed-hand"><path d="M638 324c-2-9-13-16-20-12l-24 13c-8 5-6 11 3 8l18-6c9 0 17 8 23-3Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" /></g>
-      <g className="scene-pack-first"><TakeawayBox x={650} y={321} /></g>
-      <g className="scene-pack-second"><TakeawayBox x={650} y={294} /></g>
-      <g className="scene-takeaway-bag"><PaperBag x={650} y={355} scale={1.03} /></g>
+      {takeaway ? <>
+        {Array.from({ length: visibleServings }, (_, index) => <g key={index} className={index === 0 ? 'scene-pack-first' : 'scene-pack-second'} data-serving-index={index + 1}><TakeawayBox x={650} y={321 - index * 27} /></g>)}
+        <g className="scene-takeaway-bag"><PaperBag x={650} y={355} scale={1.03} /></g>
+      </> : <g className="scene-dine-in-order">
+        <ellipse cx={visibleServings === 1 ? 650 : 760} cy="416" rx={visibleServings === 1 ? 126 : 248} ry="24" fill="#f0e5c8" stroke="#92957a" strokeWidth="2" />
+        <ellipse cx={visibleServings === 1 ? 650 : 760} cy="414" rx={visibleServings === 1 ? 112 : 231} ry="17" fill="none" stroke="#c3c5a6" strokeWidth="2" />
+        {Array.from({ length: visibleServings }, (_, index) => {
+          const x = visibleServings === 1 ? 650 : visibleServings === 2 ? 650 + index * 180 : 620 + index * 140
+          const scale = visibleServings === 1 ? .98 : visibleServings === 2 ? .75 : .6
+          return <g key={index} className={index === 0 ? 'scene-pack-first' : 'scene-pack-second'} data-serving-index={index + 1}>
+            <Steamer x={x} y={399} scale={scale} />
+            <g transform={`translate(${x} 340) scale(${scale})`} fill="none" stroke="#fff6df" strokeWidth="4" strokeLinecap="round" opacity=".7"><path d="M-22 0c-14-22 13-26 0-46M20-7c-13-22 12-26 0-45" /></g>
+          </g>
+        })}
+      </g>}
+      {servingCount > 3 && <g className="scene-order-quantity" transform={`translate(${takeaway ? 737 : 958} ${takeaway ? 348 : 344})`}>
+        <rect x="-34" y="-19" width="68" height="38" rx="19" fill="#f4eddd" stroke="#315d50" strokeWidth="2" />
+        <text textAnchor="middle" dominantBaseline="central" fill="#284c43" fontSize="22" fontWeight="600" fontFamily="system-ui, sans-serif">×{servingCount}</text>
+      </g>}
     </g>}
     <g className="scene-steam" fill="none" stroke="#fff6df" strokeWidth="4" strokeLinecap="round" opacity=".7">
       <path d="M380 317c-18-22 14-25-1-49" /><path d="M417 307c-15-22 16-27 0-51" /><path d="M453 319c-15-21 13-26 0-45" />

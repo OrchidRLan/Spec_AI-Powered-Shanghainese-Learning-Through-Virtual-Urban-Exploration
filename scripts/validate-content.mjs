@@ -210,7 +210,17 @@ export function validateContent(pack, ledger, { mode = 'development', root = ROO
   }
   const task = pack.nanxiangTask;
   check(task?.id === 'NX-TASK', 'Nanxiang task definition missing.');
-  check(task?.target?.quantity === 2 && task?.target?.normalizedServings === 2 && task?.target?.takeaway === true && task?.item === 'xiaolongbao', 'Nanxiang target must be two servings of xiaolongbao to go.');
+  const legacyTask = ['batch-a.2026-10-17.v1', 'batch-a-r1.2026-10-17.v1'].includes(pack.contentVersion);
+  if (legacyTask) {
+    check(task?.target?.quantity === 2 && task?.target?.normalizedServings === 2 && task?.target?.takeaway === true && task?.item === 'xiaolongbao', 'Historical Nanxiang target must preserve its two-servings-to-go rule.');
+  } else {
+    check(task?.orderPolicy === 'customer-choice' && task?.item === 'xiaolongbao', 'Nanxiang must allow the customer to choose their order.');
+    check(task?.target?.quantity === null && task?.target?.normalizedServings === null && task?.target?.takeaway === null && task?.target?.unit === 'serving', 'Nanxiang must not prescribe a quantity or dining choice.');
+    check(task?.quantityRange?.min === 1 && task?.quantityRange?.max === 20, 'Nanxiang valid serving range must remain 1–20.');
+    check(Array.isArray(task?.diningOptions) && task.diningOptions.length === 2 && task.diningOptions.includes(false) && task.diningOptions.includes(true), 'Nanxiang must support both for-here and takeaway orders.');
+    check(['valid_normalized_servings', 'explicit_dining_choice', 'current_summary_displayed', 'later_confirmation_matches_revision', 'completion_saved'].every(requirement => array(task?.completionRequires).includes(requirement)), 'Nanxiang completion must require a valid chosen order, displayed summary, later confirmation, and saved completion.');
+    check(!array(task?.completionRequires).some(requirement => ['normalized_servings_2', 'takeaway_true'].includes(requirement)), 'Nanxiang must not retain fixed two-servings-to-go completion requirements.');
+  }
   check(task?.initialOrder && ['item', 'quantity', 'unit', 'normalizedServings', 'takeaway'].every((field) => task.initialOrder[field] === null), 'Initial order must keep all fields unknown; do not copy the target.');
   check(bilingual(task?.unitExplanation), 'Nanxiang unit explanation needs zh/en.');
   check(array(pack.ruleExamples).length >= 18, 'The first 18 Nanxiang rule examples are required.');

@@ -1,0 +1,39 @@
+/* Revision 2: choose a phrase to practise, then speak it. */
+.learning-segment.learning-segment-aligned{flex-direction:row;align-items:flex-end;gap:3px;flex-wrap:wrap;justify-content:flex-start}
+.learning-character{display:inline-flex;flex-direction:column;align-items:center;gap:7px;min-width:1.45em}
+.learning-character .learning-reading{white-space:nowrap;overflow-wrap:normal;padding:0 3px}
+.learning-punctuation{align-self:flex-end;margin-left:-2px}
+.r1-speaking-example .learning-segments{gap:14px 20px}
+.r1-speaking-example .learning-hanzi{font-size:31px}
+.r2-speed{display:flex;gap:3px;align-items:center;flex-shrink:0;background:#eeeede;padding:3px;border-radius:8px}
+.r2-speed button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:7px 9px;border-radius:6px;color:#68735f;font-size:12px}
+.r2-speed button[aria-pressed=true]{background:#fcfaf2;color:#315b45;box-shadow:0 1px 4px #33482715}
+.r2-speed small{font-size:10px;color:inherit}
+.r1-reading-tools{flex-wrap:wrap}
+.r2-practice-picker{margin:0 0 18px}
+.r2-practice-picker>.overline{display:block;margin-bottom:11px;font-size:11px;letter-spacing:.06em}
+.r2-practice-picker>div{display:flex;flex-wrap:wrap;gap:9px}
+.r2-practice-picker>div>button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:9px 15px;border:1px solid #d4dcc8;background:#fffdf5;border-radius:9px;line-height:1.5;font-size:15px;color:#4d6248;text-align:left}
+.r2-practice-picker>div>button.selected{border-color:#527e54;background:#e9f0e1;box-shadow:inset 0 0 0 1px #527e54}
+.r2-practice-picker>small{display:block;color:#747d68;font-size:11px;line-height:1.6;margin-top:9px}
+.r2-first-speak{font-size:12px;line-height:1.7;color:#75806b;margin:-7px 0 20px}
+.r2-select-first{display:flex;gap:12px;align-items:center;min-height:105px;padding:20px;border:1px dashed #cdd6bf;border-radius:11px;background:#f5f5e9;color:#6c7c60}
+.r2-select-first svg{flex-shrink:0}
+.r2-select-first p{font-size:13px;line-height:1.8;margin:0}
+.r2-speech-notice{padding:11px 13px;background:#f4ebd9;border-radius:8px;border:1px solid #e3d9bc;color:#756342;font-size:13px;line-height:1.7;margin-bottom:17px}
+.r2-heard{margin-top:16px;padding:12px 14px;border:1px solid #d1dcc4;border-radius:9px;background:#eff4e8}
+.r2-heard>span{font-size:11px;color:#738166}.r2-heard>p{font-size:17px;line-height:1.7;margin:5px 0 0;overflow-wrap:anywhere}
+.r2-confirm-summary{margin:20px 0 10px}.r2-change-order{width:100%;justify-content:center;font-size:13px;margin-top:15px}
+.r2-edit-prompt{padding-top:18px}.r2-edit-prompt>p{font-size:14px;color:#6c775e;margin:0 0 14px}
+.r2-review-expressions{margin:30px 0}.r2-review-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:14px}
+.r2-review-heading h2{font-size:30px;line-height:1.5;margin:9px 0}.r2-review-heading p{font-size:14px;line-height:1.8;color:#6c775f}
+.r2-review-expressions>.text-button{font-size:13px;gap:10px;margin-bottom:19px}
+.r2-review-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.r2-review-cards .phrase-card{min-width:0;background:#fbf8ef;border:1px solid #dcdcc9;border-radius:12px;padding:21px}
+.r2-review-cards .learning-hanzi{font-size:28px}.r2-review-cards .learning-segments{gap:13px 15px}
+.r2-review-cards .review-label{font-size:11px;color:#7c6845}.r2-review-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:23px}
+.r1-completed p strong{display:block;font-size:15px;margin-top:6px;color:#425e45}
+.r1-input-tabs button:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:1050px){.r2-review-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.r2-review-heading{align-items:flex-start;flex-direction:column;gap:10px}.r2-review-heading h2{font-size:25px}.r2-review-cards{grid-template-columns:1fr}.r2-review-cards .phrase-card{padding:20px}.r2-review-cards .learning-hanzi{font-size:29px}.r2-review-heading .r2-speed{align-self:flex-start}.r2-review-expressions{margin-top:22px}}
+@media(max-width:520px){.r2-speed button{font-size:11px;padding:7px 8px;gap:4px}.r2-speed small{font-size:9px}.r1-reading-tools>.text-button{flex:1;min-width:110px}.r2-first-speak{font-size:11px;margin-bottom:17px}.r2-practice-picker>div>button{font-size:14px;padding:8px 12px}.r2-practice-picker>small{font-size:11px}.r1-speaking-example{padding:16px}.r1-speaking-example .learning-hanzi{font-size:29px}.r1-speaking-example .learning-segments{gap:12px 15px}.r2-select-first{padding:15px}.r2-speech-notice{font-size:12px}.r2-review-heading p{font-size:13px}}

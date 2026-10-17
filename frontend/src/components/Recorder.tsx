@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, RotateCcw, Send, Square, X } from 'lucide-react';
+import { Mic, RotateCcw, Square, X } from 'lucide-react';
 import { chooseRecordingMimeType, MAX_RECORDING_SECONDS, recordingToWav, stopAllAudio } from '../lib/audio';
 
 type Locale = 'zh' | 'en';
@@ -15,6 +15,7 @@ interface RecorderProps {
   onPhaseChange?: (phase: RecorderPhase) => void;
   onEvent?: (name: string) => void;
   onError?: (message: string) => void;
+  onFailure?: (reason: 'recognition' | 'technical') => void;
   stopSignal?: number;
   resetSignal?: number;
 }
@@ -25,6 +26,7 @@ interface RecordingSession {
   chunks: Blob[];
   discard: boolean;
   failed: boolean;
+  autoSubmit: boolean;
   startedAt: number;
   interval?: ReturnType<typeof setInterval>;
   timeout?: ReturnType<typeof setTimeout>;
@@ -33,13 +35,11 @@ interface RecordingSession {
 const copy = {
   zh: {
     label: '说一句上海话', start: '点击说话', requesting: '等待麦克风权限…',
-    recording: '正在录音', stopping: '正在保存本地录音…', stop: '停止录音', cancel: '取消',
-    ready: '录音已保留在本页，可以先回听。', retry: '重新录制', discard: '删除录音',
-    submit: '提交录音识别', submitting: '正在识别，可以取消…', cancelRequest: '取消识别',
-    playback: '回听我的录音', limit: '最长 20 秒。停止后可回听，点击提交才上传。',
+    recording: '正在录音', stopping: '正在准备识别…', stop: '停止录音', cancel: '取消',
+    ready: '可以回听本次录音。', retry: '重新录制', discard: '删除录音',
+    submitting: '正在识别，可以取消…', cancelRequest: '取消识别',
+    playback: '回听我的录音', limit: '最长 20 秒，停止后自动识别并回答。',
     unavailable: '语音识别待连接，仍可本地回听或选择回应。',
-    privacy: '本地录音不长期保存；刷新或离开此页面后需要重录。提交后转写可随回应保存。',
-    recognized: '识别完成。请核对原始转写，再决定是否使用这句话。',
     unsupported: '此浏览器无法录音。请使用支持录音的浏览器，或选择回应。',
     permission: '麦克风权限未开启。可在浏览器中允许麦克风，也可以选择回应。',
     noDevice: '没有找到可用的麦克风。请连接麦克风，或选择回应。',
@@ -54,13 +54,11 @@ const copy = {
   },
   en: {
     label: 'Try saying it in Shanghainese', start: 'Tap to speak', requesting: 'Waiting for microphone permission…',
-    recording: 'Recording', stopping: 'Preparing your local recording…', stop: 'Stop recording', cancel: 'Cancel',
-    ready: 'Your recording is on this page. Listen back before sending.', retry: 'Record again', discard: 'Delete recording',
-    submit: 'Send for transcription', submitting: 'Transcribing… You can cancel.', cancelRequest: 'Cancel transcription',
-    playback: 'Play my recording', limit: 'Up to 20 seconds. Listen back first; upload only when you press Send.',
+    recording: 'Recording', stopping: 'Preparing transcription…', stop: 'Stop recording', cancel: 'Cancel',
+    ready: 'You can listen back to your recording.', retry: 'Record again', discard: 'Delete recording',
+    submitting: 'Transcribing… You can cancel.', cancelRequest: 'Cancel transcription',
+    playback: 'Play my recording', limit: 'Up to 20 seconds. Stopping automatically transcribes and sends your answer.',
     unavailable: 'Speech recognition is not connected yet. You can still record, listen back, or choose a response.',
-    privacy: 'Your local recording is not stored long term. Refreshing or leaving this page clears it. Submitted transcripts may be saved with your response.',
-    recognized: 'Transcription is ready. Check the original transcript before choosing to use this reply.',
     unsupported: 'This browser cannot record audio. Use a supported browser or choose a response.',
     permission: 'Microphone permission is off. Allow it in your browser or choose a response.',
     noDevice: 'No microphone was found. Connect one or choose a response.',
@@ -81,12 +79,11 @@ function closeSession(session: RecordingSession): void {
   session.stream.getTracks().forEach((track) => track.stop());
 }
 
-export default function Recorder({ locale, enabled, disabled = false, onTranscript, onDraftChange, onPhaseChange, onEvent, onError, stopSignal, resetSignal }: RecorderProps) {
+export default function Recorder({ locale, enabled, disabled = false, onTranscript, onDraftChange, onPhaseChange, onEvent, onError, onFailure, stopSignal, resetSignal }: RecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>('idle');
   const [seconds, setSeconds] = useState(0);
   const [clipUrl, setClipUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [original, setOriginal] = useState('');
   const sessionRef = useRef<RecordingSession | null>(null);
   const clipRef = useRef<Blob | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -104,8 +101,8 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
   }, []);
   const resetRef = useRef(resetSignal);
   const statusRef = useRef<RecordingStatus>('idle');
-  const latest = useRef({ locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError });
-  latest.current = { locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError };
+  const latest = useRef({ locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError, onFailure });
+  latest.current = { locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError, onFailure };
   const t = copy[locale];
 
   function syncPhase() {
@@ -132,10 +129,11 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       && controls.resetSignal === latest.current.resetSignal;
   }
 
-  function report(message: string) {
+  function report(message: string, reason: 'recognition' | 'technical') {
     if (!mountedRef.current) return;
     setError(message);
     latest.current.onError?.(message);
+    latest.current.onFailure?.(reason);
   }
 
   function notifyDraft(hasDraft: boolean) {
@@ -151,7 +149,6 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     urlRef.current = blob ? URL.createObjectURL(blob) : null;
     if (mountedRef.current) {
       setClipUrl(urlRef.current);
-      setOriginal('');
       notifyDraft(Boolean(blob));
     }
   }
@@ -162,9 +159,10 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     requestRef.current = null;
   }
 
-  function stopCapture() {
+  function stopCapture(autoSubmit = true) {
     const session = sessionRef.current;
     if (!session) return;
+    session.autoSubmit = autoSubmit;
     clearInterval(session.interval);
     clearTimeout(session.timeout);
     changeStatus('stopping');
@@ -176,7 +174,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
   function stopAndKeep() {
     abortPending();
     stopAllAudio();
-    if (sessionRef.current) stopCapture();
+    if (sessionRef.current) stopCapture(false);
     else changeStatus(clipRef.current ? 'ready' : 'idle');
   }
 
@@ -245,7 +243,8 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
   }, [locale, stopSignal]);
   useEffect(() => {
     if (!enabled && statusRef.current === 'submitting') stopAndKeep();
-  }, [enabled]);
+    if (!enabled) latest.current.onFailure?.('technical');
+  }, [enabled, resetSignal]);
   useEffect(() => {
     if (disabled) stopAndKeep();
   }, [disabled]);
@@ -259,7 +258,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     if (latest.current.disabled || ['recording', 'stopping', 'requesting', 'submitting'].includes(statusRef.current)) return;
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      report(t.unsupported);
+      report(t.unsupported, 'technical');
       return;
     }
     abortPending();
@@ -276,16 +275,16 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       }
       const mimeType = chooseRecordingMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      const session: RecordingSession = { recorder, stream, chunks: [], discard: false, failed: false, startedAt: performance.now() };
+      const session: RecordingSession = { recorder, stream, chunks: [], discard: false, failed: false, autoSubmit: false, startedAt: performance.now() };
       sessionRef.current = session;
       recorder.ondataavailable = (event) => {
         if (event.data.size && !session.discard) session.chunks.push(event.data);
       };
       recorder.onerror = () => {
-        if (session.discard || !mountedRef.current || controls.resetSignal !== latest.current.resetSignal) return;
+        if (session.discard || !isCurrentOperation(generation, controls)) return;
         session.failed = true;
         closeSession(session);
-        report(copy[latest.current.locale].recordingError);
+        report(copy[latest.current.locale].recordingError, 'technical');
         if (recorder.state !== 'inactive') recorder.stop();
       };
       recorder.onstop = () => {
@@ -298,10 +297,13 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
         if (blob.size && !session.failed) {
           replaceClip(blob);
           changeStatus('ready');
+          // Only a user stop (or the announced time limit) submits. Navigation,
+          // language changes and backgrounding invalidate the capture generation.
+          if (session.autoSubmit && isCurrentOperation(generation, controls)) void submit();
         } else {
           changeStatus(clipRef.current ? 'ready' : 'idle');
           notifyDraft(Boolean(clipRef.current));
-          if (!session.failed) report(copy[latest.current.locale].empty);
+          if (!session.failed && isCurrentOperation(generation, controls)) report(copy[latest.current.locale].empty, 'recognition');
         }
       };
       recorder.start();
@@ -313,7 +315,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       session.interval = setInterval(() => {
         if (mountedRef.current) setSeconds(Math.min(MAX_RECORDING_SECONDS, Math.floor((performance.now() - session.startedAt) / 1000)));
       }, 200);
-      session.timeout = setTimeout(stopCapture, MAX_RECORDING_SECONDS * 1000);
+      session.timeout = setTimeout(() => stopCapture(), MAX_RECORDING_SECONDS * 1000);
     } catch (cause) {
       stream?.getTracks().forEach((track) => track.stop());
       if (!isCurrentOperation(generation, controls)) return;
@@ -322,7 +324,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       const name = cause instanceof DOMException ? cause.name : '';
       report(name === 'NotAllowedError' || name === 'SecurityError' ? t.permission
         : name === 'NotFoundError' || name === 'OverconstrainedError' ? t.noDevice
-          : name === 'NotReadableError' ? t.busyDevice : t.recordingError);
+          : name === 'NotReadableError' ? t.busyDevice : t.recordingError, 'technical');
     }
   }
 
@@ -402,7 +404,6 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       if (!result || typeof result !== 'object' || !('text' in result) || typeof result.text !== 'string' || !result.text.trim()) {
         throw new Error('noText');
       }
-      setOriginal(result.text);
       const requestId = 'request_id' in result && typeof result.request_id === 'string' && result.request_id
         ? result.request_id : requestIdRef.current;
       if (!requestId) throw new Error('recognition');
@@ -415,7 +416,8 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       const key = cause instanceof Error ? cause.message : 'recognition';
       const messages = copy[latest.current.locale];
       report(timedOut ? messages.timeout : key === 'conversion' ? messages.conversion
-        : key === 'session' ? messages.session : key === 'noText' ? messages.noText : messages.recognition);
+        : key === 'session' ? messages.session : key === 'noText' ? messages.noText : messages.recognition,
+        key === 'noText' && !timedOut ? 'recognition' : 'technical');
       latest.current.onEvent?.('asr_failed');
     } finally {
       clearTimeout(timeout);
@@ -446,11 +448,8 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       {(status === 'idle' || status === 'ready') && <button type="button" className="button record-button" disabled={disabled} onClick={startRecording}>
         {clipUrl ? <RotateCcw size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}{clipUrl ? t.retry : t.start}
       </button>}
-      {isCapturing && <button type="button" className="button record-button" disabled={status === 'stopping'} onClick={stopCapture}>
+      {isCapturing && <button type="button" className="button record-button" disabled={status === 'stopping'} onClick={() => stopCapture()}>
         <Square size={16} aria-hidden="true" />{t.stop}
-      </button>}
-      {status === 'ready' && <button type="button" className="button primary" disabled={!enabled || disabled} onClick={submit}>
-        <Send size={16} aria-hidden="true" />{t.submit}
       </button>}
       {status !== 'idle' && <button type="button" className="button secondary" disabled={disabled && !isCapturing && status !== 'submitting'} onClick={cancel}>
         <X size={16} aria-hidden="true" />{status === 'submitting' ? t.cancelRequest : status === 'ready' ? t.discard : t.cancel}
@@ -459,7 +458,5 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     {error && <p className="recorder-error" role="alert">{error}</p>}
     {!enabled && <p className="recorder-hint">{t.unavailable}</p>}
     <p className="recorder-hint">{t.limit}</p>
-    <p className="recorder-hint recorder-privacy">{t.privacy}</p>
-    {original && <p className="recorder-hint transcript-result" role="status">{t.recognized}</p>}
   </section>;
 }

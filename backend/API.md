@@ -1,4 +1,4 @@
-# 批次 A／修订 1 本地 API
+# 批次 A／修订 2 本地 API
 
 Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
 
@@ -58,7 +58,9 @@ type TurnInput = {
   text?:string; summary_revision?:number; asr_request_id?:string;
 };
 type TurnResult = {request_id:string;status:'applied'|'pending'|'cancelled'|'failed';
-  attempt:Attempt;interpretation_source:string|null};
+  attempt:Attempt;interpretation_source:string|null;
+  speech_feedback?: {outcome:'accepted'|'retry';
+    reason:'understood'|'unrecognized'|'needs_clarification'|'repeat_requested'|'confirmation_required'}};
 type Session = {
   id:string;locale:'zh'|'en';show_romanization:boolean;reduced_motion:boolean;
   mode:'development';content_version:string;rule_version:string;
@@ -68,13 +70,13 @@ type Session = {
 };
 ```
 
-提交 `set_order` 的字段必须实际表达；未出现字段保留，null 明确清空，false 真实堂吃。数量变更必须携带单位，不从旧订单偷用单位。新数量/单位/商品/方式及无效修改先让旧摘要失效；同轮文字里的“对”不能确认尚未展示的摘要。随后独立提交 `confirm`，带已展示的 `summary_revision`。每次请求使用新的 request_id（8–100 位字母/数字/`_`/`-`）；网络重试复用相同 ID 与完全相同负载。重复已应用回合返回原始保存结果；若之后已有新进展，前端应按 revision 防止旧结果覆盖当前状态，必要时 GET attempt。
+提交 `set_order` 的字段必须实际表达；未出现字段保留，null 明确清空，false 真实堂吃。R2 完成条件为小笼、有效 1–20 份、明确堂吃或外带和独立确认；不再强制两份或外带。数量变更必须携带单位，不从旧订单偷用单位。新数量/单位/商品/方式及无效修改先让旧摘要失效；同轮文字里的“对”不能确认尚未展示的摘要。随后独立提交 `confirm`，带已展示的 `summary_revision`。每次请求使用新的 request_id（8–100 位字母/数字/`_`/`-`）；网络重试复用相同 ID 与完全相同负载。重复已应用回合返回原始保存结果；若之后已有新进展，前端应按 revision 防止旧结果覆盖当前状态，必要时 GET attempt。
 
 `POST /api/session/new` 只供用户明确点击“开始新的探索”并确认后调用，不在配置冲突或普通刷新时自动调用。它保留当前语言、注音显示及减少动态偏好，为新会话绑定当前内容/规则/模型配置，并返回空 attempts 与完成列表。旧会话、已保存尝试和成功记录留在数据库中，既不删除也不转入新会话；新 Cookie 没有访问旧会话的权限。前端应先取消在途任务并清空旧会话的本地草稿/请求状态，防止迟到界面结果覆盖新探索。
 
-修订 1 新会话绑定 `batch-a-r1.2026-10-17.v1`，规则仍为 `nanxiang-rules.v1`。旧会话保留 `batch-a.2026-10-17.v1`，从 `content/versions/batch-a.2026-10-17.v1.json` 读取原内容；缺失、未知或文件内版本不匹配时返回 `content_version_unavailable`，不能用新文案静默替换旧包。所有 Attempt 响应附所属 `content_version/rule_version`；早期记录缺这些字段时从其原会话补充到响应，不迁移数据库。历史回合的缓存响应仍是当时的订单和修订，附原版本，不替换成最新订单。
+修订 2 新会话绑定 `batch-a-r2.2026-10-17.v1` 和 `nanxiang-rules.v2`。R1 会话保留 `batch-a-r1.2026-10-17.v1`，基线会话保留 `batch-a.2026-10-17.v1`，分别从 `content/versions/<原版本>.json` 读取原内容；缺失、未知或文件内版本不匹配时返回 `content_version_unavailable`，不能用新文案静默替换旧包。规则也按 Attempt 原绑定分派：`nanxiang-rules.v1` 仍要求两份外带，不会因上线 R2 静默完成旧任务。所有 Attempt 响应附所属 `content_version/rule_version`；早期记录缺这些字段时从其原会话补充，读取本身不迁移数据库。历史回合的缓存响应仍是当时的订单和修订，附原版本，不替换成最新订单。
 
-R1 界面只呈现语音与按钮，后端仍保留 `text`、`voice_edited` 数据结构、历史读取和已提交请求的幂等结果。旧成功、旧文本、ASR 原转写及编辑文本不删除或改写。当前静态界面若只带 R1 包，遇旧会话应说明版本差异并提供用户主动“开始新的探索”入口，不把旧进度标为新内容下的结果。
+R2 界面只呈现语音与按钮，后端仍保留 `text`、`voice_edited` 数据结构、历史读取和已提交请求的幂等结果。旧成功、旧文本、ASR 原转写及编辑文本不删除或改写。当前静态界面若只带 R2 包，遇旧会话应说明版本差异并提供用户主动“开始新的探索”入口，不把旧进度标为新内容下的结果。
 
 允许事件：`expression_opened`, `expression_inserted`, `unit_explanation_viewed`, `recording_started`, `recording_stopped`, `recording_cancelled`, `recording_played`, `recording_permission_denied`, `asr_submitted`, `asr_succeeded`, `asr_failed`, `asr_cancelled`, `audio_started`, `audio_ended`, `audio_interrupted`, `pronunciation_support_changed`, `input_channel_changed`, `station_entered`, `assistance_recorded`, `logging_gap`。只在真的展示“一笼示意对应一份”后发 `unit_explanation_viewed`；之后提交的 basket 单位才可归一。事件不能直接完成订单。录音权限拒绝不能发 `recording_started`。客户端 ASR 与回听事件只是 UI 诊断，后端强制记录 `reported_by:client`，不会增加语音尝试、帮助、成功或完成计数；真正识别结果由服务端单独记录 `asr_finished`（`reported_by:server`），客户端不能提交该事件。
 
@@ -82,10 +84,12 @@ HTTP 409 的 `detail={code,message,attempt?}` 表示冲突；刷新 attempt 并�
 
 解释失败会终结该回合并返回 `detail.terminal=true`，明确重试时生成新 ID；这与保存失败和网络未知结果的原 ID 重试不同。页面刷新后也要根据 `attempt.pending_request_id` 展示查询/取消入口，不能只依赖内存中的请求对象。
 
-语音原转写成功后，用户在只读转写核对中明确选择“使用这句话”，提交 `channel:'voice',text,asr_request_id`。R1 界面不再提供文字编辑；旧客户端及历史的 `voice_edited` 兼容结构保留。ASR ID 必须属于当前会话，原转写从服务端保存结果读取；`voice` 文本必须完全匹配原转写。回合分别返回 `asr_transcript` 与 `text`，不把编辑后的内容伪记为识别结果。ASR 出错返回稳定 `detail.code/retryable/terminal`；只有终结失败重新试才换 ID，未知结果仍复用原 ID。转写处理超过 30 秒的未知请求允许用户明确开始新请求；不会自动重调模型。
+R2 中用户主动结束录音后由前端自动转写，并自动提交 `channel:'voice',text,asr_request_id`，不再要求手动发送录音和“使用这句话”。原转写可只读查看；旧客户端及历史的 `voice_edited` 兼容结构保留。ASR ID 必须属于当前会话，原转写从服务端保存结果读取；`voice` 文本必须完全匹配原转写，前置练习选择不能替换这份证据。回合分别返回 `asr_transcript` 与 `text`，不把编辑后的内容伪记为识别结果。ASR 出错返回稳定 `detail.code/retryable/terminal`；空转写返回 `detail.code='no_speech'`。只有终结失败重新试才换 ID，未知结果仍复用原 ID。转写处理超过 30 秒的未知请求允许用户明确开始新请求；不会自动重调模型。
+
+已应用的 `voice` 回合增加 `speech_feedback`，与订单和幂等响应同时保存。`accepted` 表示表达已理解，不代表已完成或发音正确；清楚的否定/合法修改为 `understood`，请求重说为 `repeat_requested`，尚未展示摘要的确认是 `confirmation_required`。无法识别语义返回 `retry/unrecognized`，字段歧义或数量/单位等规则问题为 `retry/needs_clarification`。这些不是逐字发音评价。前端据 `retry` 开放本题按钮回答，并区分没理解与内容需澄清；正常帮助请求和无进展的明确表达不伪记为语音失败。ASR/麦克风/服务故障也允许前端回退，每题首次 Speak 是教学交互策略，不作为订单 API 的安全授权边界；历史按钮客户端与幂等恢复继续兼容。
 
 文字解析默认是有限开发解析器，覆盖草案中的常见中文/英文、数量/单位/否定修正；不承诺任意自然语言，不把模型输出或 UI 文案伪称已审核上海话。设置 `TEXT_INTERPRETER=qwen` 可选择实际 Qwen 解释适配器；还必须显式启用服务并配置凭据，不会在失败后静默回退到开发解析器。会话绑定解释/ASR 配置 ID，变更模型或模式后使用新会话，不静默修改历史会话来源。ASR/TTS 的真实调用必须显式启用且配置凭据，未配置清楚报错。ASR 在内存中处理录音，不在磁盘存原始音频；请求 ID 对同一录音去重。实际真人语音、模型质量与听审状态以验证记录为准。
 
-R1 开发解析器标为 `development-parser.v2`：本轮明确说出的“小笼包／小笼馒头”均映射到 `xiaolongbao`；数量、否定、单位与确认仍单独校验，证据和原文保持原句。重复请求和修正同时出现时必须先保留修正，不以“再讲一遍”绕过订单变更。旧 `development-parser.v1` 会话的历史和缓存重试可读取；新文字或语音解释返回 `configuration_changed`，提示显式新探索，按钮规则及已准备好、只待保存的回合仍可恢复。此处有限解析器回归不代表真实 ASR／LLM 对新沪语稿的质量已审核。
+R2 开发解析器标为 `development-parser.v3`：明确说出的“小笼／小笼包／小笼馒头”映射到 `xiaolongbao`，支持 1–20 常用中英文数词、在明确份数问句下的“要两／两吧／两，谢谢”、堂食/这里吃等说法和“好个／嗯，对个，谢谢”等独立确认。只在 `NX-N02` 已明确询问份数时省略单位可补 `serving`，两个/两只不会换成两份。分数、范围、近似数、后置否定和互相矛盾的用餐方式仍需澄清。数量、否定、单位与确认单独校验，证据和原文保留原句。重复请求和修正同时出现时必须保留修正，不以“再讲一遍”绕过订单变更。旧 `development-parser.v1/v2` 会话的历史和缓存重试可读取；新文字或语音解释返回 `configuration_changed`，提示显式新探索，原版本按钮规则及已准备好、只待保存的回合仍可恢复。此处有限解析器回归不代表真实 ASR／LLM 对新沪语稿的质量已审核。
 
 自动测试的 `tests/conftest.py` 在加载应用前关闭所有真实调用并选择开发解析器，避免用户本地 `.env` 引发测试计费。适配器通过 mock HTTP 测试；通过测试不等于已验证上海话效果。
