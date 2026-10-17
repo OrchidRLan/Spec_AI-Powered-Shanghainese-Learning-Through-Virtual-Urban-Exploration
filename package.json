@@ -15,7 +15,7 @@
     "test:content": "node --test content/validate-content.test.mjs",
     "check": "npm run typecheck && npm run test:content && npm run test:ui && npm run test:api && npm run audio:check",
     "test:ui": "node --experimental-strip-types --test frontend/tests/*.test.mjs",
-    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && backend/.venv/bin/python scripts/speech-review-r2.py check"
+    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && node scripts/check-audio-r3.mjs"
   },
   "engines": {
     "node": ">=22.12"

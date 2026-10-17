@@ -43,6 +43,17 @@ class Database:
                     fingerprint TEXT NOT NULL, response TEXT, created_at TEXT NOT NULL,
                     PRIMARY KEY(session_id, request_id)
                 );
+                CREATE TABLE IF NOT EXISTS practice_requests (
+                    attempt_id TEXT NOT NULL REFERENCES attempts(id), request_id TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL, status TEXT NOT NULL, payload TEXT NOT NULL,
+                    response TEXT NOT NULL, created_at TEXT NOT NULL,
+                    PRIMARY KEY(attempt_id, request_id)
+                );
+                CREATE TABLE IF NOT EXISTS practice_asr_uses (
+                    session_id TEXT NOT NULL REFERENCES sessions(id), asr_request_id TEXT NOT NULL,
+                    attempt_id TEXT NOT NULL REFERENCES attempts(id), request_id TEXT NOT NULL,
+                    PRIMARY KEY(session_id, asr_request_id)
+                );
             """)
 
     @contextmanager

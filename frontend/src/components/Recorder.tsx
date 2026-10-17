@@ -15,7 +15,7 @@ interface RecorderProps {
   onPhaseChange?: (phase: RecorderPhase) => void;
   onEvent?: (name: string) => void;
   onError?: (message: string) => void;
-  onFailure?: (reason: 'recognition' | 'technical') => void;
+  onFailure?: (reason: 'recognition' | 'technical', detail?: { message?: string; requestId?: string }) => void;
   stopSignal?: number;
   resetSignal?: number;
 }
@@ -38,7 +38,7 @@ const copy = {
     recording: '正在录音', stopping: '正在准备识别…', stop: '停止录音', cancel: '取消',
     ready: '可以回听本次录音。', retry: '重新录制', discard: '删除录音',
     submitting: '正在识别，可以取消…', cancelRequest: '取消识别',
-    playback: '回听我的录音', limit: '最长 20 秒，停止后自动识别并回答。',
+    playback: '回听我的录音', limit: '最长 20 秒，停止后自动识别，查看结果后再继续。',
     unavailable: '语音识别待连接，仍可本地回听或选择回应。',
     unsupported: '此浏览器无法录音。请使用支持录音的浏览器，或选择回应。',
     permission: '麦克风权限未开启。可在浏览器中允许麦克风，也可以选择回应。',
@@ -57,7 +57,7 @@ const copy = {
     recording: 'Recording', stopping: 'Preparing transcription…', stop: 'Stop recording', cancel: 'Cancel',
     ready: 'You can listen back to your recording.', retry: 'Record again', discard: 'Delete recording',
     submitting: 'Transcribing… You can cancel.', cancelRequest: 'Cancel transcription',
-    playback: 'Play my recording', limit: 'Up to 20 seconds. Stopping automatically transcribes and sends your answer.',
+    playback: 'Play my recording', limit: 'Up to 20 seconds. Stopping automatically transcribes. Review your result before continuing.',
     unavailable: 'Speech recognition is not connected yet. You can still record, listen back, or choose a response.',
     unsupported: 'This browser cannot record audio. Use a supported browser or choose a response.',
     permission: 'Microphone permission is off. Allow it in your browser or choose a response.',
@@ -129,11 +129,11 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       && controls.resetSignal === latest.current.resetSignal;
   }
 
-  function report(message: string, reason: 'recognition' | 'technical') {
+  function report(message: string, reason: 'recognition' | 'technical', requestId?: string) {
     if (!mountedRef.current) return;
     setError(message);
     latest.current.onError?.(message);
-    latest.current.onFailure?.(reason);
+    latest.current.onFailure?.(reason, { message, ...(requestId ? { requestId } : {}) });
   }
 
   function notifyDraft(hasDraft: boolean) {
@@ -243,7 +243,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
   }, [locale, stopSignal]);
   useEffect(() => {
     if (!enabled && statusRef.current === 'submitting') stopAndKeep();
-    if (!enabled) latest.current.onFailure?.('technical');
+    if (!enabled) latest.current.onFailure?.('technical', { message: copy[latest.current.locale].unavailable });
   }, [enabled, resetSignal]);
   useEffect(() => {
     if (disabled) stopAndKeep();
@@ -362,6 +362,9 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     stopAllAudio();
     changeStatus('submitting');
     let timedOut = false;
+    // A terminal provider error can clear the reusable request ID. Keep this
+    // attempt's ID separately so the parent can persist its failure result.
+    let submittedRequestId: string | undefined;
     const timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
@@ -379,6 +382,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
         return;
       }
       requestIdRef.current ??= crypto.randomUUID();
+      submittedRequestId = requestIdRef.current;
       latest.current.onEvent?.('asr_submitted');
       const response = await fetch('/api/asr', {
         method: 'POST', headers: { 'Content-Type': 'audio/wav', 'X-Request-ID': requestIdRef.current }, credentials: 'same-origin',
@@ -417,7 +421,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       const messages = copy[latest.current.locale];
       report(timedOut ? messages.timeout : key === 'conversion' ? messages.conversion
         : key === 'session' ? messages.session : key === 'noText' ? messages.noText : messages.recognition,
-        key === 'noText' && !timedOut ? 'recognition' : 'technical');
+        key === 'noText' && !timedOut ? 'recognition' : 'technical', submittedRequestId);
       latest.current.onEvent?.('asr_failed');
     } finally {
       clearTimeout(timeout);

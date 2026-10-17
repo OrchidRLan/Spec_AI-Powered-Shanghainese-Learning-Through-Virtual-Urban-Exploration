@@ -76,7 +76,7 @@ function harness(options = {}) {
       effects.push(() => { slot.cleanup?.(); slot.cleanup = callback(); });
     }
   };
-  const components = Object.fromEntries(['Dialog', 'Recorder', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
+  const components = Object.fromEntries(['Dialog', 'Recorder', 'GuidedPractice', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
     .map(name => [name, function boundaryComponent() {}]));
   const window = {
     location: { hash: options.hash ?? '#nanxiang' },
@@ -147,6 +147,7 @@ function harness(options = {}) {
     get hash() { return window.location.hash; },
     find, textOf: text,
     get recorder() { return find(node => node.type === components.Recorder)?.props; },
+    get guided() { return find(node => node.type === components.GuidedPractice)?.props; },
     tab(id) { return find(node => node.props?.id === `tab-${id}`)?.props; },
     click(predicate) {
       const button = typeof predicate === 'string'
@@ -473,4 +474,44 @@ test('normal and slow controls change actual playback rate, preserve pitch and p
   await refreshed.settle(); assert.equal(refreshed.audio.playbackRate, 0.75);
   h.click(speedButton(1)); assert.equal(h.audio.playbackRate, 1); assert.equal(h.audio.preservesPitch, true);
   assert.equal(h.requests.length, 0, 'playback and preference changes do not call speech APIs');
+});
+
+const guidedPractice = (change = {}) => ({ step: 'quantity', step_id: 'r3-quantity', target: { type: 'set_order', quantity: 2, unit: 'serving' }, result: null, can_choose: false, ...change });
+
+test('R3 uses only its four fixed prompts and removes the legacy unit explanation', async t => {
+  const prompts = { item: 'NX-N01', quantity: 'NX-N02', mode: 'NX-N03', confirm: 'NX-N09' };
+  for (const [step, id] of Object.entries(prompts)) {
+    const h = harness({ attempt: makeAttempt({ prompt_id: 'NX-N04', practice: guidedPractice({ step }) }) });
+    t.after(() => h.dispose()); await h.settle();
+    assert.ok(h.guided);
+    assert.ok(h.find(node => node.props?.entry?.id === id));
+    assert.equal(h.find(node => node.props?.entry?.id === 'NX-N04'), undefined);
+    assert.equal(h.tab('speak'), undefined, 'legacy free-conversation controls are not rendered');
+    assert.equal(h.find(node => node.props?.['aria-label'] === 'What is one serving?'), undefined);
+    assert.equal(h.text.includes('How much is one serving'), false);
+  }
+});
+
+test('R3 evaluation updates the result without playing a prompt or unlocking completion', async t => {
+  const initial = makeAttempt({ practice: guidedPractice() });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  h.guided.onAttempt({ ...initial, revision: 2, practice: guidedPractice({ result: { request_id: 'evaluation', transcript: '两份', status: 'correct', reason: 'target_matched' } }) });
+  await h.settle(); h.runTimers(); await h.settle();
+  assert.equal(h.guided.attempt.practice.step, 'quantity');
+  assert.equal(h.guided.attempt.order.quantity, null);
+  assert.equal(h.audio.playCalls, 0);
+  assert.equal(h.find(node => node.props?.className === 'review-page page-shell'), undefined);
+});
+
+test('R3 plays the next fixed prompt only after the explicit continuation callback', async t => {
+  const initial = makeAttempt({ practice: guidedPractice() });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  const next = makeAttempt({ revision: 3, prompt_id: 'NX-N03', practice: guidedPractice({ step: 'mode', step_id: 'r3-mode', target: null }),
+    order: { item: 'xiaolongbao', quantity: 2, unit: 'serving', normalized_servings: 2, takeaway: null } });
+  h.guided.onAttempt(next); h.guided.onAdvanced(next); await h.settle(); h.runTimers(); await h.settle();
+  assert.equal(h.guided.attempt.practice.step, 'mode');
+  assert.equal(h.audio.playCalls, 1);
+  assert.ok(h.find(node => node.props?.entry?.id === 'NX-N03'));
 });

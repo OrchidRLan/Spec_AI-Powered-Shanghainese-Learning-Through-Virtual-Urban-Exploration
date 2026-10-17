@@ -19,10 +19,23 @@ def app(tmp_path):
     return create_app(str(tmp_path / "test.db"))
 
 
+def bind_r2(client):
+    response = client.get("/api/session")
+    assert response.status_code == 200
+    with client.app.state.database.transaction() as connection:
+        data = response.json()
+        for key in ("attempts", "completed_station_ids", "services"):
+            data.pop(key, None)
+        data.update(content_version="batch-a-r2.2026-10-17.v1", rule_version="nanxiang-rules.v2")
+        connection.execute("UPDATE sessions SET data=? WHERE id=?", (json.dumps(data), data["id"]))
+
+
 @pytest.fixture
 def client(app):
     with TestClient(app) as client:
-        assert client.get("/api/session").status_code == 200
+        # This suite preserves the pre-guided R2 conversation contract. R3 has
+        # separate tests and cannot bypass its result/continue gate via /turns.
+        bind_r2(client)
         yield client
 
 
@@ -392,6 +405,7 @@ def test_voice_source_is_saved_verified_and_cannot_be_claimed_from_other_session
     assert edited["turns"][-1]["text"] == "三份小笼包外带"
     other = TestClient(app)
     other.get("/api/session")
+    bind_r2(other)
     others_attempt = start(other)
     body.update(request_id=str(uuid4()), expected_revision=0)
     assert other.post(f"/api/attempts/{others_attempt['id']}/turns", json=body).status_code == 422
@@ -557,7 +571,7 @@ def test_r1_content_loading_preserves_legacy_bindings_and_cached_history(app, cl
         assert rejected.status_code == 409
         assert rejected.json()["detail"]["code"] == "configuration_changed"
         new_session = restarted.post("/api/session/new", json={}).json()
-        assert new_session["content_version"] == CONTENT_VERSION == "batch-a-r2.2026-10-17.v1"
+        assert new_session["content_version"] == CONTENT_VERSION == "batch-a-r3.2026-10-17.v1"
         assert new_session["model_config_id"] == "development-parser.v3"
         current_content = restarted.get("/api/content").json()
         assert current_content["contentVersion"] == CONTENT_VERSION

@@ -1,4 +1,4 @@
-# 批次 A／修订 2 本地 API
+# 批次 A／修订 3 本地 API
 
 Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
 
@@ -24,6 +24,9 @@ python3.11 -m venv .venv
 | GET /api/content | 会话 Cookie | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
 | POST /api/attempts | station_id: nanxiang, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
 | GET /api/attempts/{id} | Cookie | Attempt |
+| POST /api/attempts/{id}/practice | PracticeInput，仅 R3 | PracticeResult；保存本题选择/评估或显式推进 |
+| GET /api/attempts/{id}/practice/{request_id} | Cookie | 原始 PracticeResult；未知 404 |
+| POST /api/attempts/{id}/practice/{request_id}/cancel | expected_revision | 已保存结果或取消 tombstone，保护迟到原请求 |
 | POST /api/attempts/{id}/turns | TurnInput | TurnResult |
 | GET /api/attempts/{id}/turns/{request_id} | Cookie | TurnResult；未知 404 |
 | POST /api/attempts/{id}/turns/{request_id}/cancel | expected_revision | TurnResult；支持取消先于原 POST 到达 |
@@ -49,6 +52,7 @@ type Attempt = {
   prompt_id: string; pending_request_id: string|null;
   metrics: {voice_attempts:number;help_used:number};
   unit_convention_seen: boolean; turns: Turn[];
+  practice?: Practice; // 仅 R3，历史版本没有此字段
   created_at:string; updated_at:string;
 };
 type TurnInput = {
@@ -69,6 +73,52 @@ type Session = {
   services:{text:'development_parser'|'qwen';asr:'unconfigured'|'configured'};
 };
 ```
+
+## 修订 3：固定练习与手动继续
+
+新会话绑定 `batch-a-r3.2026-10-17.v1`、`nanxiang-rules.v3`。R2、R1、原基线会话按其原内容快照和规则继续恢复；不静默迁移。R3 禁止通过旧 `POST /turns` 直接修改订单，返回 `guided_practice_required`；旧版本使用 `/practice` 返回 `practice_version_required`。版本变化后仍由用户明确选择新探索。
+
+```ts
+type Practice = {
+  step: 'item'|'quantity'|'mode'|'confirm'; step_id: string;
+  target: TurnInput['action']|null;
+  result: null|{request_id:string;transcript:string|null;
+    status:'correct'|'incorrect'|'unrecognized'|'technical';reason:string;
+    channel:'voice'|'technical';reported_by:'server'|'client';
+    asr_request_id:string|null;interpretation_source:string|null};
+  can_choose:boolean;
+};
+type PracticeInput = {
+  request_id:string;expected_revision:number;
+  operation:'select'|'evaluate'|'continue'|'edit';
+  action?:TurnInput['action']; // select only
+  text?:string;asr_request_id?:string;
+  failure_kind?:'recognition'|'technical'; // evaluate only
+  assisted?:boolean;result_request_id?:string; // continue only
+  step?:'item'|'quantity'|'mode'; // edit only
+};
+type PracticeResult = {request_id:string;status:'applied'|'cancelled';attempt:Attempt};
+```
+
+- `select` 只保存本题合法目标、清空旧结果；不写订单。商品只能 `xiaolongbao`，数量为 1–20 和 `unit:'serving'`，方式为布尔值。每次只能提交本题字段，不能选择一个包含全部订单字段的目标。最终题默认目标 `{type:'confirm'}`。
+- `evaluate` 携带本会话保存的 ASR ID 和完全相同的原转写 `text`；服务端独立核对，不信任客户端正确标志。不改订单、问题、状态、摘要或完成列表，只保存结果。原文始终保留，空转写为 `unrecognized/no_speech`；有文字但不理解为 `incorrect/not_understood`。返回结果后前端必须停留。
+- 故障使用 `evaluate` 的 `failure_kind`，不能同时提交 `text`；存在 ASR 失败 ID 时服务端按已保存错误区分无语音和技术故障。浏览器技术超时所带 ID 若仍 pending/尚未建立，保存 `reported_by:'client'` 的真实技术空态并开放回退；若后台其实已成功，就从服务端读取原转写核对并显示结果。没有 ASR ID 的设备/浏览器失败同样标为 client，原文为空；不能伪记为后端识别证据。技术故障为 `technical`，不是错误发音；晚返回的 ASR 不会覆盖已保存结果。
+- `continue` 正常推进必须携带当前正确结果的 `result_request_id`。错误、无语音或技术故障后 `can_choose=true`，用户明确选择 `assisted:true` 才用当前目标推进；增加帮助计数并记录辅助继续，不变造原语音结果。失败后改选新目标会清结果但保留本题回退资格，此时辅助继续可不带结果 ID；若提供结果 ID 就必须匹配当前结果。
+- 进入下一题才替换 `step_id` 并重置目标/回退资格；本题选择、评估、刷新保持 `step_id`。固定问题仅为 `NX-N01 → NX-N02 → NX-N03 → NX-N09`，结束为 `NX-N10`。额外字段不能跨题推进，没有单位、商品、越界等临时追问。
+- `edit` 仅从最终核对返回指定既定题，立即使旧确认摘要失效。原订单先保留，评估仍不修改；点击继续才应用新字段并回到核对。新的编辑题重新要求先尝试语音，其失败/结果可跨刷新恢复。
+- `revision` 包含选择、结果与推进的状态变化；`summary_revision` 在进入核对题时固定，不因该题选择/评估而失效。确认结果也必须停留，明确 `continue` 保存成功才完成；辅助确认同样必须显式点击。
+
+核对来源为 `guided-target-check.v1`，不调用自由对话 LLM，也不是声调或逐字发音评分。数量题允许纯数字、常见词和有限的“分→份”同音误写；判定用的替换不改原文。显式只/笼/个等不同单位、范围、分数、时长、冲突、否定给当前结果卡不正确，不启动新问题。R3 对否定表达采用保守边界，不会因提及目标字词就判通过；它不承诺理解任意自由修改句。
+
+结果原因：`target_matched`、`ambiguous_expression`、`target_mismatch`、`quantity_mismatch`、`mode_mismatch`、`item_mismatch`、`unit_mismatch`、`confirmation_mismatch`、`not_understood`、`no_speech`、`device_or_service_unavailable`、`asr_failed`。这些稳定代码由前端按语言呈现，服务端不拼写用户文案。
+
+所有练习操作的状态、事件、幂等响应在一个 SQLite 事务写入，不产生需要重新付费处理的 pending。重复相同 ID/负载返回原结果；同 ID 不同负载返回 `idempotency_conflict`，旧 revision 返回最新 Attempt 和 `stale_revision`。保存失败回滚所有变更和 ASR 消费标记，可查询原 ID，再重试原负载。取消未知 ID 建立 tombstone，迟到 POST 返回 cancelled；取消已完成的操作返回其保存结果，不撤销既成推进。
+
+同会话同一 ASR 结果只能被一次练习评估消费（同一请求 ID 的幂等读取例外），跨题或不同请求再次使用返回 `asr_result_already_used`。前端录音回调仍需绑定录制时的 attempt/step/目标/revision，离开、取消、改选后的迟到回调应丢弃，不能拿最新 revision 重新包装旧录音。客户端故障回退是教学策略，不是声学准确性或安全认证证明。
+
+## 原基线／修订 1／修订 2 的历史回合合同
+
+以下 `/turns`、自由字段解析与澄清规则只描述保留的历史版本，不用于 R3 主流程。
 
 提交 `set_order` 的字段必须实际表达；未出现字段保留，null 明确清空，false 真实堂吃。R2 完成条件为小笼、有效 1–20 份、明确堂吃或外带和独立确认；不再强制两份或外带。数量变更必须携带单位，不从旧订单偷用单位。新数量/单位/商品/方式及无效修改先让旧摘要失效；同轮文字里的“对”不能确认尚未展示的摘要。随后独立提交 `confirm`，带已展示的 `summary_revision`。每次请求使用新的 request_id（8–100 位字母/数字/`_`/`-`）；网络重试复用相同 ID 与完全相同负载。重复已应用回合返回原始保存结果；若之后已有新进展，前端应按 revision 防止旧结果覆盖当前状态，必要时 GET attempt。
 

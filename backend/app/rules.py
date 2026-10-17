@@ -4,9 +4,11 @@ from __future__ import annotations
 from copy import deepcopy
 from .models import Interpretation
 
-RULE_VERSION = "nanxiang-rules.v2"
+RULE_VERSION = "nanxiang-rules.v3"
+R2_RULE_VERSION = "nanxiang-rules.v2"
 LEGACY_RULE_VERSION = "nanxiang-rules.v1"
-CONTENT_VERSION = "batch-a-r2.2026-10-17.v1"
+CONTENT_VERSION = "batch-a-r3.2026-10-17.v1"
+R2_CONTENT_VERSION = "batch-a-r2.2026-10-17.v1"
 R1_CONTENT_VERSION = "batch-a-r1.2026-10-17.v1"
 LEGACY_CONTENT_VERSION = "batch-a.2026-10-17.v1"
 ORDER_FIELDS = {"item", "quantity", "unit", "takeaway"}
@@ -16,7 +18,7 @@ DERIVED_ISSUES = {"unsupported_item", "quantity_out_of_range", "unit_unknown", "
 
 def new_attempt(attempt_id: str, now: str, *, content_version: str = CONTENT_VERSION,
                 rule_version: str = RULE_VERSION) -> dict:
-    return {
+    result = {
         "id": attempt_id, "station_id": "nanxiang", "status": "collecting", "revision": 0,
         "content_version": content_version, "rule_version": rule_version,
         "order": {"item": None, "quantity": None, "unit": None,
@@ -26,6 +28,10 @@ def new_attempt(attempt_id: str, now: str, *, content_version: str = CONTENT_VER
         "metrics": {"voice_attempts": 0, "help_used": 0},
         "unit_convention_seen": False, "created_at": now, "updated_at": now,
     }
+    if rule_version == RULE_VERSION:
+        from .guided import initial_practice
+        result["practice"] = initial_practice()
+    return result
 
 
 def issues_for(order: dict, unit_seen: bool, rule_version: str = RULE_VERSION) -> list[str]:

@@ -221,6 +221,14 @@ export function validateContent(pack, ledger, { mode = 'development', root = ROO
     check(['valid_normalized_servings', 'explicit_dining_choice', 'current_summary_displayed', 'later_confirmation_matches_revision', 'completion_saved'].every(requirement => array(task?.completionRequires).includes(requirement)), 'Nanxiang completion must require a valid chosen order, displayed summary, later confirmation, and saved completion.');
     check(!array(task?.completionRequires).some(requirement => ['normalized_servings_2', 'takeaway_true'].includes(requirement)), 'Nanxiang must not retain fixed two-servings-to-go completion requirements.');
   }
+  if (pack.contentVersion === 'batch-a-r3.2026-10-17.v1') {
+    check(task?.practiceMode === 'guided-target' && task?.allowAdHocQuestions === false, 'R3 must use guided practice without ad-hoc questions.');
+    check(JSON.stringify(task?.questionIds) === JSON.stringify(['NX-N01', 'NX-N02', 'NX-N03', 'NX-N09']) && task?.completionDialogueId === 'NX-N10', 'R3 must retain only the four designed questions and completion line.');
+    check(JSON.stringify(task?.historicalOnlyDialogueIds) === JSON.stringify(['NX-N04', 'NX-N05', 'NX-N06', 'NX-N07', 'NX-N08', 'NX-N11', 'NX-N12']), 'R3 branch dialogue must remain explicitly historical.');
+    check(array(task?.units).length === 1 && task.units[0].id === 'serving', 'R3 quantities must use servings without unit clarification branches.');
+    check(task?.advancePolicy === 'explicit-continue-after-result' && ['evaluated_result_displayed', 'explicit_continue'].every(requirement => array(task?.completionRequires).includes(requirement)), 'R3 requires a displayed result and explicit continuation.');
+    check(task?.audioReviewManifest === 'content/audio-review-r2.json', 'R3 reuses the unchanged, pending R2 audio source.');
+  }
   check(task?.initialOrder && ['item', 'quantity', 'unit', 'normalizedServings', 'takeaway'].every((field) => task.initialOrder[field] === null), 'Initial order must keep all fields unknown; do not copy the target.');
   check(bilingual(task?.unitExplanation), 'Nanxiang unit explanation needs zh/en.');
   check(array(pack.ruleExamples).length >= 18, 'The first 18 Nanxiang rule examples are required.');

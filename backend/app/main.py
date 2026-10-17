@@ -17,8 +17,9 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from .interpreter import parse_development
-from .models import AttemptInput, EventInput, Interpretation, NewSessionInput, Preferences, RevisionInput, TurnInput
-from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, R1_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
+from .models import AttemptInput, EventInput, Interpretation, NewSessionInput, Preferences, PracticeInput, RevisionInput, TurnInput
+from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, R1_CONTENT_VERSION, R2_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
+from .guided import GUIDED_SOURCE, PracticeError, apply_practice, assess
 from .semantic import configure_interpreter
 from .storage import Database, encode
 
@@ -210,6 +211,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         content_paths = {
             CONTENT_VERSION: ROOT.parent / "content" / "batch-a.json",
             R1_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{R1_CONTENT_VERSION}.json",
+            R2_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{R2_CONTENT_VERSION}.json",
             LEGACY_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{LEGACY_CONTENT_VERSION}.json",
         }
         version = bound["content_version"]
@@ -245,6 +247,132 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
     def get_attempt(attempt_id: str, request: Request):
         with database.transaction() as connection:
             return public_attempt(connection, owned_attempt(connection, session_id(request, connection), attempt_id))
+
+    def require_guided(connection, attempt):
+        if attempt["rule_version"] != RULE_VERSION or "practice" not in attempt:
+            problem("practice_version_required", "This session uses the earlier conversation flow.",
+                    attempt=public_attempt(connection, attempt))
+
+    def saved_practice_response(connection, attempt, row):
+        if row["status"] == "cancelled":
+            return {"request_id": row["request_id"], "status": "cancelled", "attempt": public_attempt(connection, attempt)}
+        return json.loads(row["response"])
+
+    @app.post("/api/attempts/{attempt_id}/practice")
+    def practice_operation(attempt_id: str, body: PracticeInput, request: Request):
+        payload = encode(body.model_dump(exclude_unset=True))
+        fingerprint = hashlib.sha256(payload.encode()).hexdigest()
+        with database.transaction() as connection:
+            sid = session_id(request, connection)
+            attempt = owned_attempt(connection, sid, attempt_id)
+            require_guided(connection, attempt)
+            previous = connection.execute("SELECT * FROM practice_requests WHERE attempt_id=? AND request_id=?", (attempt_id, body.request_id)).fetchone()
+            if previous:
+                if previous["status"] != "cancelled" and previous["fingerprint"] != fingerprint:
+                    problem("idempotency_conflict", "This request ID was already used for different input.", attempt=public_attempt(connection, attempt))
+                return saved_practice_response(connection, attempt, previous)
+            if attempt["status"] in ("completed", "skipped"):
+                problem("attempt_closed", "This attempt has ended. Start a new practice.", attempt=public_attempt(connection, attempt))
+            if attempt["revision"] != body.expected_revision:
+                problem("stale_revision", "The question changed. Review the current question.", attempt=public_attempt(connection, attempt))
+            evaluation = None
+            if body.operation == "evaluate":
+                transcript, status, reason, reported_by = None, None, None, "client"
+                if body.asr_request_id:
+                    used = connection.execute("SELECT request_id FROM practice_asr_uses WHERE session_id=? AND asr_request_id=?", (sid, body.asr_request_id)).fetchone()
+                    if used:
+                        problem("asr_result_already_used", "This transcription has already been evaluated. Record a new reply.", attempt=public_attempt(connection, attempt))
+                    row = connection.execute("SELECT response FROM asr_requests WHERE session_id=? AND request_id=?", (sid, body.asr_request_id)).fetchone()
+                    if row is None or not row["response"]:
+                        if body.failure_kind != "technical":
+                            problem("asr_result_required", "Use a finished transcription from your own session.", 422)
+                        # A browser timeout or lost request is itself a real
+                        # technical failure, even when the provider outcome is
+                        # unknown. Persist this empty state; late ASR cannot
+                        # override it or silently progress the question.
+                        saved = {}
+                        status, reason = "technical", "device_or_service_unavailable"
+                    else:
+                        saved = json.loads(row["response"])
+                        reported_by = "server"
+                    if "transcript" in saved:
+                        transcript = saved["transcript"]
+                        # The server may have finished after the browser lost
+                        # the response. Reconcile from that saved original.
+                        if body.failure_kind != "technical" and (body.failure_kind is not None or body.text != transcript):
+                            problem("original_transcript_required", "Keep the original saved transcription unchanged.", 422)
+                    elif "error" in saved:
+                        if body.failure_kind is None:
+                            problem("asr_result_required", "This recording did not return a transcript.", 422)
+                        if saved["error"]["code"] == "no_speech":
+                            status, reason = "unrecognized", "no_speech"
+                        else:
+                            status, reason = "technical", "asr_failed"
+                    elif status is None:
+                        problem("asr_result_required", "This recording did not return a usable result.", 422)
+                elif body.failure_kind == "recognition":
+                    status, reason = "unrecognized", "no_speech"
+                else:
+                    status, reason = "technical", "device_or_service_unavailable"
+                if attempt["practice"]["target"] is None:
+                    problem("practice_target_required", "Select what you want to say first.", attempt=public_attempt(connection, attempt))
+                if transcript is not None:
+                    status, reason = assess(transcript, attempt["practice"])
+                evaluation = {"request_id": body.request_id, "transcript": transcript, "status": status,
+                              "reason": reason, "channel": "technical" if status == "technical" else "voice",
+                              "reported_by": reported_by, "asr_request_id": body.asr_request_id,
+                              "interpretation_source": GUIDED_SOURCE if transcript is not None else None}
+            try:
+                result, events = apply_practice(attempt, body, evaluation)
+            except PracticeError as exc:
+                problem(exc.code, exc.message, attempt=public_attempt(connection, attempt))
+            result["updated_at"] = now()
+            if app.state.before_commit:
+                app.state.before_commit()
+            database.save_attempt(connection, result)
+            if body.operation == "evaluate" and body.asr_request_id:
+                connection.execute("INSERT INTO practice_asr_uses VALUES (?,?,?,?)", (sid, body.asr_request_id, attempt_id, body.request_id))
+            for event in events:
+                metadata = {"request_id": body.request_id, "revision": result["revision"],
+                            "previous_revision": attempt["revision"], "step_id": attempt["practice"]["step_id"],
+                            "step": attempt["practice"]["step"], "target": result["practice"]["target"] if body.operation == "select" else attempt["practice"]["target"],
+                            "assisted": body.assisted, "result": evaluation if evaluation is not None else attempt["practice"]["result"]}
+                if event in ("fields_updated", "confirmation_shown", "confirmation_accepted", "task_completed"):
+                    metadata.update(order=result["order"], summary_revision=result["summary_revision"], confirmed_revision=result["confirmed_revision"])
+                if event == "task_completed":
+                    metadata["metrics"] = result["metrics"]
+                database.event(connection, sid, attempt_id, identifier(), event, metadata, now())
+            response = {"request_id": body.request_id, "status": "applied", "attempt": public_attempt(connection, result)}
+            connection.execute("INSERT INTO practice_requests VALUES (?,?,?,?,?,?,?)", (attempt_id, body.request_id, fingerprint, "applied", payload, encode(response), now()))
+            return response
+
+    @app.get("/api/attempts/{attempt_id}/practice/{request_id}")
+    def get_practice_operation(attempt_id: str, request_id: str, request: Request):
+        with database.transaction() as connection:
+            attempt = owned_attempt(connection, session_id(request, connection), attempt_id)
+            require_guided(connection, attempt)
+            row = connection.execute("SELECT * FROM practice_requests WHERE attempt_id=? AND request_id=?", (attempt_id, request_id)).fetchone()
+            if row is None:
+                problem("practice_request_not_found", "No saved practice operation has this ID.", 404)
+            return saved_practice_response(connection, attempt, row)
+
+    @app.post("/api/attempts/{attempt_id}/practice/{request_id}/cancel")
+    def cancel_practice_operation(attempt_id: str, request_id: str, body: RevisionInput, request: Request):
+        if not re.fullmatch(r"[A-Za-z0-9_-]{8,100}", request_id):
+            problem("invalid_request_id", "Invalid request ID.", 422)
+        with database.transaction() as connection:
+            sid = session_id(request, connection)
+            attempt = owned_attempt(connection, sid, attempt_id)
+            require_guided(connection, attempt)
+            row = connection.execute("SELECT * FROM practice_requests WHERE attempt_id=? AND request_id=?", (attempt_id, request_id)).fetchone()
+            if row:
+                return saved_practice_response(connection, attempt, row)
+            if attempt["revision"] != body.expected_revision:
+                problem("stale_revision", "The question changed. Refresh its state.", attempt=public_attempt(connection, attempt))
+            response = {"request_id": request_id, "status": "cancelled", "attempt": public_attempt(connection, attempt)}
+            connection.execute("INSERT INTO practice_requests VALUES (?,?,?,?,?,?,?)", (attempt_id, request_id, "cancelled-before-arrival", "cancelled", "{}", encode(response), now()))
+            database.event(connection, sid, attempt_id, identifier(), "practice_request_cancelled", {"request_id": request_id}, now())
+            return response
 
     def turn_response(connection, attempt: dict, row) -> dict:
         if row["response"]:
@@ -315,6 +443,8 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         with database.transaction() as connection:
             sid = session_id(request, connection)
             attempt = owned_attempt(connection, sid, attempt_id)
+            if attempt["rule_version"] == RULE_VERSION:
+                problem("guided_practice_required", "Use the guided practice flow for this session.", attempt=public_attempt(connection, attempt))
             previous = connection.execute("SELECT * FROM turns WHERE attempt_id=? AND request_id=?", (attempt_id, body.request_id)).fetchone()
             if previous:
                 # A cancellation tombstone applies even when POST arrived later.

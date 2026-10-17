@@ -31,7 +31,8 @@ def review(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
     content = tmp_path / "content"
     (content / "versions").mkdir(parents=True)
-    for file in ("batch-a.json", "audio-review-r1.json", "reviews.json", f"versions/{module.R1.VERSION}.json"):
+    shutil.copyfile(root / "content" / "versions" / "batch-a-r2.2026-10-17.v1.json", content / "batch-a.json")
+    for file in ("audio-review-r1.json", "reviews.json", f"versions/{module.R1.VERSION}.json"):
         shutil.copyfile(root / "content" / file, content / file)
     source_folder = tmp_path / "frontend" / "public" / "audio" / "review-r1"
     shutil.copytree(root / "frontend" / "public" / "audio" / "review-r1", source_folder)

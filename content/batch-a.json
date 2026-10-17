@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "batch-a-r2.2026-10-17.v1",
+  "contentVersion": "batch-a-r3.2026-10-17.v1",
   "status": "draft",
   "createdAt": "2026-10-17",
   "localeKeys": [
@@ -148,6 +148,20 @@
       ],
       "kind": "project-specification",
       "note": "用户确认的自由点单、语音优先与完成后复习；改写及声音仍须人工审阅，生成情况以版本匹配的声音清单为准。"
+    },
+    {
+      "id": "r3-guided-practice",
+      "path": "docs/Batch-A-revision-3.md",
+      "version": "2026-10-17",
+      "sections": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "kind": "project-specification",
+      "note": "固定商品、数量、方式、确认四题，取消所有临时追问；原转写与核对结果停留，用户明确继续才推进。保留历史台词供旧版本追溯，不在当前主流程使用。学习句与声音沿用 R2 的原文和真实待审状态。"
     }
   ],
   "stations": [
@@ -226,7 +240,7 @@
     },
     {
       "id": "nanxiang",
-      "version": "batch-a-r2.2026-10-17.v1",
+      "version": "batch-a-r3.2026-10-17.v1",
       "name": {
         "zh": "南翔馒头店",
         "en": "Nanxiang Steamed Bun Restaurant"
@@ -254,7 +268,8 @@
       "sourceIds": [
         "nanxiang-draft",
         "route-common",
-        "r2-order-flow"
+        "r2-order-flow",
+        "r3-guided-practice"
       ],
       "copyReview": {
         "status": "pending",
@@ -1868,7 +1883,7 @@
   ],
   "nanxiangTask": {
     "id": "NX-TASK",
-    "version": "batch-a-r2.2026-10-17.v1",
+    "version": "batch-a-r3.2026-10-17.v1",
     "item": "xiaolongbao",
     "target": {
       "quantity": null,
@@ -1889,35 +1904,11 @@
           "en": "serving"
         },
         "normalization": "identity"
-      },
-      {
-        "id": "basket",
-        "label": {
-          "zh": "笼",
-          "en": "basket"
-        },
-        "normalization": "requires_unit_explanation_viewed"
-      },
-      {
-        "id": "piece",
-        "label": {
-          "zh": "只",
-          "en": "dumpling"
-        },
-        "normalization": "never_serving"
-      },
-      {
-        "id": "unknown",
-        "label": {
-          "zh": "单位待说明",
-          "en": "Unit not specified"
-        },
-        "normalization": "clarify"
       }
     ],
     "unitExplanation": {
-      "zh": "本练习里，一笼示意代表一份；份数与小笼的只数不同。",
-      "en": "In this activity, one basket represents one serving. Servings and individual dumplings are different units."
+      "zh": "本练习的数量统一按份。",
+      "en": "Quantities in this activity are measured in servings."
     },
     "allowedActions": [
       "set_item",
@@ -1942,6 +1933,8 @@
       "no_unresolved_issues",
       "current_summary_displayed",
       "later_confirmation_matches_revision",
+      "evaluated_result_displayed",
+      "explicit_continue",
       "completion_saved"
     ],
     "copyReview": {
@@ -1950,7 +1943,8 @@
     },
     "sourceIds": [
       "nanxiang-draft",
-      "r2-order-flow"
+      "r2-order-flow",
+      "r3-guided-practice"
     ],
     "orderPolicy": "customer-choice",
     "quantityRange": {
@@ -1960,361 +1954,391 @@
     "diningOptions": [
       false,
       true
-    ]
+    ],
+    "practiceMode": "guided-target",
+    "questionIds": [
+      "NX-N01",
+      "NX-N02",
+      "NX-N03",
+      "NX-N09"
+    ],
+    "completionDialogueId": "NX-N10",
+    "historicalOnlyDialogueIds": [
+      "NX-N04",
+      "NX-N05",
+      "NX-N06",
+      "NX-N07",
+      "NX-N08",
+      "NX-N11",
+      "NX-N12"
+    ],
+    "allowAdHocQuestions": false,
+    "advancePolicy": "explicit-continue-after-result",
+    "audioReviewManifest": "content/audio-review-r2.json"
   },
   "ruleExamples": [
     {
       "id": "NX-T01",
       "input": {
-        "zh": "两份小笼包 → 外带 → 确认",
-        "en": "Two servings of xiaolongbao → to go → confirm"
+        "zh": "商品、两份、外带、确认，逐题练习并点击继续",
+        "en": "Practice item, two servings, to go, and confirmation; continue after each result"
       },
       "expected": {
-        "zh": "商品/份数/外带齐全后展示摘要，后续确认且保存成功才完成。",
-        "en": "Show a valid summary, then complete only after later confirmation and successful saving."
+        "zh": "只按四道既定问题推进，最后明确确认并保存才完成。",
+        "en": "Use only the four designed questions; finish after explicit confirmation and saving."
       },
       "assertions": {
+        "questionIds": [
+          "NX-N01",
+          "NX-N02",
+          "NX-N03",
+          "NX-N09"
+        ],
         "normalizedServings": 2,
         "takeaway": true,
-        "needsDisplayedSummary": true,
-        "needsSubsequentConfirmation": true
+        "requiresExplicitContinue": true
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T02",
       "input": {
-        "zh": "两份小笼包外带",
-        "en": "Two servings of xiaolongbao to go"
+        "zh": "商品题说两份小笼包外带",
+        "en": "At the item question, say two servings of xiaolongbao to go"
       },
       "expected": {
-        "zh": "同轮保留完整字段，直接核对。",
-        "en": "Keep all fields from this turn and show the summary."
+        "zh": "仅核对本题商品；不一次填入数量和方式，不跳题。",
+        "en": "Evaluate only the item target; do not fill quantity or dining mode or skip questions."
       },
       "assertions": {
-        "normalizedServings": 2,
-        "takeaway": true,
-        "complete": false
+        "evaluatesCurrentTargetOnly": true,
+        "mutatesOrderBeforeContinue": false,
+        "skipsQuestions": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T03",
       "input": {
-        "zh": "先说外带，再补商品和数量",
-        "en": "Say to go, then item and quantity"
+        "zh": "商品题只说外带",
+        "en": "At the item question, say only to go"
       },
       "expected": {
-        "zh": "保留外带；只追问仍缺少的字段。",
-        "en": "Keep takeaway and ask only for remaining information."
+        "zh": "原转写可见，显示不符合商品目标，保留商品题并开放选择辅助。",
+        "en": "Show the original transcript and item-target mismatch; keep the item question and allow assisted continuation."
       },
       "assertions": {
-        "takeaway": true,
-        "mustNotPrepopulateTarget": true
+        "correct": false,
+        "questionId": "NX-N01",
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T04",
       "input": {
-        "zh": "每题先说话，识别失败后用选项回答",
-        "en": "Try speaking first on each question; use options after recognition fails"
+        "zh": "每题先说话，失败后使用所选答案继续",
+        "en": "Try speaking first; after a failure continue with the selected answer"
       },
       "expected": {
-        "zh": "识别失败解锁本题按钮；技术不可用可直接回退，取消录音不解锁。",
-        "en": "A failed spoken reply unlocks options for this question; technical unavailability allows fallback, cancellation does not."
+        "zh": "失败后可重试或明确辅助继续；辅助继续不计语音正确，下一道新题重新要求先说话。",
+        "en": "Allow retry or explicit assisted continuation after failure; assistance is not a correct spoken answer, and each new question requires a spoken attempt."
       },
       "assertions": {
         "voiceFirstPerQuestion": true,
         "fallbackAfterFailedAttempt": true,
-        "technicalFailureAllowsFallback": true,
-        "cancelUnlocksFallback": false
+        "assistedCountsAsSpeechCorrect": false
       },
       "sourceIds": [
-        "nanxiang-draft",
-        "r2-order-flow"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T05",
       "input": {
-        "zh": "两个（没有份数上下文）",
-        "en": "Two (without a serving context)"
+        "zh": "数量题选两份，识别原文为两分",
+        "en": "Select two servings; the quantity transcript is 两分"
       },
       "expected": {
-        "zh": "单位待澄清，不归一为两份。",
-        "en": "Clarify the unit; do not infer two servings."
+        "zh": "在份数上下文内容忍有限同音误写，保留原文，显示正确并等待点击继续。",
+        "en": "Allow the limited homophone in the serving context, preserve the transcript, and show a correct result awaiting Continue."
       },
       "assertions": {
-        "normalizedServings": null,
-        "unresolvedIssue": "unit_ambiguous"
+        "correct": true,
+        "mustPreserveInput": true,
+        "mutatesOrderBeforeContinue": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T06",
       "input": {
-        "zh": "店员刚问几份，回答两",
-        "en": "Answer two immediately after how many servings"
+        "zh": "数量题选两份，回答两",
+        "en": "Select two servings; answer two at the quantity question"
       },
       "expected": {
-        "zh": "结合明确问题理解为两份，并记录上下文依据。",
-        "en": "Interpret two servings using the explicit question, and record that basis."
+        "zh": "结合本题份数上下文核对两份，取消单位辨析追问。",
+        "en": "Evaluate two servings in this question’s serving context without asking a unit clarification."
       },
       "assertions": {
-        "normalizedServings": 2,
-        "basis": "explicit_quantity_question"
+        "correct": true,
+        "basis": "explicit_quantity_question",
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T07",
       "input": {
-        "zh": "两笼，已看过一笼对应一份的说明",
-        "en": "Two baskets after seeing the basket-to-serving explanation"
+        "zh": "数量题选两份，却识别成七份",
+        "en": "Select two servings, but recognize seven servings"
       },
       "expected": {
-        "zh": "可归一两份，保留原单位及说明事件；未展示说明时继续澄清。",
-        "en": "Normalize to two servings while preserving the original unit and explanation event; otherwise clarify."
+        "zh": "显示原文及目标冲突，不写入七份；保留本题，可重试或明确用两份继续。",
+        "en": "Show the transcript and target mismatch; never save seven. Keep this question for retry or explicitly continue with the selected two."
       },
       "assertions": {
-        "unit": "basket",
-        "normalizedServings": 2,
-        "requiresEvent": "unit_explanation_viewed"
+        "correct": false,
+        "mutatesOrderBeforeContinue": false,
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T08",
       "input": {
-        "zh": "一份小笼包，堂吃，核对后确认",
-        "en": "One serving of xiaolongbao for here, then confirm the displayed order"
+        "zh": "一份小笼包、堂吃、核对后确认，逐题继续",
+        "en": "Practice one serving of xiaolongbao for here and confirm the order, continuing after each result"
       },
       "expected": {
-        "zh": "保存堂吃 false；一份是有效选择，后续确认并保存即可完成。",
-        "en": "Keep takeaway false. One serving is valid; complete after confirming the displayed order and saving."
+        "zh": "保留堂吃 false，一份有效；最终结果仍须明确点击完成且保存成功。",
+        "en": "Preserve takeaway false and the valid one-serving choice; the final result still needs an explicit completion click and successful save."
       },
       "assertions": {
         "normalizedServings": 1,
         "takeaway": false,
-        "needsDisplayedSummary": true,
-        "needsSubsequentConfirmation": true
+        "requiresExplicitContinue": true,
+        "needsDisplayedSummary": true
       },
       "sourceIds": [
-        "nanxiang-draft",
-        "r2-order-flow"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T09",
       "input": {
-        "zh": "不堂吃，要打包",
-        "en": "Not for here; to go"
+        "zh": "方式题选外带，说不堂吃，要打包",
+        "en": "Select to go; say not for here, pack it to go"
       },
       "expected": {
-        "zh": "识别否定范围与外带意图，保留其他已知字段。",
-        "en": "Recognize negation and the takeaway intent; keep other known fields."
+        "zh": "理解否定范围并核对外带目标；正确结果停留，本题之外的订单字段不变。",
+        "en": "Respect negation while evaluating the to-go target; hold the correct result and leave other order fields unchanged."
       },
       "assertions": {
-        "takeaway": true
+        "correct": true,
+        "mutatesOrderBeforeContinue": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T10",
       "input": {
-        "zh": "不要打包",
-        "en": "Do not pack it to go"
+        "zh": "方式题选外带，说不要打包",
+        "en": "Select to go; say do not pack it to go"
       },
       "expected": {
-        "zh": "不得仅因出现打包二字记 true；拒绝外带或冲突语境需澄清。",
-        "en": "Never infer takeaway from the packing keyword; preserve the refusal or clarify a conflict."
+        "zh": "不得仅凭打包关键词通过；显示不符合所选目标并保留本题。",
+        "en": "Do not pass on the packing keyword alone; show a target mismatch and keep this question."
       },
       "assertions": {
-        "takeawayMustNotBe": true
+        "correct": false,
+        "questionId": "NX-N03",
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T11",
       "input": {
-        "zh": "核对时说对，改三份",
-        "en": "At confirmation: yes, change it to three"
+        "zh": "核对题说对，改三份",
+        "en": "At confirmation, say yes, change it to three"
       },
       "expected": {
-        "zh": "修改优先，三份有效；旧确认失效，展示更新后的摘要并等待新确认。",
-        "en": "Apply the valid change to three first. Invalidate the old confirmation and request confirmation of the updated summary."
+        "zh": "不以含糊修改完成确认或触发新追问；显示不符合确认目标，可用编辑入口回到数量题。",
+        "en": "Do not complete confirmation or add a question for the mixed change; show a confirmation mismatch and allow editing through the designed quantity question."
       },
       "assertions": {
-        "normalizedServings": 3,
-        "confirmedRevision": null,
+        "correct": false,
         "complete": false,
-        "quantityValid": true
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft",
-        "r2-order-flow"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T12",
       "input": {
-        "zh": "核对时说没听清",
-        "en": "At confirmation: I did not hear that"
+        "zh": "没有识别到语音，或服务不可用",
+        "en": "No speech recognized, or the service is unavailable"
       },
       "expected": {
-        "zh": "重播或提供文字，仍待确认。",
-        "en": "Replay or show text; confirmation remains pending."
+        "zh": "明确显示未获得转写或暂时无法判定，不伪造文字或发音错误；允许重试或选择辅助。",
+        "en": "Show no transcript or temporarily unable to evaluate; never invent words or a pronunciation error. Allow retry or assistance."
       },
       "assertions": {
-        "complete": false,
-        "confirmedRevision": null
+        "mustNotInventTranscript": true,
+        "technicalFailureAllowsFallback": true,
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T13",
       "input": {
-        "zh": "首轮两份外带，对的",
-        "en": "First reply: two servings to go, yes"
+        "zh": "首题说两份外带，对的",
+        "en": "At the first question, say two servings to go, yes"
       },
       "expected": {
-        "zh": "只生成摘要；未见过摘要的肯定不生效。",
-        "en": "Create a summary only; a yes cannot confirm an unseen summary."
+        "zh": "只核对当前题，未展示摘要的肯定不能确认订单，也不能跳过中间问题。",
+        "en": "Evaluate only the current target; affirmation before the summary cannot confirm the order or skip intermediate questions."
       },
       "assertions": {
         "complete": false,
-        "confirmedRevision": null
+        "confirmedRevision": null,
+        "skipsQuestions": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T14",
       "input": {
-        "zh": "二百份",
-        "en": "Two hundred servings"
+        "zh": "数量题说二百份",
+        "en": "At the quantity question, say two hundred servings"
       },
       "expected": {
-        "zh": "保留原文并澄清超出1–20份的范围，不改成示例或预选份数。",
-        "en": "Keep the input and clarify the 1–20 serving range; do not substitute the example or selected quantity."
+        "zh": "原文可见，显示超出有效范围，不改成预选份数，也不生成范围追问。",
+        "en": "Show the transcript and out-of-range result; do not replace it with the selected quantity or ask a range clarification."
       },
       "assertions": {
+        "correct": false,
         "mustPreserveInput": true,
-        "complete": false,
-        "unresolvedIssue": "quantity_out_of_range"
+        "mutatesOrderBeforeContinue": false,
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft",
-        "r2-order-flow"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T15",
       "input": {
-        "zh": "点击蒸笼、袋子或预选一份/两份练习内容",
-        "en": "Click a basket, bag, or choose one/two servings as speaking practice"
+        "zh": "选择两份目标后重新选择三份，或只点击示范音频",
+        "en": "Change the practice target from two to three, or only play the example audio"
       },
       "expected": {
-        "zh": "只打开当前帮助或修改练习提示，不写订单；实际语音说一份就按一份理解。",
-        "en": "Only open contextual help or choose practice guidance. Do not update the order; interpret one serving if that is what was spoken."
+        "zh": "预选与试听不写订单；旧目标的评估不能应用到新目标。",
+        "en": "Selection and listening do not change the order; an old evaluation cannot apply to a new target."
       },
       "assertions": {
         "mutatesOrder": false,
-        "selectedTargetMustNotOverrideSpeech": true
+        "staleEvaluationRejected": true
       },
       "sourceIds": [
-        "nanxiang-draft",
-        "r2-order-flow"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T16",
       "input": {
-        "zh": "重复确认或断网后重试相同请求",
-        "en": "Repeat confirmation or retry the same request after disconnect"
+        "zh": "重复点击继续或断网后重试相同请求",
+        "en": "Click Continue repeatedly or retry the same request after a disconnect"
       },
       "expected": {
-        "zh": "依请求 ID 去重，完成只保存一次。",
-        "en": "Deduplicate by request ID; save completion once."
+        "zh": "依请求标识去重，保持结果与继续状态一致，完成只保存一次。",
+        "en": "Deduplicate requests, preserve the result and continuation state, and save completion once."
       },
       "assertions": {
-        "completionEvents": 1
+        "completionEvents": 1,
+        "idempotentContinue": true
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T17",
       "input": {
-        "zh": "使用旧版本摘要确认新订单",
-        "en": "Confirm a new order using an old summary revision"
+        "zh": "使用旧摘要确认修改后的订单",
+        "en": "Confirm a changed order using an old summary"
       },
       "expected": {
-        "zh": "拒绝过期确认并展示当前有效摘要。",
-        "en": "Reject stale confirmation and show the current summary."
+        "zh": "拒绝旧评估或旧摘要确认，展示当前既定核对题；不生成额外问题。",
+        "en": "Reject the stale evaluation or summary confirmation and show the current designed confirmation question without adding a question."
       },
       "assertions": {
         "complete": false,
-        "rejectReason": "stale_revision"
+        "rejectReason": "stale_revision",
+        "adHocQuestion": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     },
     {
       "id": "NX-T18",
       "input": {
-        "zh": "完成保存失败",
-        "en": "Completion save fails"
+        "zh": "显示结果后刷新，或点击完成时保存失败",
+        "en": "Refresh after seeing a result, or fail to save after clicking Finish"
       },
       "expected": {
-        "zh": "不递袋，不显示完成；查询或重试相同请求。",
-        "en": "Do not hand over the bag or show success; query or retry the same request."
+        "zh": "恢复待继续结果；保存失败不显示完成或开放 Review，可查询或重试同一请求。",
+        "en": "Restore the pending result. Failed saving must not show completion or unlock Review; allow querying or retrying the same request."
       },
       "assertions": {
+        "pendingResultSurvivesReload": true,
         "complete": false,
         "successVisual": false
       },
       "sourceIds": [
-        "nanxiang-draft"
+        "r3-guided-practice"
       ],
       "purpose": "engineering-fixture-not-language-certification"
     }

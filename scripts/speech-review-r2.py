@@ -271,7 +271,7 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     for command in ("plan", "generate", "check"):
         sub = commands.add_parser(command)
-        sub.add_argument("--pack", default="content/batch-a.json")
+        sub.add_argument("--pack", default=f"content/versions/{VERSION}.json")
         if command == "generate":
             sub.add_argument("--expect-input-sha256", required=True)
             sub.add_argument("--allow-paid-call", action="store_true")

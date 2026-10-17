@@ -24,6 +24,7 @@ function harness(options = {}) {
   const windowEvents = new Map();
   const transcripts = [];
   const failures = [];
+  const failureDetails = [];
   const requests = [];
   const events = [];
   let cursor = 0;
@@ -36,7 +37,10 @@ function harness(options = {}) {
   let props = {
     locale: 'en', enabled: true, resetSignal: 0, stopSignal: 0,
     onTranscript: (text, id) => transcripts.push({ text, id }),
-    onFailure: reason => failures.push(reason), onEvent: name => events.push(name),
+    onFailure: (reason, detail) => {
+      failures.push(reason);
+      failureDetails.push({ message: detail?.message, requestId: detail?.requestId });
+    }, onEvent: name => events.push(name),
     ...options.props,
   };
   const dependenciesMatch = (left, right) => left && right && left.length === right.length
@@ -127,7 +131,7 @@ function harness(options = {}) {
   }
   flush();
   return {
-    transcripts, failures, requests, events,
+    transcripts, failures, failureDetails, requests, events,
     get stoppedTracks() { return stoppedTracks; },
     get mediaRequests() { return mediaRequests; },
     get text() { return text(tree); },
@@ -164,7 +168,8 @@ test('a user stop automatically transcribes once and sends the original transcri
   assert.deepEqual(h.transcripts, [{ text: '  我要两份。 ', id: 'asr-test-id' }]);
   assert.deepEqual(h.failures, []);
   assert.ok(h.stoppedTracks > 0);
-  assert.doesNotMatch(h.text, /Send for transcription|not stored long term|use this reply/);
+  assert.match(h.text, /Review your result before continuing/);
+  assert.doesNotMatch(h.text, /Send for transcription|not stored long term|use this reply|sends your answer/);
 });
 
 test('empty audio and empty recognized text unlock recognition fallback', async t => {
@@ -181,6 +186,8 @@ test('microphone rejection and unavailable service unlock technical fallback', a
   t.after(() => permission.dispose());
   permission.click('Tap to speak'); await permission.settle();
   assert.deepEqual(permission.failures, ['technical']);
+  assert.match(permission.failureDetails[0].message, /Microphone permission is off/);
+  assert.equal(permission.failureDetails[0].requestId, undefined);
   assert.equal(permission.requests.length, 0);
   const unavailable = harness({ props: { enabled: false } }); t.after(() => unavailable.dispose());
   assert.deepEqual(unavailable.failures, ['technical']);
@@ -194,12 +201,15 @@ test('conversion and provider errors are technical failures, never pronunciation
   t.after(() => conversion.dispose());
   await recordAndStop(conversion);
   assert.deepEqual(conversion.failures, ['technical']);
+  assert.match(conversion.failureDetails[0].message, /could not be converted/);
+  assert.equal(conversion.failureDetails[0].requestId, undefined);
   assert.equal(conversion.requests.length, 0);
   const response = deferred(); const provider = harness({ response }); t.after(() => provider.dispose());
   await recordAndStop(provider);
   response.resolve({ ok: false, status: 503, json: async () => ({ detail: { code: 'unavailable' } }) });
   await provider.settle();
   assert.deepEqual(provider.failures, ['technical']);
+  assert.equal(provider.failureDetails[0].requestId, provider.requests[0].request.headers['X-Request-ID']);
 });
 
 test('provider no_speech is a recognition failure', async t => {
@@ -208,7 +218,30 @@ test('provider no_speech is a recognition failure', async t => {
   response.resolve({ ok: false, status: 422, json: async () => ({ detail: { code: 'no_speech', terminal: true, retryable: true } }) });
   await h.settle();
   assert.deepEqual(h.failures, ['recognition']);
+  assert.match(h.failureDetails[0].message, /No clear words were recognized/);
+  assert.equal(h.failureDetails[0].requestId, h.requests[0].request.headers['X-Request-ID'],
+    'terminal failures retain the attempt ID even after the retry ID was cleared');
   assert.deepEqual(h.transcripts, []);
+});
+
+test('unavailable service reports a localized reason without a stale request ID or callback loop', async t => {
+  const h = harness(); t.after(() => h.dispose());
+  await recordAndStop(h);
+  assert.equal(h.requests.length, 1);
+  h.update({ enabled: false, locale: 'zh' });
+  assert.deepEqual(h.failures, ['technical']);
+  assert.deepEqual(h.failureDetails, [{
+    message: '语音识别待连接，仍可本地回听或选择回应。', requestId: undefined,
+  }]);
+  assert.match(h.text, /停止后自动识别，查看结果后再继续/);
+  assert.doesNotMatch(h.text, /自动识别并回答/);
+  const laterCalls = [];
+  h.update({ onFailure: (...args) => laterCalls.push(args) });
+  h.update({ disabled: true });
+  assert.equal(laterCalls.length, 0, 'a new callback or parent render does not report the same outage again');
+  h.update({ resetSignal: 1 });
+  assert.equal(laterCalls.length, 1, 'a newly selected question receives its own availability result');
+  assert.equal(laterCalls[0][1].requestId, undefined);
 });
 
 test('cancelling capture never uploads or unlocks fallback', async t => {

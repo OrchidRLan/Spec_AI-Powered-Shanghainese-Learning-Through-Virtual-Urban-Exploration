@@ -67,6 +67,39 @@ class RevisionInput(StrictModel):
     expected_revision: StrictInt = Field(ge=0)
 
 
+class PracticeInput(StrictModel):
+    request_id: str = Field(min_length=8, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+    expected_revision: StrictInt = Field(ge=0)
+    operation: Literal["select", "evaluate", "continue", "edit"]
+    action: Action | None = None
+    text: str | None = Field(default=None, max_length=2000)
+    asr_request_id: str | None = Field(default=None, min_length=8, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+    failure_kind: Literal["recognition", "technical"] | None = None
+    assisted: StrictBool = False
+    result_request_id: str | None = Field(default=None, min_length=8, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+    step: Literal["item", "quantity", "mode"] | None = None
+
+    @model_validator(mode="after")
+    def valid_operation(self):
+        supplied = self.model_fields_set - {"request_id", "expected_revision", "operation"}
+        allowed = {"select": {"action"}, "evaluate": {"text", "asr_request_id", "failure_kind"},
+                   "continue": {"assisted", "result_request_id"}, "edit": {"step"}}[self.operation]
+        if supplied - allowed:
+            raise ValueError("Fields do not match the practice operation")
+        if self.operation == "select" and self.action is None:
+            raise ValueError("Select requires an action")
+        if self.operation == "evaluate":
+            if self.failure_kind is None and (self.asr_request_id is None or self.text is None):
+                raise ValueError("Evaluation requires the saved ASR ID and original text")
+            if self.failure_kind is not None and self.text is not None:
+                raise ValueError("Failure reports cannot invent a transcript")
+        if self.operation == "continue" and not self.assisted and self.result_request_id is None:
+            raise ValueError("Continue requires the displayed result ID")
+        if self.operation == "edit" and self.step is None:
+            raise ValueError("Edit requires a step")
+        return self
+
+
 class EventInput(StrictModel):
     event_id: str = Field(min_length=8, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
     attempt_id: str | None = Field(default=None, max_length=100)

@@ -6,9 +6,12 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { validateContent, teachingTexts, reviewSubjectSha256, packageSha256 } from '../scripts/validate-content.mjs';
+import { checkReviewReuse } from '../scripts/check-audio-r3.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = JSON.parse(readFileSync(join(repo, 'content/batch-a.json')));
+const revision2 = JSON.parse(readFileSync(join(repo, 'content/versions/batch-a-r2.2026-10-17.v1.json')));
+const reviewAudio = JSON.parse(readFileSync(join(repo, 'content/audio-review-r2.json')));
 const empty = JSON.parse(readFileSync(join(repo, 'content/reviews.json')));
 const root = mkdtempSync(join(tmpdir(), 'content-gate-synthetic-'));
 after(() => rmSync(root, { recursive: true, force: true }));
@@ -69,8 +72,8 @@ const validate = (candidate = pack, reviews = ledger) => validateContent(candida
 const clone = () => structuredClone(pack);
 
 test('draft development accepts explicit pending', () => assert.equal(validateContent(draft, empty).ok, true));
-test('revision 2 retains reviewable text and versioned approval boundaries', () => {
-  const version = 'batch-a-r2.2026-10-17.v1';
+test('revision 3 retains reviewable text and versioned approval boundaries', () => {
+  const version = 'batch-a-r3.2026-10-17.v1';
   const changedIds = new Set(['NX-N04', 'NX-N05', 'NX-N06', 'NX-N09', 'NX-N10']);
   const expectedIds = [
     'E08', 'E09', 'E05',
@@ -81,7 +84,7 @@ test('revision 2 retains reviewable text and versioned approval boundaries', () 
   assert.equal(draft.contentVersion, version);
   assert.deepEqual(texts.map((text) => text.id).sort(), expectedIds.sort());
   for (const text of texts) {
-    assert.equal(text.version, changedIds.has(text.id) ? version : 'batch-a-r1.2026-10-17.v1', text.id);
+    assert.equal(text.version, changedIds.has(text.id) ? 'batch-a-r2.2026-10-17.v1' : 'batch-a-r1.2026-10-17.v1', text.id);
     assert.equal(text.textKind, 'shanghainese-candidate', text.id);
     assert.equal(typeof text.hanzi, 'string', text.id);
     assert.ok(text.hanzi.trim(), text.id);
@@ -109,6 +112,56 @@ test('revision 2 retains reviewable text and versioned approval boundaries', () 
     assert.equal(clip.file, null, clip.id);
     assert.deepEqual(clip.reviewIds, [], clip.id);
   }
+});
+test('revision 3 preserves R2 learning entries and validates the historical order definition', () => {
+  assert.deepEqual(teachingTexts(draft), teachingTexts(revision2), 'No new wording, pronunciation or approvals are implied by the flow revision.');
+  assert.equal(validateContent(revision2, empty).ok, true);
+});
+test('revision 3 cannot reintroduce branch questions or automatic advancement', () => {
+  for (const mutate of [
+    pack => { pack.nanxiangTask.questionIds.splice(2, 0, 'NX-N04'); },
+    pack => { pack.nanxiangTask.historicalOnlyDialogueIds.pop(); },
+    pack => { pack.nanxiangTask.allowAdHocQuestions = true; },
+    pack => { pack.nanxiangTask.advancePolicy = 'automatic'; },
+    pack => { pack.nanxiangTask.completionRequires = pack.nanxiangTask.completionRequires.filter(value => value !== 'explicit_continue'); },
+    pack => { pack.nanxiangTask.units.push({ id: 'unknown', normalization: 'clarify' }); },
+  ]) {
+    const candidate = structuredClone(draft);
+    mutate(candidate);
+    assert.equal(validateContent(candidate, empty).ok, false);
+  }
+});
+test('revision 3 reuses exact R2 review sounds without new assets or branch playback', () => {
+  const result = checkReviewReuse(draft, revision2, reviewAudio);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.matchedEntries, 20);
+  assert.equal(result.currentPlaybackEntries, 13);
+  assert.equal(result.historicalOnlyDialogueEntries, 7);
+  assert.equal(result.newAudioFiles, 0);
+  assert.equal(result.networkCalls, 0);
+});
+test('audio reuse rejects changed pronunciation, source revision and target metadata', () => {
+  for (const [field, value] of [['hanzi', 'changed'], ['pronunciation', 'changed'], ['version', 'changed']]) {
+    const candidate = structuredClone(draft);
+    candidate.expressions[0][field] = value;
+    assert.equal(checkReviewReuse(candidate, revision2, reviewAudio).ok, false, field);
+  }
+  for (const [field, value] of [['textVersion', 'changed'], ['pronunciationVersion', 'changed'], ['pronunciation', 'changed'], ['id', 'changed.normal'], ['reviewStatus', 'approved']]) {
+    const manifest = structuredClone(reviewAudio);
+    manifest.clips[0][field] = value;
+    assert.equal(checkReviewReuse(draft, revision2, manifest).ok, false, field);
+  }
+});
+test('audio reuse rejects historical questions restored as current targets', () => {
+  const candidate = structuredClone(draft);
+  candidate.nanxiangTask.questionIds.push('NX-N04');
+  assert.equal(checkReviewReuse(candidate, revision2, reviewAudio).ok, false);
+});
+test('standalone audio reuse check rejects duplicate historical entries hiding a missing one', () => {
+  const candidate = structuredClone(draft);
+  candidate.dialogues[candidate.dialogues.findIndex(entry => entry.id === 'NX-N04')]
+    = structuredClone(candidate.dialogues.find(entry => entry.id === 'NX-N05'));
+  assert.equal(checkReviewReuse(candidate, revision2, reviewAudio).ok, false);
 });
 test('revision 2 does not reuse audio for changed quantities or dining prompts', () => {
   const archive = JSON.parse(readFileSync(join(repo, 'content/versions/batch-a-r1.2026-10-17.v1.json')));
