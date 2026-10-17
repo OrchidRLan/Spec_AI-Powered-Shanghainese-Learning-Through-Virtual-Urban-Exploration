@@ -22,7 +22,17 @@ export function verifyDeploymentOutput(validation, outputRoot) {
   }
 }
 
-export function deploymentMetadata(validation, { commit, dirty = null, builtAt = new Date().toISOString() } = {}) {
+export function deploymentSource({ env = process.env, readGit = args => spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' }) } = {}) {
+  // Provider-generated build files do not reveal whether the submitted source was dirty.
+  for (const [provider, variable] of [['vercel', 'VERCEL_GIT_COMMIT_SHA'], ['render', 'RENDER_GIT_COMMIT']]) {
+    if (env[variable]) return { commit: env[variable], provider, dirty: null };
+  }
+  const git = readGit(['rev-parse', 'HEAD']), status = readGit(['status', '--porcelain']);
+  return { commit: git.status === 0 ? git.stdout.trim() : null, provider: 'git',
+    dirty: status.status === 0 ? Boolean(status.stdout.trim()) : null };
+}
+
+export function deploymentMetadata(validation, { commit, provider = 'git', dirty = null, builtAt = new Date().toISOString() } = {}) {
   if (!validation.ok || (commit !== null && !/^[a-f0-9]{40}$/u.test(commit || ''))) throw new Error('Valid content and a valid commit (or null) are required.');
   return {
     schemaVersion: 1,
@@ -30,7 +40,7 @@ export function deploymentMetadata(validation, { commit, dirty = null, builtAt =
     reviewStatus: 'pending',
     productionApproved: false,
     builtAt,
-    source: { commit, dirty },
+    source: { commit, provider, dirty },
     content: validation.content,
     audio: validation.audio,
     checks: { contentIntegrity: 'passed', outputAudioIntegrity: 'passed', networkCalls: 0 },
@@ -53,10 +63,7 @@ function main() {
   run(process.execPath, ['node_modules/vite/bin/vite.js', 'build']);
   const output = resolve(ROOT, 'dist');
   verifyDeploymentOutput(validation, output);
-  const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
-  const candidate = process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || (git.status === 0 ? git.stdout.trim() : null);
-  const status = spawnSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' });
-  const metadata = deploymentMetadata(validation, { commit: candidate, dirty: status.status === 0 ? Boolean(status.stdout.trim()) : null });
+  const metadata = deploymentMetadata(validation, deploymentSource());
   writeFileSync(resolve(output, 'deployment.json'), `${JSON.stringify(metadata, null, 2)}\n`);
   console.log(`Pending-acceptance build verified: ${validation.audio.files.length} teaching audio files; version record: dist/deployment.json`);
 }

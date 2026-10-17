@@ -2,11 +2,19 @@
 
 本文保留语音适配、制作和真实调用记录；分批计数描述对应历史执行，不代表完整质量验收。现行产品行为见 [产品规格](../Product-spec.md)，待完成验证见 [D/E 计划](../Batch-DE-plan.md)。
 
-最新交付（2026-10-17）：[批次 B+C](../archive/batches/Batch-BC-plan.md) 沿用南翔的语音适配与明确继续交互，新增三站固定目标核对及 36 条待审声音。三站独立内容/规则版本不改变现有南翔会话；本轮实际执行仅有下述 35 次 TTS，没有新增 ASR、LLM 或真人录音。完整证据见 [B+C 验收](../archive/batches/Batch-BC-acceptance.md)。
+最新接通检查（2026-10-17）：批次 D 已通过实际 Vercel／Render 部署执行获准的额外 **1 次 E08 合成音频 ASR**，无重试、无麦克风，详见下节；不构成真人语音或语言质量验收。此前 [批次 B+C](../archive/batches/Batch-BC-plan.md) 沿用南翔的语音适配与明确继续交互，新增三站固定目标核对及 36 条待审声音。B+C 当轮仅有下述 35 次 TTS，没有新增 ASR、LLM 或真人录音，完整证据见 [B+C 验收](../archive/batches/Batch-BC-acceptance.md)。
 
 当前覆盖性决定（2026-10-17）：[批次 A 修订 4](../archive/batches/Batch-A-revision-4.md) 精简中英常驻提示、将实际订单带入最后确认及配套声音、统一完成按钮并重排地点卡。流程沿用 [修订 3](../archive/batches/Batch-A-revision-3.md)：只保留商品、数量、方式、订单核对四道既定问题，取消临时追问；识别后显示原转写与正误，明确点击继续才推进，失败可重试或辅助继续。未覆盖部分沿用 [修订 2](../archive/batches/Batch-A-revision-2.md)；下方历史冲突规定由最新修订覆盖，实际完成状态见 [开发进度](../Development-status.md)。
 
 核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](../content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+
+## 批次 D：线上 E08 合成音频接通检查
+
+2026-10-17，按用户额外授权，通过 [实际前端](https://spec-virtual-shanghainese-learning.vercel.app) 的同源代理与 [Render 后端](https://a-little-shanghai-api.onrender.com) 执行 **1 次 ASR，0 次 LLM、0 次 TTS，无重试**。两端源码均为 `e3beb7dc6c2feb8f630a1d11ee13b2d80a879e59`；Vercel 部署 `G2g4NfWeERH5BhWPaqJX4kxjh8bt` 已 Ready。输入为已有 E08「我要两份小笼馒头」的合成 PCM16 WAV，1,600 ms、24 kHz、单声道，不使用麦克风或用户真人录音。
+
+北京 `qwen3-asr-flash` 返回原转写 **「我要两份小笼馒头。」**，`elapsed_ms:1962`，配置 ID 为 `asr-4c784f1651e2840a`。所选目标核对为正确，原转写保留，仍停留在南翔商品题，没有自动推进。首次脚本执行因本地音频路径错误在发送前退出，发出 **0 次**请求；修正路径后才发出唯一一次请求，不能记为两次或收费重试。
+
+本次授权费用上限为 **¥1**，未核对实际账单，不编造实际扣费；单次调用授权已用完。另有 36 项线上 API 基线检查，其中四站均明确模拟客户端技术回退后辅助完成，没有模型调用或语音正确结论。浏览器检查了常／慢速按钮与店员说话状态，未做硬件声音听审。以上只确认部署接通、原转写与固定目标核对，不替代 E 的真人语音、实体设备、ASR 效果评估或教材审核；完整边界见 [D 检查记录](Batch-D-checks.md)。
 
 ## 批次 B+C：三站待审声音与核对
 

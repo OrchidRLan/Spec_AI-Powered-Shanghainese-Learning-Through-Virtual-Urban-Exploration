@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { inspectTeachingWav, validateAudioAssets, validateDeployment } from './validate-deployment.mjs';
-import { deploymentMetadata, verifyDeploymentOutput } from './build-deployment.mjs';
+import { deploymentMetadata, deploymentSource, verifyDeploymentOutput } from './build-deployment.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = mkdtempSync(join(tmpdir(), 'deployment-content-'));
@@ -124,6 +124,19 @@ test('the public build record carries pending state and a narrow allowlist of me
   assert.ok(!JSON.stringify(record).includes('NEVER_INCLUDE'));
   assert.throws(() => deploymentMetadata(validation, { commit: 'bad' }), /valid commit/);
   assert.throws(() => deploymentMetadata({ ...validation, ok: false }, { commit: null }), /Valid content/);
+});
+
+test('cloud source commits do not mislabel generated build files as source changes', () => {
+  const commit = 'a'.repeat(40);
+  for (const [provider, variable] of [['vercel', 'VERCEL_GIT_COMMIT_SHA'], ['render', 'RENDER_GIT_COMMIT']]) {
+    const source = deploymentSource({ env: { [variable]: commit }, readGit: () => assert.fail('Cloud source must not use build-tree Git status.') });
+    assert.deepEqual(deploymentMetadata(validation, source).source, { commit, provider, dirty: null });
+  }
+  for (const [stdout, dirty] of [['', false], [' M tracked-file\n', true], ['?? local-file\n', true]]) {
+    assert.deepEqual(deploymentSource({ env: {}, readGit: args => ({ status: 0, stdout: args[0] === 'rev-parse' ? `${commit}\n` : stdout }) }),
+      { commit, provider: 'git', dirty });
+  }
+  assert.deepEqual(deploymentSource({ env: {}, readGit: () => ({ status: 1, stdout: '' }) }), { commit: null, provider: 'git', dirty: null });
 });
 
 test('production validation remains blocked, and deployment accepts no bypass flag', () => {

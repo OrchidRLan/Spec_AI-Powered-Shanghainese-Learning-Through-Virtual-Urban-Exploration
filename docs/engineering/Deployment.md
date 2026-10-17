@@ -23,7 +23,7 @@ npm run test:deployment-proxy
 npm run test:database-maintenance
 ```
 
-`build:deployment` validates the current content packages, review evidence, all audio bindings, WAV structure, duration and hashes; runs type/content checks; builds Vite; then verifies output audio. `dist/deployment.json` records the code commit, review status, content versions, and audio hashes. It contains no environment secrets. Cloud builds should identify the intended clean Git commit.
+`build:deployment` validates the current content packages, review evidence, all audio bindings, WAV structure, duration and hashes; runs type/content checks; builds Vite; then verifies output audio. `dist/deployment.json` records the code commit, review status, content versions, and audio hashes. It contains no environment secrets. Cloud builds use the provider's source commit and record `source.provider` as `vercel` or `render`, with `source.dirty: null`: cloud build files cannot establish source cleanliness, so null is not a deployment error or a claim of a clean checkout. Local builds record actual Git status.
 
 `build:release` continues to reject unapproved teaching material. Do not change approval fields to make deployment pass. The proxy tests use temporary localhost HTTP servers; all database tests use temporary files. None of these checks calls a live speech provider.
 
@@ -80,7 +80,7 @@ Vercel rewrite routing, real browser cookies, microphone access and platform can
 
 ## Update and rollback
 
-Before a backend update, take a consistent backup and record its hash and application version. See [database maintenance](Database-maintenance.md) for verified backup, restore and guest-cleanup commands. Startup retains three automatic pre-start backups on the same disk; daily/off-disk backups and idle-period guest cleanup require a separate, verified maintenance arrangement on the same service instance.
+Before a backend update, take a consistent backup and record its hash and application version. See [database maintenance](Database-maintenance.md) for verified backup, restore and guest-cleanup commands. Startup retains three automatic pre-start backups on the same disk. The production API also runs same-instance maintenance every 15 minutes: expired-guest cleanup and a verified snapshot on the first cycle of each UTC day, retaining seven daily copies. Confirm these events on the deployed instance. Private off-disk transfer remains separate; same-disk snapshots do not protect against loss of that disk.
 
 Publish checked commits with `npm run git:publish`, verify both main branches, then manually deploy the intended fork commit on Render and Vercel. Check health, cookies, saved progress and affected teaching content. With an attached disk, Render updates briefly interrupt service; no horizontal scaling or zero-downtime guarantee applies.
 

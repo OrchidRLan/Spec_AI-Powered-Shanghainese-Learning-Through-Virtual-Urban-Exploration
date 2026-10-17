@@ -26,6 +26,7 @@ from . import lessons
 from .lesson_api import register as register_lessons
 from .auth import Authentication, cleanup_expired
 from .runtime import RuntimeSettings
+from .maintenance import production_lifespan
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT.parent / ".env", override=False)
@@ -47,6 +48,7 @@ def problem(code: str, message: str, status: int = 409, **extra):
 def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
     runtime = RuntimeSettings.from_env(str(ROOT / "data" / "app.db"), database_path)
     app = FastAPI(title="Shanghai learning — Four stations", version="0.2.0",
+                  lifespan=production_lifespan,
                   docs_url=None if runtime.production else "/docs",
                   redoc_url=None if runtime.production else "/redoc",
                   openapi_url=None if runtime.production else "/openapi.json")
