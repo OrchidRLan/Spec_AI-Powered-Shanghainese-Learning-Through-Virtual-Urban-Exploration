@@ -24,6 +24,7 @@ from .semantic import configure_interpreter
 from .storage import Database, encode
 from . import lessons
 from .lesson_api import register as register_lessons
+from .auth import Authentication, cleanup_expired
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT.parent / ".env", override=False)
@@ -54,6 +55,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     @app.middleware("http")
     async def same_origin(request: Request, call_next):
+        if request.url.path.startswith("/api/"):
+            with database.transaction() as connection:
+                cleanup_expired(connection)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             origin = request.headers.get("origin")
             permitted = {str(request.base_url).rstrip("/")}
@@ -74,13 +78,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         return JSONResponse({"detail": {"code": "save_failed", "message": "Progress could not be saved. Retry the same request ID.", "retryable": True}}, status_code=503)
 
     def session_id(request: Request, connection) -> str:
-        token = request.cookies.get(COOKIE)
-        if not token:
-            problem("session_required", "Start or resume your session first.", 401)
-        row = connection.execute("SELECT id FROM sessions WHERE token_hash=?", (hashlib.sha256(token.encode()).hexdigest(),)).fetchone()
-        if row is None:
-            problem("session_required", "The session is no longer available.", 401)
-        return row["id"]
+        return authentication.session_id(request, connection)
 
     def owned_attempt(connection, sid: str, attempt_id: str) -> dict:
         row = connection.execute("SELECT data FROM attempts WHERE id=? AND session_id=?", (attempt_id, sid)).fetchone()
@@ -174,14 +172,10 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
     @app.get("/api/session")
     def get_session(request: Request, response: Response):
         with database.transaction() as connection:
-            token = request.cookies.get(COOKIE)
-            digest = hashlib.sha256(token.encode()).hexdigest() if token else None
-            row = connection.execute("SELECT id FROM sessions WHERE token_hash=?", (digest,)).fetchone() if digest else None
-            if row:
-                sid = row["id"]
-            else:
-                sid, token = create_session(connection)
-            set_session_cookie(response, token)
+            sid = session_id(request, connection)
+            mode, _, _ = authentication.identity(request, connection, allow_legacy=True)
+            if mode == "legacy":
+                set_session_cookie(response, request.cookies[COOKIE])
             return public_session(connection, sid)
 
     @app.post("/api/session/new")
@@ -190,7 +184,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
             previous_id = session_id(request, connection)
             previous = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (previous_id,)).fetchone()["data"])
             sid, token = create_session(connection, preferences=previous, reason="explicit_new_session")
-            set_session_cookie(response, token)
+            mode = authentication.reset_binding(connection, request, previous_id, sid)
+            if mode == "legacy":
+                set_session_cookie(response, token)
             return public_session(connection, sid)
 
     @app.patch("/api/session")
@@ -617,6 +613,8 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         content_type = request.headers.get("content-type", "").split(";")[0]
         fingerprint = hashlib.sha256(content_type.encode() + bytes(audio)).hexdigest()
         with database.transaction() as connection:
+            if session_id(request, connection) != sid:
+                problem("session_required", "The active visit changed. Start a new recording.", 401)
             row = connection.execute("SELECT * FROM asr_requests WHERE session_id=? AND request_id=?", (sid, request_id)).fetchone()
             if row:
                 if row["fingerprint"] != fingerprint:
@@ -630,8 +628,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                 if elapsed > 30:
                     # Never re-submit an unknown cloud request automatically.
                     # The next user-initiated retry may use a fresh request ID.
-                    problem("asr_interrupted", "The previous transcription was interrupted. You can submit again.", 503,
-                            retryable=True, terminal=True)
+                    interrupted = {"code": "asr_interrupted", "message": "The previous transcription was interrupted. You can submit again.", "status": 503, "retryable": True, "terminal": True}
+                    connection.execute("UPDATE asr_requests SET response=? WHERE session_id=? AND request_id=? AND response IS NULL", (encode({"error": interrupted}), sid, request_id))
+                    return JSONResponse({"detail": interrupted}, status_code=503)
                 problem("asr_pending", "This recording is already being transcribed.")
             recent = connection.execute("SELECT created_at FROM asr_requests WHERE session_id=? ORDER BY created_at DESC LIMIT 30", (sid,)).fetchall()
             if len(recent) >= 30 and (datetime.now(timezone.utc) - datetime.fromisoformat(recent[-1]["created_at"])).total_seconds() < 60:
@@ -646,18 +645,41 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
             result = {"error": {"code": exc.code, "message": str(exc), "status": 503, "retryable": exc.retryable, "terminal": True}}
         finally:
             audio.clear()  # No raw audio is persisted by this endpoint.
+        auth_error = None
         with database.transaction() as connection:
-            connection.execute("UPDATE asr_requests SET response=? WHERE session_id=? AND request_id=?", (encode(result), sid, request_id))
-            database.event(connection, sid, None, identifier(), "asr_finished", {
-                "reported_by": "server", "request_id": request_id,
-                "status": "failed" if "error" in result else result["status"],
-                "config_id": config.config_id, "error_code": result.get("error", {}).get("code"),
-                "elapsed_ms": result.get("elapsed_ms"), "model": result.get("model"),
-            }, now())
+            try:
+                if session_id(request, connection) != sid:
+                    problem("session_required", "The active visit changed. Start a new recording.", 401)
+            except HTTPException as exc:
+                auth_error = exc
+                # Finish the abandoned request without saving its transcription
+                # or touching learning progress. Expiry may already have removed it.
+                abandoned = {"error": {"code": "session_ended", "message": "The visit ended during transcription.", "status": 401, "retryable": False, "terminal": True}}
+                connection.execute("UPDATE asr_requests SET response=? WHERE session_id=? AND request_id=? AND response IS NULL", (encode(abandoned), sid, request_id))
+            if auth_error is None:
+                saved = connection.execute("SELECT response FROM asr_requests WHERE session_id=? AND request_id=?", (sid, request_id)).fetchone()
+                if saved and saved["response"]:
+                    # A timeout/merge may have closed this request while the
+                    # provider was running. A late transcript cannot reopen it.
+                    result = json.loads(saved["response"])
+                elif saved:
+                    connection.execute("UPDATE asr_requests SET response=? WHERE session_id=? AND request_id=? AND response IS NULL", (encode(result), sid, request_id))
+                    database.event(connection, sid, None, identifier(), "asr_finished", {
+                        "reported_by": "server", "request_id": request_id,
+                        "status": "failed" if "error" in result else result["status"],
+                        "config_id": config.config_id, "error_code": result.get("error", {}).get("code"),
+                        "elapsed_ms": result.get("elapsed_ms"), "model": result.get("model"),
+                    }, now())
+                else:
+                    problem("session_required", "The active visit ended.", 401)
+        if auth_error is not None:
+            raise auth_error
         if "error" in result:
             problem(**result["error"])
         return result
 
+    authentication = Authentication(app, database, create_session=create_session, public_session=public_session,
+                                    problem=problem, identifier=identifier, now=now)
     register_lessons(app, database, session_id=session_id, owned_attempt=owned_attempt,
                      public_attempt=public_attempt, problem=problem, now=now,
                      identifier=identifier, root=ROOT.parent)

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, CircleHelp, Compass, Headphones, Mic, PencilLine, RotateCcw, Volume2, XCircle } from 'lucide-react';
 import { api, post, ApiError, type Attempt, type LessonRequest, type LessonResponse, type LessonStationId, type Locale } from '../lib/api';
 import { stopAllAudio } from '../lib/audio';
+import { authFetch, assertCurrentAuthResponse } from '../lib/authSession';
 import { reviewClipFor } from '../lib/reviewAudio';
 import { stationPlanFor, stationEntryFor, stationSummary, type StationPlan } from '../lib/stationContent';
 import LearningText, { type LearningEntry } from './LearningText';
@@ -69,6 +70,8 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   const [audioProgress, setAudioProgress] = useState(0);
   const player = useRef<HTMLAudioElement | null>(null);
   const mediaId = useRef<string | null>(null);
+  const mediaRequest = useRef<AbortController | null>(null);
+  const mediaObjectUrl = useRef<string | null>(null);
   const mediaGeneration = useRef(0);
   const introPlayStarted = useRef(false);
   const activeContinuation = useRef<string | null>(null);
@@ -99,10 +102,11 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
   const hostEntry = stationEntryFor(completed ? plan.completedEntryId : summaryEntryId || attempt.prompt_id) || stationEntryFor(step.hostEntryId);
   const pose: ScenePose = playing ? 'speaking' : completed ? 'packed' : phase === 'recording' || phase === 'playback' ? 'listening' : working || phase === 'processing' ? 'thinking' : lesson.step === 'confirm' ? 'checking' : 'idle';
 
-  function stopAudio() { mediaGeneration.current += 1; introPlayStarted.current = false; activeContinuation.current = null; closingPlayback.current = null; stopAllAudio(); setPlaying(null); }
+  function releaseIntroduction() { mediaRequest.current?.abort(); mediaRequest.current = null; if(mediaObjectUrl.current){URL.revokeObjectURL(mediaObjectUrl.current);mediaObjectUrl.current=null;} }
+  function stopAudio() { releaseIntroduction(); mediaGeneration.current += 1; introPlayStarted.current = false; activeContinuation.current = null; closingPlayback.current = null; stopAllAudio(); setPlaying(null); }
   useEffect(()=> {
     mounted.current = true;
-    return ()=> { mounted.current = false; generation.current += 1; mediaGeneration.current += 1; requestController.current?.abort(); inFlight.current = false; stopAllAudio(); latest.current.onBusyChange(false); latest.current.onDraftChange(false); latest.current.onPhaseChange('idle'); };
+    return ()=> { mounted.current = false; releaseIntroduction(); generation.current += 1; mediaGeneration.current += 1; requestController.current?.abort(); inFlight.current = false; stopAllAudio(); latest.current.onBusyChange(false); latest.current.onDraftChange(false); latest.current.onPhaseChange('idle'); };
   }, []);
   useEffect(()=> { setRetrying(false); setRecorderReset(value=>value + 1); setMessage(''); }, [currentKey]);
   useEffect(()=> { stopAudio(); setAudioError(false); }, [locale, stopSignal]);
@@ -192,8 +196,21 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
     if(captureActive || blocked || !player.current) return;
     stopAudio(); setAudioError(false); setAudioProgress(0);
     const ticket = mediaGeneration.current;
-    mediaId.current = id; player.current.src = source; player.current.playbackRate = audioSpeed; player.current.preservesPitch = true;
-    try { await player.current.play(); }
+    mediaId.current = id;
+    try {
+      let playableSource = source;
+      if(id === 'introduction') {
+        const controller = new AbortController(); mediaRequest.current = controller;
+        const response = await authFetch(source, {signal:controller.signal});
+        if(!response.ok) throw new Error('Introduction unavailable');
+        const blob = await response.blob(); assertCurrentAuthResponse(response);
+        if(!mounted.current || ticket !== mediaGeneration.current || controller.signal.aborted) return;
+        playableSource = URL.createObjectURL(blob); mediaObjectUrl.current = playableSource; mediaRequest.current = null;
+      }
+      if(!mounted.current || ticket !== mediaGeneration.current || !player.current) return;
+      player.current.src = playableSource; player.current.playbackRate = latest.current.audioSpeed; player.current.preservesPitch = true;
+      await player.current.play();
+    }
     catch { if(mounted.current && ticket === mediaGeneration.current) { introPlayStarted.current = false; setPlaying(null); setAudioError(true); } }
   }
   function playEntry(entry: LearningEntry) { const clip = reviewClipFor(entry); if(clip) return playSource(clip.file, entry.id); setAudioError(true); }

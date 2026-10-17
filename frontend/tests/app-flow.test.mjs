@@ -110,7 +110,7 @@ function harness(options = {}) {
     } },
     window, localStorage, sessionStorage,
     document: { documentElement: { lang: '', dataset: {} }, title: '', getElementById: () => null },
-    stopAllAudio: () => audio.pause(), requestAnimationFrame: callback => callback(),
+    bindAuthSession: () => {}, stopAllAudio: () => audio.pause(), requestAnimationFrame: callback => callback(),
     api: async (path, init) => {
       reads.push(path);
       if (path === '/session' && init?.method === 'PATCH') {
@@ -144,7 +144,7 @@ function harness(options = {}) {
   const App = vm.runInNewContext(`${executable}\nApp;`, context);
   function flush() {
     for (let loop = 0; dirty && loop < 30; loop += 1) {
-      dirty = false; cursor = 0; tree = App();
+      dirty = false; cursor = 0; tree = App(options.props);
       while (effects.length) effects.shift()();
     }
     assert.equal(dirty, false, 'App effects settled');
@@ -918,7 +918,7 @@ test('About opens directly in both languages and its CTA preserves the current j
 
 test('the three main destinations support direct links and browser back/forward', async t => {
   const h = harness({ hash: '', attempts: [] }); t.after(() => h.dispose()); await h.settle();
-  assert.ok(h.find(node => node.props?.className === 'map-page page-shell'), 'the default stays Explore');
+  assert.ok(h.find(node => node.props?.id === 'about-title'), 'the default opens About');
   const nav = h.find(node => node.props?.className === 'main-nav');
   assert.equal(nav.props.children.flat(Infinity).filter(Boolean).length, 3);
   h.click('About'); assert.equal(h.hash, 'about');
@@ -945,11 +945,11 @@ test('the state book remains a development-only direct route with no public foot
   for (const development of [false, true]) {
     const h = harness({ hash: '#design', development }); t.after(() => h.dispose()); await h.settle();
     assert.equal(Boolean(h.find(node => node.props?.className === 'design-page page-shell')), development);
-    assert.equal(Boolean(h.find(node => node.props?.className === 'map-page page-shell')), !development);
+    assert.equal(Boolean(h.find(node => node.props?.id === 'about-title')), !development);
     const footer = h.find(node => node.props?.className === 'site-footer');
     assert.doesNotMatch(h.textOf(footer), /Interface state book|界面状态册/);
     h.hashChange('#about'); await h.settle(); h.hashChange('#design'); await h.settle();
-    assert.equal(h.hash, development ? 'design' : 'map');
+    assert.equal(h.hash, development ? 'design' : 'about');
   }
 });
 
@@ -982,4 +982,25 @@ test('legacy lesson recovery still requires explicit confirmation before creatin
   assert.equal(h.hash, 'map');
   h.click(node => node.props?.['aria-label'] === 'Settings');
   assert.equal(h.find(node => node.type === 'button' && h.textOf(node) === 'Start a new journey'), undefined);
+});
+
+test('authentication navigation is About, Explore, Review in both languages', async t=>{
+  for(const locale of ['en','zh']){const h=harness({hash:'',locale});t.after(()=>h.dispose());await h.settle();const nav=h.find(node=>node.props?.className==='main-nav');assert.deepEqual(nav.props.children.flat(Infinity).filter(Boolean).map(node=>h.textOf(node)),locale==='en'?['About','Explore','Review']:['介绍','探索','复习']);}
+});
+
+test('guest sign-in keeps the existing recording leave guard before opening the account form', async t=>{
+  const opens=[];const h=harness({props:{onSignIn:locale=>opens.push(locale)}});t.after(()=>h.dispose());await h.settle();h.practice('NX-Q1');h.recorder.onDraftChange(true);await h.settle();
+  h.click(node=>node.props?.['aria-label']==='Sign in or register');assert.equal(opens.length,0);assert.match(h.text,/Leaving discards the recording/);h.click('Stay here');assert.equal(opens.length,0);
+  h.click(node=>node.props?.['aria-label']==='Sign in or register');h.click('Leave and discard recording');assert.deepEqual(opens,['en']);assert.equal(h.hash,'#nanxiang');
+});
+
+test('a station save locks account switching and a signed-in account offers server logout', async t=>{
+  let logouts=0;const h=harness({hash:'#teahouse',attempts:[makeLessonAttempt('teahouse')],props:{accountName:'Alice',onSignIn:()=>{},onSignOut:()=>logouts++}});t.after(()=>h.dispose());await h.settle();
+  h.lesson.onBusyChange(true);await h.settle();const button=()=>h.find(node=>node.props?.['aria-label']==='Account: Alice');assert.equal(button().props.disabled,true);button().props.onClick();assert.equal(h.find(node=>node.props?.className==='account-menu'),undefined);
+  h.lesson.onBusyChange(false);await h.settle();h.click(node=>node.props?.['aria-label']==='Account: Alice');h.click('Sign out');assert.equal(logouts,1);
+});
+
+
+test('account logout passes the current saved interface language to the welcome shell', async t=>{
+  const locales=[];const h=harness({hash:'#about',locale:'en',props:{accountName:'Alice',onSignIn:()=>{},onSignOut:locale=>locales.push(locale)}});t.after(()=>h.dispose());await h.settle();h.click(node=>node.props?.['aria-label']==='切换为中文');await h.settle();h.click(node=>node.props?.['aria-label']==='账号：Alice');h.click('退出登录');assert.deepEqual(locales,['zh']);
 });

@@ -105,7 +105,8 @@ function harness(options = {}) {
     } } },
     MediaRecorder: MockMediaRecorder, HTMLMediaElement: class {}, document,
     window: { addEventListener: (name, callback) => windowEvents.set(name, callback), removeEventListener: name => windowEvents.delete(name) },
-    fetch: async (url, request) => {
+    assertCurrentAuthResponse: () => {},
+    authFetch: async (url, request) => {
       requests.push({ url, request });
       if (options.response) return options.response.promise;
       return { ok: true, json: async () => ({ text: options.text ?? '两份', request_id: 'asr-test-id' }) };

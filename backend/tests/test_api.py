@@ -8,6 +8,7 @@ import wave
 
 import pytest
 from fastapi.testclient import TestClient
+from auth_helpers import seed_legacy
 
 from app.main import create_app
 from app.interpreter import parse_development
@@ -20,6 +21,8 @@ def app(tmp_path):
 
 
 def bind_r2(client):
+    if not client.cookies.get("shanghai_session"):
+        seed_legacy(client)
     response = client.get("/api/session")
     assert response.status_code == 200
     with client.app.state.database.transaction() as connection:
@@ -271,7 +274,7 @@ def test_persistence_across_process_instance(app, client):
 def test_ownership_all_private_routes_and_no_client_success(app, client):
     attempt = start(client)
     other = TestClient(app)
-    other.get("/api/session")
+    seed_legacy(other)
     assert other.get(f"/api/attempts/{attempt['id']}").status_code == 404
     assert other.post(f"/api/attempts/{attempt['id']}/skip", json={"expected_revision": 0}).status_code == 404
     assert other.post("/api/events", json={"event_id": str(uuid4()), "attempt_id": attempt["id"], "event_type": "recording_started"}).status_code == 404
@@ -404,7 +407,7 @@ def test_voice_source_is_saved_verified_and_cannot_be_claimed_from_other_session
     assert edited["turns"][-1]["asr_transcript"] == "两份小笼包外带"
     assert edited["turns"][-1]["text"] == "三份小笼包外带"
     other = TestClient(app)
-    other.get("/api/session")
+    seed_legacy(other)
     bind_r2(other)
     others_attempt = start(other)
     body.update(request_id=str(uuid4()), expected_revision=0)

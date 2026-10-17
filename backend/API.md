@@ -1,4 +1,4 @@
-# 四站本地 API（批次 A 修订 4 与 B+C）
+# 四站本地 API（批次 2 修改 3：账号与临时游客）
 
 Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
 
@@ -11,32 +11,69 @@ python3.11 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
-默认数据库 `backend/data/app.db`，可通过 `DATABASE_PATH` 改到独立目录。后端自动加载根 `.env`，不覆盖进程已有环境变量；配置修改后重启后端。数据库、录音、日志、虚拟环境都不提交。部署 HTTPS 后必须设置 `COOKIE_SECURE=true`；本地 HTTP 默认 false。Cookie 为随机 256 位 token（数据库只保存哈希），`HttpOnly; SameSite=Strict`。返回的 session ID 不是访问凭证。写请求检验 Origin / Fetch Metadata 并要求 JSON（ASR 除外）；`ALLOWED_ORIGINS` 为逗号分隔的开发源列表，默认 localhost/127.0.0.1:5173。对外部署还需 HTTPS、正式 DB、过期清理、通用限速、备份和部署检查。ASR 已有会话每分钟 30 个请求的上限。
+默认数据库 `backend/data/app.db`，可通过 `DATABASE_PATH` 改到独立目录。后端自动加载根 `.env`，不覆盖进程已有环境变量；配置修改后重启后端。数据库、录音、日志、虚拟环境都不提交。部署 HTTPS 后必须设置 `COOKIE_SECURE=true`；本地 HTTP 默认 false。Cookie 为随机 256 位 token（数据库只保存哈希），`HttpOnly; SameSite=Strict`。返回的 session ID 不是访问凭证。写请求检验 Origin / Fetch Metadata 并要求 JSON（ASR 除外）；`ALLOWED_ORIGINS` 为逗号分隔的开发源列表，默认 localhost/127.0.0.1:5173。对外部署还需 HTTPS、正式 DB、定时调用游客清理命令、代理层通用限速、备份和部署检查。ASR 已有会话每分钟 30 个请求的上限。
+
+## 认证与临时进度
+
+本轮身份独立于已有学习 session。账号使用 `shanghai_account` HttpOnly / SameSite=Strict Cookie，服务器令牌与浏览器均最长 30 天；退出撤销当前令牌，不清空账号进度。游客使用 `X-Guest-Token` 请求头，前端只存标签页 `sessionStorage`，最长 24 小时。数据库只存两类随机令牌的 SHA-256 摘要。用户名按 trim + casefold 唯一，显示保留大小写；3–24 位 ASCII 字母、数字、下划线。密码 15–128 字符，空格不裁剪，随机盐 scrypt `N=32768,r=8,p=3`，不存明文。第一版无密码找回。
+
+```ts
+type AuthState = {
+  mode: 'signed_out' | 'guest' | 'account';
+  user: {username: string} | null;
+  session: Session | null;
+  legacy_available: boolean;
+};
+```
+
+| 接口 | 请求 | 返回 |
+| --- | --- | --- |
+| GET /api/auth | 可选账号 Cookie / 游客头 | AuthState；旧匿名 Cookie 不自动登录，只报告 legacy_available |
+| POST /api/auth/guest | `{locale?: 'zh'|'en'}` | AuthState + guest_token；不签发长期匿名 Cookie |
+| POST /api/auth/register | `{username,password,locale?,import_legacy?:boolean}`，可带游客头 | 注册并登录，AuthState；承接当前游客进度 |
+| POST /api/auth/login | 同上 | AuthState；恢复账号并事务合并当前游客进度 |
+| POST /api/auth/logout | `{}`，附当前 X-Expected-Session-ID | 撤销当前令牌，返回 signed_out；保留账号数据 |
+
+课程 API 的身份优先级为显式游客头 → 有效账号 Cookie → 旧匿名 Cookie。**带了无效/过期游客头时返回 `guest_expired`，不得回退到同浏览器账号。** 普通欢迎界面不调用旧匿名 `/session` 恢复；只有用户明确勾选 `import_legacy`，登录/注册才导入其持有的旧 Cookie 数据。旧匿名记录不会自动删除。
+
+前端在恢复身份后，所有课程 API、原始 ASR 上传与私有糖店音频携带 `X-Expected-Session-ID`，其值为当前显示的 Session.id。服务器将它与实际凭据绑定比对；不一致返回 401 `session_changed`，防止另一标签切换账号后把旧页面操作写入新账号。登录/注册/游客入口与 GET /auth 不受此绑定限制；退出会比对。为了已有 API/旧匿名兼容，未提供该头的请求仍使用其实际凭据授权，但正式前端不得省略。私有音频必须带头 fetch 为 Blob 后播放，令牌不放 URL。
+
+合并在同一 SQLite 事务中移动尝试、事件、ASR 与使用记录；课程版本先固化到每条 attempt。合并保留历史成功和所有练习记录，撤销来源游客/旧匿名凭据，并留下账号来源归属。不同课程版本或会话内请求 ID 冲突返回 `merge_conflict`，两边原记录均不改变；旧版可单独关联新账号后通过原有升级入口继续。仍在处理的请求返回 `merge_in_progress`，完成后可重试；超过 30 秒的未完成 ASR 先存为 `asr_interrupted` 终态，避免进程重启后永远不能保存。旧版 turns 的 processing / prepared 同样以 30 秒为界：近期请求仍阻止合并，超时请求记录为 cancelled，只清除匹配的 pending_request_id；原始 payload、解释和记录保留，不自动应用订单。取消状态阻止迟到解释重新写成 prepared 或推进订单。迟到云端结果不能覆盖终态。ASR 上传完成和云端返回时重新核验身份；退出后的转写被丢弃，不改变练习进度。
+
+服务端 SQLite 限流：登录每用户名 10 次 / 15 分钟、每来源 IP 50 次 / 15 分钟；注册每 IP 15 次 / 小时；游客创建每 IP 50 次 / 15 分钟。账号不存在与密码错误统一 `invalid_credentials`。常用错误还包括 `invalid_username` / `invalid_password` (422)、`username_taken` (409)、`auth_rate_limited` (429)、`legacy_unavailable` (409)、`session_required` / `guest_expired` / `session_changed` (401)。
+
+每次 API 请求惰性清理到期游客及其所有关联尝试、请求、事件与 ASR 数据，不清理旧匿名或账号记录。无访问时可从 backend 目录执行下列命令；部署时将其纳入定时维护：
+
+```sh
+.venv/bin/python -m app.cleanup_guests --database /absolute/path/to/app.db
+```
+
+命令不会加载语音服务或读取 `.env`；不传参数时采用进程 `DATABASE_PATH` 或默认 backend/data/app.db。数据库初始化仅新增认证/归属表，不改写已有会话数据。账号升级旧课程会保留 account_sessions 归属记录；游客升级不延长原 24 小时窗口。关闭页面不能可靠通知服务器，24 小时是凭据有效期上限；实际数据在后续 API 请求或清理命令中移除，无访问时不能保证准点物理删除。浏览器恢复标签页可能恢复游客凭据。
 
 ## 接口
 
 | 接口 | 请求 | 返回 |
 | --- | --- | --- |
-| GET /api/session | 无 | 创建/恢复 cookie 会话，Session |
+| GET /api/session | 当前身份 | 恢复 Session；没有身份返回 401，不再自动创建匿名 Cookie |
 | PATCH /api/session | locale?: zh/en, show_romanization?: bool, reduced_motion?: bool | Session |
-| POST /api/session/new | 已有会话 Cookie；JSON `{}` | 用户明确选择新的探索时创建 Session 并替换 Cookie；保留三项偏好，进度从零开始 |
+| POST /api/session/new | 当前身份；JSON `{}` | 明确升级旧课程时创建 Session；账号更新当前绑定，游客沿用原 token 与到期时刻，旧匿名才替换 Cookie；保留偏好与旧记录 |
 | GET /api/services | 无 | asr.enabled/formats/config；text.mode=development_parser |
-| GET /api/content | 会话 Cookie | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
+| GET /api/content | 当前身份 | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
 | POST /api/attempts | station_id: nanxiang/restaurant/candy/teahouse, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
-| GET /api/attempts/{id} | Cookie | Attempt |
+| GET /api/attempts/{id} | 当前身份 | Attempt |
 | POST /api/attempts/{id}/practice | PracticeInput，仅 R3 | PracticeResult；保存本题选择/评估或显式推进 |
-| GET /api/attempts/{id}/practice/{request_id} | Cookie | 原始 PracticeResult；未知 404 |
+| GET /api/attempts/{id}/practice/{request_id} | 当前身份 | 原始 PracticeResult；未知 404 |
 | POST /api/attempts/{id}/practice/{request_id}/cancel | expected_revision | 已保存结果或取消 tombstone，保护迟到原请求 |
 | POST /api/attempts/{id}/lesson | LessonInput，仅 B+C 三站 | PracticeResult；保存选择、评估、明确继续、编辑或听辨接触 |
-| GET /api/attempts/{id}/lesson/{request_id} | Cookie | 原始 PracticeResult；未知 404 |
+| GET /api/attempts/{id}/lesson/{request_id} | 当前身份 | 原始 PracticeResult；未知 404 |
 | POST /api/attempts/{id}/lesson/{request_id}/cancel | expected_revision | 原始结果或取消 tombstone |
-| GET /api/attempts/{id}/introduction/audio | Cookie；仅本人糖店尝试 | 版本、原文、注音与文件哈希核验后的 WAV；不发送目标文件名 |
+| GET /api/attempts/{id}/introduction/audio | 当前身份；仅本人糖店尝试 | 版本、原文、注音与文件哈希核验后的 WAV；不发送目标文件名 |
 | POST /api/attempts/{id}/turns | TurnInput | TurnResult |
-| GET /api/attempts/{id}/turns/{request_id} | Cookie | TurnResult；未知 404 |
+| GET /api/attempts/{id}/turns/{request_id} | 当前身份 | TurnResult；未知 404 |
 | POST /api/attempts/{id}/turns/{request_id}/cancel | expected_revision | TurnResult；支持取消先于原 POST 到达 |
 | POST /api/attempts/{id}/skip | expected_revision | Attempt；取消在途回合，不覆盖成功 |
 | POST /api/events | event_id, attempt_id?, event_type, metadata? | saved, duplicate；不更新订单字段 |
-| GET /api/events | Cookie | 仅自己会话的事件 |
+| GET /api/events | 当前身份 | 仅自己会话的事件 |
 | POST /api/asr | 原始 PCM16 WAV；Content-Type:audio/wav，X-Request-ID | {text,transcript,status,elapsed_ms,config_id,...}，转写本身不推进任务 |
 
 ```ts

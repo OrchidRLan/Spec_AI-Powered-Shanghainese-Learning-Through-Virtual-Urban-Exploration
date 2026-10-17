@@ -1,3 +1,4 @@
+import { authFetch, assertCurrentAuthResponse, type AuthRequestPolicy } from './authSession';
 export type Locale = 'zh' | 'en';
 export type Order = { item: string | null; quantity: number | null; unit: 'serving' | 'basket' | 'piece' | 'pack' | 'unknown' | null; normalized_servings: number | null; takeaway: boolean | null };
 export type PracticeStep = 'item' | 'quantity' | 'mode' | 'confirm';
@@ -13,9 +14,12 @@ export type PracticeResponse = { request_id: string; status: 'applied' | 'cancel
 export class ApiError extends Error {
   constructor(public code: string, message: string, public attempt?: Attempt, public terminal = false, public retryable = false) { super(message); }
 }
-export async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, { credentials: 'same-origin', ...options, headers: { 'Content-Type': 'application/json', ...options?.headers } });
+export async function api<T>(path: string, options?: RequestInit, policy?: AuthRequestPolicy): Promise<T> {
+  const headers = new Headers(options?.headers);
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const response = await authFetch(`/api${path}`, { ...options, headers }, policy);
   const body = await response.json().catch(() => null);
+  assertCurrentAuthResponse(response);
   if (!response.ok) {
     const detail = body?.detail;
     throw new ApiError(detail?.code || `http_${response.status}`, typeof detail === 'string' ? detail : detail?.message || 'Request failed', detail?.attempt, detail?.terminal === true, detail?.retryable === true);
@@ -29,3 +33,5 @@ export type LessonResult = PracticeResult & { task_matches?: boolean };
 export type Lesson = { step: string; step_id: string; target: string | null; result: LessonResult | null; can_choose: boolean; answers: Record<string, string>; history: Array<{ step: string; option_id: string; [key: string]: unknown }>; listening: { audio_url: string; played: boolean; text_revealed: boolean; introduction_text_id: string | null } | null };
 export type LessonRequest = { request_id: string; expected_revision: number; operation: 'select' | 'evaluate' | 'continue' | 'edit' | 'listened' | 'help'; option_id?: string; text?: string; asr_request_id?: string; failure_kind?: 'recognition' | 'technical'; assisted?: boolean; result_request_id?: string; step?: string };
 export type LessonResponse = { request_id: string; status: 'applied' | 'cancelled'; attempt: Attempt };
+
+export type AuthState = { mode: 'signed_out' | 'guest' | 'account'; user: { username: string } | null; session: Session | null; legacy_available: boolean; guest_token?: string };

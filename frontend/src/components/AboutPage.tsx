@@ -26,8 +26,10 @@ const aboutCopy = {
     support: [
       ['字旁有读音', '拉丁注音对齐汉字，需要时看一眼，也可以随时隐藏。'],
       ['按自己的速度听', '标准速听完整表达，慢速再听一遍。'],
-      ['下次接着逛', '进度自动保存，回来继续这一段；完成后也能再练一次。'],
+      ['留住这段漫游', '游客进度仅在本次体验中保留。登录后，可以保存进度，下次接着练习。'],
     ],
+    savedProgress: '进度已保存到账号，下次登录可以接着练习。完成过的站点也能再练一次。',
+    signIn: '登录保存进度',
   },
   en: {
     eyebrow: 'A FEW WORDS, A WHOLE NEW WORLD',
@@ -51,12 +53,14 @@ const aboutCopy = {
     support: [
       ['Read along', 'Romanization sits above its matching characters. Keep it nearby or hide it whenever you like.'],
       ['Listen at your pace', 'Hear the expression at normal speed, or slow it down for another listen.'],
-      ['Pick up where you left off', 'Your progress is saved for your return. You can also try a completed stop again.'],
+      ['Save your journey', 'Guest progress lasts for this visit. Sign in to save it and continue another time.'],
     ],
+    savedProgress: 'Your progress is saved to your account. Sign in next time to continue, or try a completed stop again.',
+    signIn: 'Sign in to save progress',
   },
 };
 
-export default function AboutPage({ locale, hasProgress, onExplore }: { locale: Locale; hasProgress: boolean; onExplore: () => void }) {
+export default function AboutPage({ locale, hasProgress, onExplore, accountName, onSignIn }: { locale: Locale; hasProgress: boolean; onExplore: () => void; accountName?: string | null; onSignIn?: () => void }) {
   const copy = aboutCopy[locale];
   const s = strings[locale];
   const stops = ['restaurant', 'candy', 'nanxiang', 'teahouse'] as const;
@@ -100,7 +104,7 @@ export default function AboutPage({ locale, hasProgress, onExplore }: { locale: 
       <div className="about-section-heading"><span className="overline">{copy.supportLabel}</span><h2 id="about-support-title">{copy.supportTitle}</h2></div>
       <div className="about-support-grid">{copy.support.map(([title, description], index) => {
         const Icon = supportIcons[index];
-        return <div key={title}><Icon size={23} strokeWidth={1.5}/><h3>{title}</h3><p>{description}</p></div>;
+        return <div key={title}><Icon size={23} strokeWidth={1.5}/><h3>{title}</h3><p>{index === 2 && accountName ? copy.savedProgress : description}</p>{index === 2 && !accountName && onSignIn && <button type="button" className="about-sign-in" onClick={onSignIn}>{copy.signIn}<ArrowRight size={16}/></button>}</div>;
       })}</div>
     </section>
   </div>;

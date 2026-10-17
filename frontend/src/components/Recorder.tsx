@@ -1,3 +1,4 @@
+import { authFetch, assertCurrentAuthResponse } from '../lib/authSession';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, RotateCcw, Square, X } from 'lucide-react';
 import { chooseRecordingMimeType, MAX_RECORDING_SECONDS, recordingToWav, stopAllAudio } from '../lib/audio';
@@ -384,12 +385,13 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
       requestIdRef.current ??= crypto.randomUUID();
       submittedRequestId = requestIdRef.current;
       latest.current.onEvent?.('asr_submitted');
-      const response = await fetch('/api/asr', {
+      const response = await authFetch('/api/asr', {
         method: 'POST', headers: { 'Content-Type': 'audio/wav', 'X-Request-ID': requestIdRef.current }, credentials: 'same-origin',
         body: wav, signal: controller.signal,
       });
       if (!response.ok) {
         const failure: unknown = await response.json().catch(() => null);
+        assertCurrentAuthResponse(response);
         if (!isCurrentOperation(generation, controls) || !latest.current.enabled) return;
         if (failure && typeof failure === 'object' && 'detail' in failure) {
           const detail = failure.detail;
@@ -404,6 +406,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
         throw new Error(response.status === 401 ? 'session' : 'recognition');
       }
       const result: unknown = await response.json();
+      assertCurrentAuthResponse(response);
       if (!isCurrentOperation(generation, controls) || !latest.current.enabled || controller.signal.aborted) return;
       if (!result || typeof result !== 'object' || !('text' in result) || typeof result.text !== 'string' || !result.text.trim()) {
         throw new Error('noText');

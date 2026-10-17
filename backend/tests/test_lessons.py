@@ -12,6 +12,7 @@ import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
+from auth_helpers import start_guest
 
 from app.main import create_app, now
 from app.lessons import assess, new_attempt
@@ -33,7 +34,7 @@ def teaching_options():
 @pytest.fixture
 def client(tmp_path):
     with TestClient(create_app(str(tmp_path / "lessons.db"))) as browser:
-        browser.get("/api/session")
+        start_guest(browser)
         yield browser
 
 
@@ -221,7 +222,7 @@ def test_candy_target_is_private_stable_and_help_reveals_only_on_request(client)
     assert all(flavor not in listening["audio_url"] for flavor in FLAVOR_TEXT)
     assert start(client, "candy")["id"] == attempt["id"]
     with TestClient(create_app(client.app.state.database.path)) as reopened:
-        reopened.cookies.update(client.cookies)
+        reopened.headers.update({"X-Guest-Token": client.headers["X-Guest-Token"]})
         assert reopened.get(f"/api/attempts/{attempt['id']}").json() == attempt
         assert internal_attempt(reopened, attempt)["_lesson_target"] == target
     helped = send(client, attempt, "help")
@@ -276,7 +277,7 @@ def test_result_stays_on_same_question_and_restores_exactly(client, station, opt
     assert assessed["lesson"]["answers"] == {}
     assert assessed["prompt_id"] == attempt["prompt_id"]
     with TestClient(create_app(client.app.state.database.path)) as reopened:
-        reopened.cookies.update(client.cookies)
+        reopened.headers.update({"X-Guest-Token": client.headers["X-Guest-Token"]})
         assert reopened.get(f"/api/attempts/{attempt['id']}").json() == assessed
         assert start(reopened, station) == assessed
         advanced = advance(reopened, assessed)
@@ -534,7 +535,7 @@ def test_original_transcript_and_asr_session_ownership_enforced(client):
     response = client.post(path(attempt), json=body)
     assert response.json()["detail"]["code"] == "original_transcript_required"
     with TestClient(client.app) as other:
-        other.get("/api/session")
+        start_guest(other)
         assert other.get(f"/api/attempts/{attempt['id']}").status_code == 404
         assert other.get(path(attempt) + "/" + body["request_id"]).status_code == 404
         theirs = select(other, start(other), "not_spicy")
@@ -621,7 +622,7 @@ def test_introduction_audio_is_session_owned_and_missing_audio_never_marks_playe
     attempt = start(client, "candy")
     audio_url = attempt["lesson"]["listening"]["audio_url"]
     with TestClient(client.app) as other:
-        other.get("/api/session")
+        start_guest(other)
         assert other.get(audio_url).status_code == 404
     # This assertion intentionally does not depend on a generated audio asset.
     # A successful download may allow an explicit ended event, but never itself

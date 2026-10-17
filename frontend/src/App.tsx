@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleHelp, Clock3, Compass, Globe2, Info, MapPin, MessageCircle, Mic, Minus, Navigation, PackageCheck, PencilLine, Play, RotateCcw, Settings2, ShoppingBag, Sparkles, Volume2, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleHelp, Clock3, Compass, Globe2, Info, MapPin, MessageCircle, Mic, Minus, Navigation, PackageCheck, PencilLine, Play, RotateCcw, Settings2, ShoppingBag, Sparkles, UserRound, LogOut, Volume2, X } from 'lucide-react';
 import Dialog from './components/Dialog';
 import { Brand } from './components/Brand';
 import AboutPage from './components/AboutPage';
@@ -17,6 +17,7 @@ import { cursorForQuestion, readQuestionCursors, saveQuestionCursors, readOrderE
 import { reviewClipFor } from './lib/reviewAudio';
 import { orderConfirmationFor } from './lib/orderConfirmation';
 import { stopAllAudio } from './lib/audio';
+import { bindAuthSession } from './lib/authSession';
 import './styles.css';
 import './styles-revision1.css';
 import './styles-revision2.css';
@@ -68,14 +69,16 @@ function ServingIllustration() { return <svg width="75" height="62" viewBox="0 0
 function getRoute(): Destination {
   const route = window.location.hash.replace(/^#/, '');
   if (route.startsWith('review/')) return stationIds.includes(route.slice(7) as StationId) ? route as Destination : 'review';
-  if (route === 'design') return import.meta.env.DEV ? 'design' : 'map';
-  return ['nanxiang', 'restaurant', 'candy', 'teahouse', 'review', 'about'].includes(route) ? route as View : 'map';
+  if (route === 'design') return import.meta.env.DEV ? 'design' : 'about';
+  return ['map', 'nanxiang', 'restaurant', 'candy', 'teahouse', 'review', 'about'].includes(route) ? route as View : 'about';
 }
 function routeView(route: Destination): View { return route.startsWith('review/') ? 'review' : route as View; }
 
-export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [locale, setLocale] = useState<Locale>('zh');
+export default function App({ initialSession = null, accountName = null, onSignIn, onSignOut, authBusy = false, authError = '' }: { initialSession?: Session | null; accountName?: string | null; onSignIn?: (locale: Locale) => void; onSignOut?: (locale: Locale) => void; authBusy?: boolean; authError?: string } = {}) {
+  const [session, setSession] = useState<Session | null>(initialSession);
+  const [locale, setLocale] = useState<Locale>(initialSession?.locale || 'zh');
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountDestination = useRef<'login' | 'menu' | 'logout' | null>(null);
   const [route, setRoute] = useState<Destination>(getRoute);
   const view = routeView(route);
   const reviewStation = route.startsWith('review/') ? route.slice(7) as StationId : null;
@@ -149,15 +152,16 @@ export default function App() {
   const completeCount = session?.completed_station_ids.length || 0;
   const selectedIndex = stationIds.indexOf(selected);
 
-  async function loadSession() {
+  async function loadSession(restored = false) {
     setBooting(true); setError('');
-    try { const next = await api<Session>('/session'); setSession(next); setLocale(next.locale); const savedAttempt=[...next.attempts].reverse().find(item=>item.station_id === 'nanxiang') || null; const edit=readOrderEdit(savedAttempt); if(edit){setEditing(true);setEditFocus(edit.focus);editSummary.current=edit.summary;} const services = await api<{asr:{enabled:boolean}}>('/services'); setAsrEnabled(services.asr.enabled); }
+    try { const next = restored && initialSession ? initialSession : await api<Session>('/session'); setSession(next); setLocale(next.locale); const savedAttempt=[...next.attempts].reverse().find(item=>item.station_id === 'nanxiang') || null; const edit=readOrderEdit(savedAttempt); if(edit){setEditing(true);setEditFocus(edit.focus);editSummary.current=edit.summary;} const services = await api<{asr:{enabled:boolean}}>('/services'); setAsrEnabled(services.asr.enabled); }
     catch { setError(strings[locale].offline); }
     finally { setBooting(false); }
   }
-  useEffect(() => { void loadSession(); const update = () => {const next = getRoute(); if(next !== routeRef.current || window.location.hash.replace(/^#/, '') !== next) navigationHandler.current(next);}; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
+  useEffect(() => { void loadSession(true); const update = () => {const next = getRoute(); if(next !== routeRef.current || window.location.hash.replace(/^#/, '') !== next) navigationHandler.current(next);}; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
   useEffect(() => { document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'; document.title = `${s.brand} · ${stationIds.includes(view as StationId) ? shortNames[locale][stationIds.indexOf(view as StationId)] : view === 'review' ? s.review : view === 'about' ? (locale === 'zh' ? '介绍' : 'About') : s.map}`; setStopSignal(n => n + 1); }, [locale, view]);
   useEffect(() => { const warn = (e:BeforeUnloadEvent) => {if(recordingDraft){e.preventDefault();e.returnValue='';}}; window.addEventListener('beforeunload',warn); return () => window.removeEventListener('beforeunload',warn); },[recordingDraft]);
+  useEffect(() => { if(session) bindAuthSession(session.id); }, [session?.id]);
   useEffect(() => { document.documentElement.dataset.reducedMotion = String(session?.reduced_motion || false); }, [session?.reduced_motion]);
   function replaceAttempt(next: Attempt, allowCreate = false) {
     setSession(previous => previous ? { ...previous, attempts: previous.attempts.some(a => a.id === next.id) ? previous.attempts.map(a => a.id === next.id && a.revision <= next.revision ? next : a) : allowCreate ? [...previous.attempts, next] : previous.attempts, completed_station_ids: next.status === 'completed' && previous.attempts.some(a => a.id === next.id) ? Array.from(new Set([...previous.completed_station_ids, next.station_id])) : previous.completed_station_ids } : previous);
@@ -176,7 +180,22 @@ export default function App() {
     catch { setError(s.error); }
     finally {preferencesInFlight.current=false;setSavingPreferences(false);}
   }
+  function finishAccountAction(action: 'login' | 'menu' | 'logout') {
+    stopTeachingAudio(); stopAllAudio(); setStopSignal(value=>value + 1);
+    if (action === 'menu') { setAccountOpen(value=>!value); return; }
+    setAccountOpen(false);
+    if (action === 'login') onSignIn?.(locale);
+    else onSignOut?.(locale);
+  }
+  function requestAccount(action: 'login' | 'menu' | 'logout') {
+    if (busy || authBusy || savingPreferences || preferencesInFlight.current || sessionResetInFlight.current || recordingPhase === 'processing') return;
+    if (recordingDraft) {
+      stopTeachingAudio(); setStopSignal(value=>value + 1); accountDestination.current = action; setPanel('leaveRecording'); return;
+    }
+    finishAccountAction(action);
+  }
   function navigate(next: Destination, force = false) {
+    accountDestination.current = null; setAccountOpen(false);
     if (recordingDraft && stationIds.includes(view as StationId) && next !== view && !force) { stopTeachingAudio();setStopSignal(n=>n+1);destination.current = next; window.history.replaceState(null,'',`#${route}`); setPanel('leaveRecording'); return; }
     generation.current += 1; submittingRef.current=false; stopTeachingAudio(); controller.current?.abort(); if(!sessionResetInFlight.current) setBusy(false); setAwaitingReplyResolution(false); setPanel(null); setError(''); setStopSignal(n => n + 1);
     const pendingId = viewRef.current === 'nanxiang' ? lastRequest.current?.body.request_id || attempt?.pending_request_id : null;
@@ -397,7 +416,7 @@ export default function App() {
     audioGeneration.current += 1;stopAllAudio();setPlayingId(null);setAudioMessage('');
   },[locale,route]);
   useEffect(()=>{if(!transientPose) return;poseTimer.current=setTimeout(()=>setTransientPose(null),transientPose === 'packing' ? 1850 : 550);return()=>{if(poseTimer.current) clearTimeout(poseTimer.current);};},[transientPose]);
-  useEffect(()=>()=>{if(promptTimer.current) clearTimeout(promptTimer.current);if(poseTimer.current) clearTimeout(poseTimer.current);stopAllAudio();},[]);
+  useEffect(()=>()=>{generation.current += 1; controller.current?.abort(); if(promptTimer.current) clearTimeout(promptTimer.current);if(poseTimer.current) clearTimeout(poseTimer.current);stopAllAudio();},[]);
   function listenButton(entry:LearningEntry, role:'host'|'example'='example') {
     const available=Boolean(reviewClipFor(entry));
     return <button type="button" className={`sentence-listen ${playingId === entry.id ? 'is-playing' : ''}`} disabled={!available || captureActive}
@@ -432,20 +451,21 @@ export default function App() {
     </div>;
   }
 
-  return <div className={`app locale-${locale}`}>
+  return <div className={`app locale-${locale}`} inert={authBusy || undefined} aria-busy={authBusy || undefined}>
     <audio ref={teachingAudio} className="sr-only" preload="none" onPlay={()=>{setPlayingId(audioEntryId.current);void event('audio_started',{text_id:audioEntryId.current,review_draft:true});}} onPause={()=>setPlayingId(null)} onEnded={()=>{setPlayingId(null);void event('audio_ended',{text_id:audioEntryId.current,review_draft:true});}} onError={()=>{setPlayingId(null);setAudioMessage(locale === 'zh' ? '声音暂时无法读取，请重听。' : 'Audio is unavailable. Please try listening again.');}}/>
 
     <a className="skip-link" href="#main-content" onClick={e=>{e.preventDefault();document.getElementById('main-content')?.focus();}}>{locale === 'zh' ? '跳到主要内容' : 'Skip to content'}</a>
     <header className="site-header">
       <Brand locale={locale} onClick={() => navigate('map')} />
       <nav className="main-nav" aria-label={locale === 'zh' ? '主导航' : 'Main navigation'}>
+        <button className={view === 'about' ? 'active' : ''} aria-current={view === 'about' ? 'page' : undefined} onClick={() => navigate('about')}><Info size={18}/>{locale === 'zh' ? '介绍' : 'About'}</button>
         <button className={view === 'map' || stationIds.includes(view as StationId) ? 'active' : ''} aria-current={view === 'map' || stationIds.includes(view as StationId) ? 'page' : undefined} onClick={() => navigate('map')}><Compass size={18}/>{locale === 'zh' ? '探索' : s.map}</button>
         <button className={view === 'review' ? 'active' : ''} aria-current={view === 'review' ? 'page' : undefined} onClick={() => navigate('review')}><BookOpen size={18}/>{s.review}</button>
-        <button className={view === 'about' ? 'active' : ''} aria-current={view === 'about' ? 'page' : undefined} onClick={() => navigate('about')}><Info size={18}/>{locale === 'zh' ? '介绍' : 'About'}</button>
       </nav>
-      <div className="header-tools"><button className="language-button" disabled={savingPreferences} onClick={() => void preferences({locale: locale === 'zh' ? 'en' : 'zh'})} aria-label={locale === 'zh' ? 'Switch to English' : '切换为中文'}><Globe2 size={17}/><span>{locale === 'zh' ? 'EN' : '中文'}</span></button><span className="tool-divider"/><button className="icon-button" onClick={() => {stopTeachingAudio();setPanel('settings'); setStopSignal(n => n + 1);}} aria-label={s.settings}><Settings2 size={20}/></button></div>
+      <div className="header-tools">{onSignIn && <div className="account-control"><button className="account-button" disabled={busy || authBusy || savingPreferences || recordingPhase === 'processing'} aria-label={accountName ? (locale === 'zh' ? `账号：${accountName}` : `Account: ${accountName}`) : (locale === 'zh' ? '登录或注册' : 'Sign in or register')} aria-expanded={accountName ? accountOpen : undefined} onClick={()=>requestAccount(accountName ? 'menu' : 'login')}><UserRound size={18}/><span>{accountName || (locale === 'zh' ? '登录' : 'Sign in')}</span></button>{accountOpen && accountName && <div className="account-menu" role="group" aria-label={locale === 'zh' ? '账号选项' : 'Account options'}><p>{locale === 'zh' ? '已登录' : 'Signed in as'}<strong>{accountName}</strong></p><button className="secondary" disabled={busy || authBusy || savingPreferences} onClick={()=>requestAccount('logout')}><LogOut size={17}/>{locale === 'zh' ? '退出登录' : 'Sign out'}</button><button className="text-button" onClick={()=>setAccountOpen(false)}>{s.close}</button></div>}</div>}<button className="language-button" disabled={savingPreferences} onClick={() => void preferences({locale: locale === 'zh' ? 'en' : 'zh'})} aria-label={locale === 'zh' ? 'Switch to English' : '切换为中文'}><Globe2 size={17}/><span>{locale === 'zh' ? 'EN' : '中文'}</span></button><span className="tool-divider"/><button className="icon-button" onClick={() => {stopTeachingAudio();setPanel('settings'); setStopSignal(n => n + 1);}} aria-label={s.settings}><Settings2 size={20}/></button></div>
     </header>
     <main id="main-content" tabIndex={-1}>
+      {authError && <div className="error-banner" role="alert"><CircleHelp size={18}/><span>{authError}</span></div>}
       {error && <div className="error-banner" role="alert"><CircleHelp size={18}/><span>{error}</span><button onClick={() => { if(!session) void loadSession(); else if(lastRequest.current) void submit(undefined, true); else setError(''); }}>{lastRequest.current || !session ? s.retry : s.close}</button></div>}
       {view === 'map' && <div className="map-page page-shell">
         <section className="page-heading"><div><div className="eyebrow"><span className="tiny-line"/>{s.eyebrow}</div><h1>{s.title}</h1><p>{s.subtitle}</p></div><div className="journey-meter"><div className="journey-meter-top"><span>{s.progress}</span><strong>{completeCount}<small> / 4</small></strong></div><div className="progress-pips">{stationIds.map(id => <span key={id} className={session?.completed_station_ids.includes(id) ? 'done' : ''}/>)}</div></div></section>
@@ -468,7 +488,7 @@ export default function App() {
 
       </div>}
 
-      {view === 'about' && <AboutPage locale={locale} hasProgress={Boolean(session?.attempts.length || completeCount)} onExplore={()=>navigate('map')}/>}
+      {view === 'about' && <AboutPage locale={locale} hasProgress={Boolean(session?.attempts.length || completeCount)} onExplore={()=>navigate('map')} accountName={accountName} onSignIn={onSignIn ? ()=>requestAccount('login') : undefined}/>}
 
       {view === 'nanxiang' && <div className="scene-page r1-scene-page page-shell">
         <div className="scene-topline"><button className="text-button" onClick={()=>navigate('map')}><ChevronLeft size={18}/>{s.back}</button><span className="scene-breadcrumb">YU GARDEN <span>/</span> 03 · NANXIANG</span><button className="text-button" onClick={()=>{stopTeachingAudio();setPanel('skip');setStopSignal(n=>n+1);}} disabled={!attempt || busy || attempt.status === 'completed'}>{s.leave}<ArrowUpRight size={16}/></button></div>
@@ -562,7 +582,7 @@ export default function App() {
       {panel === 'units' && <><div className="unit-baskets"><ServingIllustration/><strong>1 {s.serving}</strong></div><p className="intro-description">{s.unitText}</p><button className="primary full" onClick={() => setPanel(null)}>{s.understood}<Check size={18}/></button></>}
       {import.meta.env.DEV && panel === 'about' && <><span className="preview-badge">{s.preview}</span><p className="intro-description">{s.aboutText}</p><p className="dialog-description">{s.aboutSpeech}</p>{loggingGap && <p className="sample-error">{locale === 'zh' ? '部分帮助记录未能保存，练习统计可能不完整。' : 'Some help events were not saved; practice statistics may be incomplete.'}</p>}<button className="secondary full" onClick={() => navigate('design')}>{s.design}<ArrowRight size={18}/></button></>}
       {panel === 'skip' && <><p className="intro-description">{s.skipText}</p><div className="dialog-actions"><button className="secondary" onClick={() => setPanel(null)}>{s.keep}</button><button className="primary" disabled={busy} onClick={() => void skip()}>{s.skipConfirm}<ArrowRight size={18}/></button></div></>}
-      {panel === 'leaveRecording' && <><p className="intro-description">{s.leaveRecordingText}</p><div className="dialog-actions"><button className="secondary" onClick={() => setPanel(null)}>{s.keep}</button><button className="primary" onClick={() => {setRecordingDraft(false); navigate(destination.current, true);}}>{s.leaveAnyway}<ArrowRight size={18}/></button></div></>}
+      {panel === 'leaveRecording' && <><p className="intro-description">{s.leaveRecordingText}</p><div className="dialog-actions"><button className="secondary" onClick={() => setPanel(null)}>{s.keep}</button><button className="primary" onClick={() => {const action=accountDestination.current; accountDestination.current=null; setRecordingDraft(false); setRecorderReset(value=>value + 1); setPanel(null); if(action) finishAccountAction(action); else navigate(destination.current, true);}}>{s.leaveAnyway}<ArrowRight size={18}/></button></div></>}
     </Dialog>}
   </div>;
 }

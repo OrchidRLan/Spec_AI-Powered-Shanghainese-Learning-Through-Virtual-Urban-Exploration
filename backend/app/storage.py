@@ -60,6 +60,29 @@ class Database:
                     response TEXT NOT NULL, created_at TEXT NOT NULL,
                     PRIMARY KEY(attempt_id, request_id)
                 );
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY, username TEXT NOT NULL, username_key TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL, session_id TEXT NOT NULL REFERENCES sessions(id),
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS auth_tokens (
+                    token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+                    expires_at REAL NOT NULL, created_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS account_sessions (
+                    user_id TEXT NOT NULL REFERENCES users(id), session_id TEXT NOT NULL REFERENCES sessions(id),
+                    PRIMARY KEY(user_id, session_id)
+                );
+                CREATE TABLE IF NOT EXISTS guest_tokens (
+                    token_hash TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES sessions(id),
+                    expires_at REAL NOT NULL, created_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS guest_sessions (
+                    session_id TEXT PRIMARY KEY REFERENCES sessions(id), expires_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS auth_rate_limits (
+                    bucket TEXT PRIMARY KEY, window_started REAL NOT NULL, count INTEGER NOT NULL
+                );
             """)
 
     @contextmanager

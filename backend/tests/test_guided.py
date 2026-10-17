@@ -6,6 +6,7 @@ import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
+from auth_helpers import start_guest
 
 from app.main import create_app, now
 from app.storage import encode
@@ -14,7 +15,7 @@ from app.storage import encode
 @pytest.fixture
 def client(tmp_path):
     with TestClient(create_app(str(tmp_path / "guided.db"))) as browser:
-        browser.get("/api/session")
+        start_guest(browser)
         yield browser
 
 
@@ -85,7 +86,7 @@ def test_result_waits_without_changing_order_prompt_or_summary_and_survives_rest
     assert assessed["summary_revision"] is None
     assert assessed["practice"]["step_id"] == attempt["practice"]["step_id"]
     with TestClient(create_app(client.app.state.database.path)) as reopened:
-        reopened.cookies.update(client.cookies)
+        reopened.headers.update({"X-Guest-Token": client.headers["X-Guest-Token"]})
         recovered = reopened.get(f"/api/attempts/{attempt['id']}").json()
         assert recovered == assessed
         advanced = advance(reopened, recovered)
@@ -236,7 +237,7 @@ def test_asr_original_and_session_ownership_enforced(client):
     body = {"request_id": str(uuid4()), "expected_revision": attempt["revision"], "operation": "evaluate", "asr_request_id": asr_id, "text": "小笼"}
     assert client.post(path, json=body).json()["detail"]["code"] == "original_transcript_required"
     with TestClient(client.app) as other:
-        other.get("/api/session")
+        start_guest(other)
         assert other.get(f"/api/attempts/{attempt['id']}").status_code == 404
         theirs = select(other, start(other), item="xiaolongbao")
         assert other.post(f"/api/attempts/{theirs['id']}/practice", json={**body, "expected_revision": theirs["revision"]}).json()["detail"]["code"] == "asr_result_required"

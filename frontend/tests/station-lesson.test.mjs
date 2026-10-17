@@ -36,7 +36,7 @@ function makeAttempt(station = 'restaurant', changes = {}, lessonChanges = {}) {
     turns: [], created_at: '', updated_at: '', ...changes,
     lesson: { step: first.id, step_id: `${station}-${first.id}-1`, target: first.options[0].id,
       answers: {}, result: null, can_choose: false, listening: station === 'candy' ? {
-        played: false, text_revealed: false, introduction_text_id: null, audio_url: '/audio/test-introduction.wav',
+        played: false, text_revealed: false, introduction_text_id: null, audio_url: '/api/attempts/attempt-candy/introduction/audio',
       } : null, ...changes.lesson, ...lessonChanges },
   };
 }
@@ -63,6 +63,7 @@ function completedResponse(attempt, requestId) {
 }
 function harness(options = {}) {
   const slots = []; const effects = []; const requests = []; const reads = [];
+  const audioRequests = []; const revokedUrls = []; const createdUrls = [];
   const attempts = []; const busy = []; const drafts = []; const phases = []; const events = [];
   const timers = new Map(); let nextTimer = 0;
   const sessionStorage = options.sessionStorage ?? storage();
@@ -95,6 +96,10 @@ function harness(options = {}) {
   const context = {
     content, ...components, useState, useRef, useEffect, ApiError, AbortController, DOMException, crypto, sessionStorage,
     document: { getElementById: () => null },
+    URL: { createObjectURL: () => {const url=`blob:introduction-${createdUrls.length}`;createdUrls.push(url);return url;}, revokeObjectURL: url => revokedUrls.push(url) },
+    assertCurrentAuthResponse: () => {},
+    authFetch: async (path, init) => { audioRequests.push({path,init}); reads.push(path); if(options.audioResponse) return value(options.audioResponse,path,init); return {ok:true,blob:async()=>new Blob(['audio'])}; },
+    Blob,
     React: { createElement: (type, attributes, ...children) => {
       if (typeof type === 'function' && type.name === 'Toggle') return type(attributes);
       if (type === 'audio' && attributes.ref) attributes.ref.current = audio;
@@ -149,7 +154,7 @@ function harness(options = {}) {
   const action = name => find(node => node.props?.['data-lesson-action'] === name);
   flush();
   return {
-    requests, reads, attempts, busy, drafts, phases, events, sessionStorage, audio, find, action, textOf: text, ApiError,
+    requests, reads, attempts, busy, drafts, phases, events, sessionStorage, audio, audioRequests, createdUrls, revokedUrls, find, action, textOf: text, ApiError,
     get text() { return text(); }, get attempt() { return props.attempt; },
     get recorder() { return find(node => node.type === components.Recorder)?.props; },
     get result() { return find(node => node.props?.['data-testid'] === 'lesson-result'); },
@@ -541,4 +546,14 @@ test('completed station illustrations retain the speaking pose during their clos
     assert.equal(runtime.StationScene({ station, completed: true, pose: 'speaking' }).props['data-pose'], 'speaking');
     assert.equal(runtime.StationScene({ station, completed: true, pose: 'idle' }).props['data-pose'], 'packed');
   }
+});
+
+test('candy introduction fetches authenticated bytes without unlocking practice until playback ends',async t=>{
+  const h=harness({station:'candy'});t.after(()=>h.dispose());h.click('listen');await h.settle();assert.equal(h.audioRequests.length,1);assert.equal(h.audioRequests[0].path,'/api/attempts/attempt-candy/introduction/audio');assert.match(h.audio.src,/^blob:/);assert.equal(h.operations('listened').length,0);assert.equal(h.recorder,undefined);
+  h.audioEvent('onPlay');assert.equal(h.operations('listened').length,0);h.audioEvent('onEnded');await h.settle();assert.equal(h.operations('listened').length,1);
+});
+
+test('cancelling an introduction download prevents late playback and releases blob URLs on replay or unmount',async t=>{
+  const response=deferred();const h=harness({station:'candy',audioResponse:response});t.after(()=>h.dispose());h.click('listen');await h.settle();h.update({stopSignal:1});assert.equal(h.audioRequests[0].init.signal.aborted,true);response.resolve({ok:true,blob:async()=>new Blob(['audio'])});await h.settle();assert.equal(h.audio.playCalls,0);assert.equal(h.createdUrls.length,0);assert.equal(h.operations('listened').length,0);
+  const replay=harness({station:'candy'});replay.click('listen');await replay.settle();const first=replay.audio.src;replay.click('listen');await replay.settle();assert.ok(replay.revokedUrls.includes(first));const second=replay.audio.src;replay.dispose();assert.ok(replay.revokedUrls.includes(second));
 });
