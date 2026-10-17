@@ -13,18 +13,20 @@ const confirmationManifest = JSON.parse(await readFile(new URL('../../content/au
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const stationContentData = JSON.parse(await readFile(new URL('../../content/batch-bc.json', import.meta.url), 'utf8'));
 const jsonDependencies = {};
-const files = ['lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'lib/orderConfirmation.ts', 'lib/stationContent.ts', 'App.tsx'];
+const componentSource = await readFile(new URL('../src/components/AboutPage.tsx', import.meta.url), 'utf8');
+const files = ['components/Toggle.tsx', 'components/AboutPage.tsx', 'lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'lib/orderConfirmation.ts', 'lib/stationContent.ts', 'App.tsx'];
 const executable = (await Promise.all(files.map(async file => {
   let source = await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8');
   if (file === 'lib/stationContent.ts') source = source.replace(/\bcontent\b/g, 'stationContentData');
   else for (const match of source.matchAll(/^import (\w+) from '([^']+\.json)';/gm)) {
     jsonDependencies[match[1]] = JSON.parse(await readFile(new URL(match[2], new URL(`../src/${file}`, import.meta.url)), 'utf8'));
   }
+  source = source.replaceAll('import.meta.env.DEV', 'developmentMode');
   const transformed = await transformWithOxc(source, file, { jsx: { runtime: 'classic' } });
   return transformed.code.replace(/^import\b[\s\S]*?;\n/gm, '')
     .replace(/export default function /g, 'function ').replace(/export (?=(?:function|const) )/g, '');
 }))).join('\n');
-const icons = appSource.match(/import \{([^}]+)\} from 'lucide-react'/)[1].split(',').map(name => name.trim());
+const icons = [...new Set([appSource, componentSource].flatMap(source => source.match(/import \{([^}]+)\} from 'lucide-react'/)[1].split(',').map(name => name.trim())))];
 const entries = [...content.dialogues, ...content.expressions, ...content.supportTerms];
 const entry = id => entries.find(value => value.id === id);
 
@@ -55,12 +57,12 @@ function harness(options = {}) {
   const slots = []; const effects = []; const browserEvents = new Map(); const timers = new Map();
   let nextTimer = 0;
   let cursor = 0; let dirty = true; let tree; let disposed = false;
-  const requests = []; const reads = []; const sessionStorage = options.sessionStorage ?? storage();
+  const requests = []; const reads = []; const preferenceRequests = []; const sessionStorage = options.sessionStorage ?? storage();
   const localStorage = options.localStorage ?? storage({ 'shanghai-review-autovoice': 'off' });
   const attempt = options.attempt ?? makeAttempt();
   const serverSession = {
     id: 'session-r2', locale: options.locale ?? 'en', show_romanization: options.romanization ?? true, reduced_motion: false,
-    content_version: content.contentVersion, rule_version: 'test',
+    content_version: options.contentVersion ?? content.contentVersion, rule_version: 'test',
     attempts: options.attempts ?? (options.completed && attempt.status !== 'completed'
       ? [makeAttempt({ id: 'previous-completed', status: 'completed' }), attempt] : [attempt]),
     completed_station_ids: options.completedStationIds ?? (options.completed ? ['nanxiang'] : []), services: {},
@@ -100,16 +102,22 @@ function harness(options = {}) {
     }
   }
   const context = {
-    content, manifest, confirmationContent, confirmationManifest, stationContentData, ...jsonDependencies, ...components, useState, useRef, useEffect,
+    developmentMode: options.development ?? true, content, manifest, confirmationContent, confirmationManifest, stationContentData, ...jsonDependencies, ...components, useState, useRef, useEffect,
     React: { createElement: (type, attributes, ...children) => {
+      if (typeof type === 'function' && ['Toggle', 'AboutPage'].includes(type.name)) return type({ ...attributes, children });
       if (type === 'audio' && attributes.ref) attributes.ref.current = audio;
       return { type, props: { ...attributes, children } };
     } },
     window, localStorage, sessionStorage,
     document: { documentElement: { lang: '', dataset: {} }, title: '', getElementById: () => null },
     stopAllAudio: () => audio.pause(), requestAnimationFrame: callback => callback(),
-    api: async path => {
+    api: async (path, init) => {
       reads.push(path);
+      if (path === '/session' && init?.method === 'PATCH') {
+        const change = JSON.parse(init.body); preferenceRequests.push(change);
+        if (options.preferencesResponse) return responseValue(options.preferencesResponse, change);
+        Object.assign(serverSession, change); return { ...serverSession };
+      }
       if (path === '/session') return serverSession;
       if (path === '/services') return options.servicesResponse?.promise ?? { asr: { enabled: options.asrEnabled ?? true } };
       if (path === `/attempts/${attempt.id}`) return options.attemptResponse ? responseValue(options.attemptResponse, path) : attempt;
@@ -119,6 +127,7 @@ function harness(options = {}) {
     post: async (path, body, signal) => {
       requests.push({ path, body, signal });
       if (path === '/events') return {};
+      if (path === '/session/new' && options.newSessionResponse) return responseValue(options.newSessionResponse, path, body);
       if (path === '/attempts' && options.beginResponse) return responseValue(options.beginResponse, path, body);
       if (path.endsWith('/cancel') && options.cancelResponse) return responseValue(options.cancelResponse, path, body);
       if (path.endsWith('/turns')) {
@@ -152,7 +161,7 @@ function harness(options = {}) {
   const find = predicate => elements().find(predicate);
   flush();
   return {
-    requests, reads, audio, sessionStorage, localStorage,
+    requests, reads, preferenceRequests, audio, sessionStorage, localStorage,
     get turnRequests() { return requests.filter(request => request.path.endsWith('/turns')); },
     get text() { return text(); },
     get hash() { return window.location.hash; },
@@ -884,4 +893,93 @@ test('turning off host audio after Nanxiang completion is queued cancels its pen
   h.runTimers(); await h.settle();
   assert.equal(h.audio.playCalls, 0);
   assert.equal(h.localStorage.getItem('shanghai-review-autovoice'), 'off');
+});
+
+test('About opens directly in both languages and its CTA preserves the current journey', async t => {
+  for (const locale of ['zh', 'en']) for (const hasProgress of [false, true]) {
+    const h = harness({ hash: '#about', locale, attempts: hasProgress ? [makeAttempt()] : [] });
+    t.after(() => h.dispose()); await h.settle();
+    assert.match(h.title, locale === 'zh' ? /介绍$/ : /About$/);
+    assert.ok(h.find(node => node.props?.id === 'about-title'));
+    const stops = h.find(node => node.props?.className === 'about-stop-grid').props.children.flat(Infinity).filter(Boolean);
+    assert.equal(stops.length, 4);
+    assert.ok(h.find(node => node.props?.id === 'about-how-title'));
+    assert.ok(h.find(node => node.props?.id === 'about-support-title'));
+    assert.doesNotMatch(h.text, /Interface state book|界面状态册|Completed|已完成/);
+    h.click(locale === 'zh' ? hasProgress ? '继续探索' : '开始探索' : hasProgress ? 'Continue exploring' : 'Start exploring');
+    await h.settle();
+    assert.equal(h.hash, 'map');
+    assert.equal(h.find(node => node.props?.className === 'walking-note'), undefined);
+    assert.equal(h.requests.length, 0, 'About never creates an attempt, resets a session or records learning events');
+    h.hashChange('#nanxiang'); await h.settle();
+    assert.equal(Boolean(h.tab('speak')), hasProgress, 'the existing attempt remains available');
+  }
+});
+
+test('the three main destinations support direct links and browser back/forward', async t => {
+  const h = harness({ hash: '', attempts: [] }); t.after(() => h.dispose()); await h.settle();
+  assert.ok(h.find(node => node.props?.className === 'map-page page-shell'), 'the default stays Explore');
+  const nav = h.find(node => node.props?.className === 'main-nav');
+  assert.equal(nav.props.children.flat(Infinity).filter(Boolean).length, 3);
+  h.click('About'); assert.equal(h.hash, 'about');
+  h.click('Review'); assert.equal(h.hash, 'review');
+  h.hashChange('#about'); assert.ok(h.find(node => node.props?.id === 'about-title'));
+  h.hashChange('#review'); assert.ok(h.find(node => node.props?.className === 'review-stop-grid'));
+  h.hashChange('#map'); assert.ok(h.find(node => node.props?.className === 'map-page page-shell'));
+  assert.equal(h.requests.length, 0);
+});
+
+test('About navigation keeps the recording leave guard and requested destination', async t => {
+  const h = harness(); t.after(() => h.dispose()); await h.settle();
+  h.practice('NX-Q1'); h.recorder.onDraftChange(true); await h.settle();
+  h.click('About'); await h.settle();
+  assert.equal(h.hash, '#nanxiang');
+  assert.equal(h.find(node => node.props?.id === 'about-title'), undefined);
+  h.click('Leave and discard recording'); await h.settle();
+  assert.equal(h.hash, 'about');
+  assert.ok(h.find(node => node.props?.id === 'about-title'));
+  assert.equal(h.turnRequests.length, 0);
+});
+
+test('the state book remains a development-only direct route with no public footer entry', async t => {
+  for (const development of [false, true]) {
+    const h = harness({ hash: '#design', development }); t.after(() => h.dispose()); await h.settle();
+    assert.equal(Boolean(h.find(node => node.props?.className === 'design-page page-shell')), development);
+    assert.equal(Boolean(h.find(node => node.props?.className === 'map-page page-shell')), !development);
+    const footer = h.find(node => node.props?.className === 'site-footer');
+    assert.doesNotMatch(h.textOf(footer), /Interface state book|界面状态册/);
+    h.hashChange('#about'); await h.settle(); h.hashChange('#design'); await h.settle();
+    assert.equal(h.hash, development ? 'design' : 'map');
+  }
+});
+
+test('Settings has no journey reset and its real switches synchronize shared lesson preferences', async t => {
+  const result = deferred();
+  const h = harness({ preferencesResponse: result }); t.after(() => h.dispose()); await h.settle();
+  h.click(node => node.props?.['aria-label'] === 'Settings');
+  assert.equal(h.find(node => node.type === 'button' && h.textOf(node) === 'Start a new journey'), undefined);
+  const settingSwitch = label => h.find(node => node.props?.role === 'switch' && node.props?.['aria-label'] === label && !h.textOf(node));
+  assert.equal(settingSwitch('Show romanization').props['aria-checked'], true);
+  h.click(node => node === settingSwitch('Show romanization'));
+  assert.equal(settingSwitch('Show romanization').props.disabled, true, 'saving prevents duplicate preference requests');
+  assert.equal(settingSwitch('Reduce motion').props.disabled, true);
+  assert.deepEqual(h.preferenceRequests, [{ show_romanization: false }]);
+  result.resolve({ locale: 'en', show_romanization: false, reduced_motion: false }); await h.settle();
+  assert.equal(settingSwitch('Show romanization').props.disabled, false);
+  assert.equal(settingSwitch('Show romanization').props['aria-checked'], false);
+  assert.equal(h.find(node => node.props?.role === 'switch' && h.textOf(node) === 'Show romanization').props['aria-checked'], false, 'the inline Nanxiang switch agrees');
+  h.hashChange('#restaurant'); await h.settle(); assert.equal(h.lesson.romanization, false);
+  assert.equal(h.requests.find(request => request.path === '/session/new'), undefined);
+});
+
+test('legacy lesson recovery still requires explicit confirmation before creating a new session', async t => {
+  const newSession = { id: 'new-version', content_version: content.contentVersion, locale: 'en', attempts: [], completed_station_ids: [], show_romanization: true, reduced_motion: false };
+  const h = harness({ contentVersion: 'old-version', newSessionResponse: newSession }); t.after(() => h.dispose()); await h.settle();
+  h.click('Start a new journey'); await h.settle();
+  assert.equal(h.requests.find(request => request.path === '/session/new'), undefined);
+  h.click(node => node.type === 'button' && node.props.className === 'primary' && h.textOf(node) === 'Start a new journey');
+  await h.settle(); assert.equal(h.requests.filter(request => request.path === '/session/new').length, 1);
+  assert.equal(h.hash, 'map');
+  h.click(node => node.props?.['aria-label'] === 'Settings');
+  assert.equal(h.find(node => node.type === 'button' && h.textOf(node) === 'Start a new journey'), undefined);
 });

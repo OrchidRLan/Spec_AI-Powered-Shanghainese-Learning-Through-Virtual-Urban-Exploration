@@ -1,5 +1,7 @@
 .site-header .brand.brand-pavilion{flex:0 0 auto;min-width:0;padding:0}
-.brand-pavilion .brand-lockup{display:block;width:206px;height:auto;max-height:92px;object-fit:contain}
+.brand-pavilion .brand-lockup{display:flex;align-items:center;gap:10px;height:84px}
+.brand-pavilion .brand-symbol{display:block;width:84px;height:84px;object-fit:contain}
+.brand-pavilion .brand-wordmark{display:block;width:110px;height:auto;overflow:hidden}
 .brand-pavilion .brand-compact{display:none}
 @media(max-width:680px){
   .brand-pavilion .brand-lockup{display:none}

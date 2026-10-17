@@ -2,7 +2,9 @@
 
 在豫园的四个虚拟地点练习日常上海话。批次 A 修订 4 已通过用户验收，**B+C：四站完整实现**已完成开发与工程检查，加入老饭店、梨膏糖商店和湖心亭茶楼，等待用户体验验收。四站保留固定题目、正误反馈、点击继续与完成后复习；语言与声音仍是供审阅的候选材料。范围见 [B+C 计划](docs/Batch-BC-plan.md)，实际检查见 [B+C 验收记录](docs/Batch-BC-acceptance.md)。
 
-最新修订 [批次 2 修改 1](docs/Batch-2-revision-1.md) 已实现结束语播放修复、四站状态总览与逐句双速复习，并接入已选“园亭对话”Logo；检查与截图见 [修订验收](docs/Batch-2-revision-1-acceptance.md)。
+前次修订 [批次 2 修改 1](docs/Batch-2-revision-1.md) 已实现结束语播放修复、四站状态总览与逐句双速复习，并接入已选“园亭对话”Logo；检查与截图见 [修订验收](docs/Batch-2-revision-1-acceptance.md)。
+
+最新 [批次 2 修改 2](docs/Batch-2-revision-2.md) 新增双语介绍页，精简设置并统一开关，调整桌面 Logo 间距；检查与截图见 [修改 2 验收](docs/Batch-2-revision-2-acceptance.md)。
 
 ![修订 4 桌面地图与地点卡](docs/design/previews/revision-4/map-desktop-en.jpg)
 
@@ -30,9 +32,10 @@ npm run dev
 - `/#teahouse`：评价茶并道谢，自然结束。
 - `/#nanxiang`：逐题交流、说话/选择回应、内嵌语言提示、订单核对与完成。
 - `/#review`：四站状态总览，未开始时也可访问；点击已完成站点进入 `/#review/{station}`，每句可直接播放标准速/慢速，重练不失去复习资格。
-- `/#design`：录音、等待、失败、核对、完成、学习支持的静态状态册，**不写入任务进度**。
+- `/#about`：项目介绍、四站内容、体验流程及随手帮助，开始／继续探索保留已有进度。
+- `/#design`：仅开发环境可直达的静态状态册，无公开导航入口，**不写入任务进度**；生产构建显示地图。
 
-本地 SQLite 数据在 `backend/data/`，刷新与重启后恢复同一浏览器 Cookie 会话。设置中的「开始新的探索」会在明确确认后切换到新匿名会话，保留偏好但不转移旧进度；数据库、录音、诊断文件和 Key 不提交 Git。
+本地 SQLite 数据在 `backend/data/`，刷新与重启后恢复同一浏览器 Cookie 会话。设置保留语言、注音、减少动态和店员声音，不提供普通重开入口。旧版本恢复提示仍可在明确确认后切换到新匿名会话，保留偏好但不转移旧进度；数据库、录音、诊断文件和 Key 不提交 Git。
 
 ## 当前可用范围
 
@@ -91,6 +94,7 @@ npm run build:release
 | [B+C 场景设计](docs/design/Batch-BC-design.md) | 三站场景、角色、物件与响应式状态 |
 | [B+C 验收记录](docs/Batch-BC-acceptance.md) | 三站实现、工程检查、画面与未验证项 |
 | [批次 2 修改 1](docs/Batch-2-revision-1.md) / [验收](docs/Batch-2-revision-1-acceptance.md) | 结束语播放、Review 总览/详情及逐句双速、园亭对话 Logo |
+| [批次 2 修改 2](docs/Batch-2-revision-2.md) / [验收](docs/Batch-2-revision-2-acceptance.md) | 独立介绍页、设置精简、统一开关及桌面 Logo 间距 |
 | [内容审核交接](docs/content-review/README.md) | 两位流利使用者可填写的审核资料 |
 | [开发进度](docs/Development-status.md) | 当前状态与下一项工作 |
 | [开发路线](docs/Product-development-roadmap.md) | 批次与十步的原始范围 |

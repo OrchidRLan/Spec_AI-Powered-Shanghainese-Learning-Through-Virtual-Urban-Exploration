@@ -29,3 +29,7 @@
 > Preserve exact horizontal lockup: the approved pavilion icon on the left, Chinese wordmark 沪语漫游 on the right with English A little Shanghai below it. Keep original lettering, precise characters and relative size/spacing. Remove excess outer canvas so the entire lockup nearly fills a wide horizontal transparent image with only a small consistent safety margin. Do not shift or rearrange the logo parts.
 
 两个请求均设置 `transparent_background: true`。生产文件复制到仓库，应用不依赖个人生成缓存目录。
+
+## 修改 2 的网页排版
+
+2026-10-17 [批次 2 修改 2](../../Batch-2-revision-2.md) 将桌面组合改为独立图标与字标布局。图标复用透明纯图标；字标通过 SVG 视窗展示原横版 PNG 的文字区域，保持原像素、文字和配色。两者独立留出间距，手机紧凑版保持。未改写或重新生成任何 PNG；这次为网页布局调整。

@@ -6,6 +6,7 @@ import { reviewClipFor } from '../lib/reviewAudio';
 import { stationPlanFor, stationEntryFor, stationSummary, type StationPlan } from '../lib/stationContent';
 import LearningText, { type LearningEntry } from './LearningText';
 import Recorder, { type RecorderPhase } from './Recorder';
+import Toggle from './Toggle';
 import { StationScene, DishIllustration, CandyIllustration } from './StationScenes';
 import type { ScenePose } from './SceneArt';
 
@@ -15,7 +16,7 @@ const copy = {
 };
 type Pending = { requestId: string; operation: LessonRequest['operation']; stepId: string; transcript: string | null; expectedRevision: number; target: string | null };
 type Props = {
-  station: LessonStationId; attempt: Attempt | null; locale: Locale; romanization: boolean; asrEnabled: boolean; servicesReady: boolean; disabled: boolean; stopSignal: number; audioSpeed: 1 | 0.75; autoVoice: boolean;
+  station: LessonStationId; attempt: Attempt | null; locale: Locale; romanization: boolean; savingPreferences?: boolean; asrEnabled: boolean; servicesReady: boolean; disabled: boolean; stopSignal: number; audioSpeed: 1 | 0.75; autoVoice: boolean;
   onAttempt: (attempt: Attempt) => void; onStart: (restart?: boolean) => void; onBack: () => void; onSkip: () => void; onReview: () => void;
   onRomanization: () => void; onSpeed: (speed: 1 | 0.75) => void; onBusyChange: (busy: boolean) => void; onDraftChange: (draft: boolean) => void; onPhaseChange: (phase: RecorderPhase) => void; onEvent: (name: string) => void;
 };
@@ -232,7 +233,7 @@ function ActiveLesson(props: Props & { attempt: Attempt; plan: StationPlan }) {
         <div className="r1-turn-heading"><span className="overline">{c.host}</span><span className="review-label">{c.draft}</span></div>
         {hostEntry && <div className="r1-question"><LearningText entry={hostEntry} locale={locale} romanization={romanization}/>{listenButton(hostEntry)}</div>}
         {lesson.step === 'confirm' && !completed && summary && <div className="bc-confirm-summary"><span>{c.summary}</span><strong>{summary}</strong></div>}
-        <div className="r1-reading-tools"><button className="text-button" aria-pressed={romanization} onClick={props.onRomanization}><span className={`toggle ${romanization ? 'on' : ''}`}/>{c.romanization}</button><div className="r2-speed" role="group" aria-label={locale === 'zh' ? '播放速度' : 'Playback speed'}>{([1,0.75] as const).map(speed=><button key={speed} aria-pressed={audioSpeed === speed} disabled={captureActive} onClick={()=>props.onSpeed(speed)}>{speed === 1 ? c.normal : c.slow}<small>{speed}×</small></button>)}</div></div>
+        <div className="r1-reading-tools"><Toggle checked={romanization} disabled={props.savingPreferences} onChange={props.onRomanization} label={c.romanization} showLabel/><div className="r2-speed" role="group" aria-label={locale === 'zh' ? '播放速度' : 'Playback speed'}>{([1,0.75] as const).map(speed=><button key={speed} aria-pressed={audioSpeed === speed} disabled={captureActive} onClick={()=>props.onSpeed(speed)}>{speed === 1 ? c.normal : c.slow}<small>{speed}×</small></button>)}</div></div>
         {completed ? <div className="r1-completed bc-completed"><CheckCircle2 size={32}/><h2>{c.completed}</h2><p>{plan.completion[locale]}</p><div className="r1-completed-actions r4-completed-actions"><button className="primary" onClick={props.onReview}><BookOpen size={18}/><span>{c.review}</span></button><button className="secondary" onClick={props.onBack}><Compass size={18}/><span>{c.explore}</span></button><button className="text-button" disabled={blocked} onClick={()=>props.onStart(true)}><RotateCcw size={18}/><span>{c.again}</span></button></div></div> : <div className="r3-practice" data-lesson-step={lesson.step}>
           <div className="r3-step-heading"><span>{c.step} {stepIndex + 1} / {plan.steps.length}</span><strong>{step.title[locale]}</strong><div aria-hidden="true">{plan.steps.map((value,index)=><i key={value.id} className={index <= stepIndex ? 'done' : ''}/>)}</div></div>
           {unapplied && <aside className="r3-pending" role="status"><strong>{c.unapplied}</strong><p>{unapplied}</p><button className="text-button" onClick={dismissUnapplied}>{c.dismiss}</button></aside>}

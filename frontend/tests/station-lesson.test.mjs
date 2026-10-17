@@ -8,7 +8,7 @@ import { transformWithOxc } from 'vite';
 // deterministic boundaries. No microphone or speech provider is called.
 const content = JSON.parse(await readFile(new URL('../../content/batch-bc.json', import.meta.url), 'utf8'));
 const source = await readFile(new URL('../src/components/StationLesson.tsx', import.meta.url), 'utf8');
-const files = ['lib/stationContent.ts', 'components/StationLesson.tsx'];
+const files = ['lib/stationContent.ts', 'components/Toggle.tsx', 'components/StationLesson.tsx'];
 const executable = (await Promise.all(files.map(async file => {
   const text = await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8');
   const result = await transformWithOxc(text, file, { jsx: { runtime: 'classic' } });
@@ -96,6 +96,7 @@ function harness(options = {}) {
     content, ...components, useState, useRef, useEffect, ApiError, AbortController, DOMException, crypto, sessionStorage,
     document: { getElementById: () => null },
     React: { createElement: (type, attributes, ...children) => {
+      if (typeof type === 'function' && type.name === 'Toggle') return type(attributes);
       if (type === 'audio' && attributes.ref) attributes.ref.current = audio;
       return { type, props: { ...attributes, children } };
     } },
@@ -167,6 +168,26 @@ function harness(options = {}) {
     dispose() { disposed = true; for (const slot of slots) slot?.cleanup?.(); },
   };
 }
+
+test('B+C romanization uses the saved preference and disables its named switch while saving', t => {
+  for (const station of ['restaurant', 'candy', 'teahouse']) for (const locale of ['zh', 'en']) {
+    let changes = 0;
+    const h = harness({ station, locale, props: { onRomanization: () => { changes += 1; } } });
+    t.after(() => h.dispose());
+    const control = () => h.find(node => node.props?.role === 'switch');
+    assert.equal(control().type, 'button');
+    assert.equal(control().props.type, 'button');
+    assert.equal(control().props['aria-label'], locale === 'zh' ? '显示拉丁注音' : 'Show romanization');
+    assert.equal(control().props['aria-checked'], true);
+    control().props.onClick();
+    assert.equal(changes, 1, 'the lesson delegates the change to its shared preference');
+    h.update({ savingPreferences: true });
+    assert.equal(control().props.disabled, true);
+    h.update({ romanization: false, savingPreferences: false });
+    assert.equal(control().props['aria-checked'], false);
+    assert.equal(control().props.disabled, false);
+  }
+});
 
 test('B+C selecting a target saves only the target and waits for speech before continuation', async t => {
   for (const station of ['restaurant', 'teahouse']) {

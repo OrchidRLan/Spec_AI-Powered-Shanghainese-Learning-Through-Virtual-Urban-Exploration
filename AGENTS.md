@@ -12,7 +12,7 @@
 
 ## 2. 文档阅读顺序
 
-当前修订：[批次 2 修改 1](docs/Batch-2-revision-1.md)，已先落盘再实施：结束语自动播放、Review 总览/单站详情及逐句双速、园亭对话 Logo 接入；工程检查见 [修订验收](docs/Batch-2-revision-1-acceptance.md)。此处“批次 2”指 B+C 交付后的本轮用户命名。
+当前修订：[批次 2 修改 2](docs/Batch-2-revision-2.md)，已实现独立 About 介绍页、精简设置、统一开关与桌面 Logo 间距，实际检查见 [修改 2 验收](docs/Batch-2-revision-2-acceptance.md)。前版 [修改 1](docs/Batch-2-revision-1.md) 的结束语、Review 和品牌基线继续有效，工程检查见 [修改 1 验收](docs/Batch-2-revision-1-acceptance.md)。此处“批次 2”指 B+C 交付后的用户命名。
 
 最近交付：[B+C 四站完整实现](docs/Batch-BC-plan.md)，实际工程与浏览器检查见 [B+C 验收记录](docs/Batch-BC-acceptance.md)。用户已通过 A 修订 4；B+C 的代码交付不等于用户验收、语言听审或正式部署。下面 A 修订继续作为交互基线；三站旧草案的自由对话、Type、临时追问和自动推进由合并计划覆盖。
 
