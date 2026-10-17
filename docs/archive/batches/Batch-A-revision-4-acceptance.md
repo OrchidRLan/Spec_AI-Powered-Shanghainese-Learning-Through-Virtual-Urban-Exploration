@@ -1,5 +1,7 @@
 # 批次 A 修订 4：实施与验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。需求基线 [Batch-A-revision-4.md](Batch-A-revision-4.md) 先落盘并提交为 `54f7fe7`，随后实施。本轮完成中英提示精简、完整订单确认句及六条声音、完成按钮统一和地点卡重排。R3 固定四题、识别结果停留与手动继续规则保留。
 
 ## 1. 界面与确认行为
@@ -31,13 +33,13 @@ Chrome 使用独立 `localhost:5174` / 8001 与测试数据库，ASR/LLM/TTS 实
 
 | 截图 | 内容 |
 | --- | --- |
-| [英文手机地点卡](design/previews/revision-4/map-card-mobile-en.jpg) | 独立插画、全宽标题与按钮 |
-| [中文手机地点卡](design/previews/revision-4/map-card-mobile-zh.jpg) | 与英文一致的信息顺序 |
-| [英文 320px 地图](design/previews/revision-4/map-narrow-en.jpg) | 窄屏自然换行与无横向溢出 |
-| [英文桌面地图](design/previews/revision-4/map-desktop-en.jpg) | 地图与重排地点卡整体布局 |
-| [英文桌面确认](design/previews/revision-4/confirm-desktop-en.jpg) | 三份外带完整句与正确结果停留 |
-| [中文手机确认](design/previews/revision-4/confirm-mobile-zh.jpg) | 完整订单、字音对齐与精简后的结果区 |
-| [英文手机完成](design/previews/revision-4/completed-mobile-en.jpg) | 两份堂吃结果与统一的三个按钮 |
+| [英文手机地点卡](../../design/previews/revision-4/map-card-mobile-en.jpg) | 独立插画、全宽标题与按钮 |
+| [中文手机地点卡](../../design/previews/revision-4/map-card-mobile-zh.jpg) | 与英文一致的信息顺序 |
+| [英文 320px 地图](../../design/previews/revision-4/map-narrow-en.jpg) | 窄屏自然换行与无横向溢出 |
+| [英文桌面地图](../../design/previews/revision-4/map-desktop-en.jpg) | 地图与重排地点卡整体布局 |
+| [英文桌面确认](../../design/previews/revision-4/confirm-desktop-en.jpg) | 三份外带完整句与正确结果停留 |
+| [中文手机确认](../../design/previews/revision-4/confirm-mobile-zh.jpg) | 完整订单、字音对齐与精简后的结果区 |
+| [英文手机完成](../../design/previews/revision-4/completed-mobile-en.jpg) | 两份堂吃结果与统一的三个按钮 |
 
 截图是隔离测试数据；悬浮翻译图标来自测试浏览器扩展。尚未执行实体手机、Safari 或完整读屏验收。
 
@@ -45,7 +47,7 @@ Chrome 使用独立 `localhost:5174` / 8001 与测试数据库，ASR/LLM/TTS 实
 
 沿用已配置的阿里云北京 `qwen3-tts-flash` + Jada，真实制作 **6 次，无重试**。六句输入原文合计 84 字符，供应商返回计量 150 字符，按既有记录的目录费率估算 **¥0.012**；未查询实际账单或免费额度。执行上限六次、估算预算 ¥1。六个 WAV 总长 **15.6 秒**，全部仍为 `pending`，常速与 0.75×慢放复用文件。
 
-资源：[确认文字与注音](../content/nanxiang-confirmations-r4.json)、[声音清单](../content/audio-review-r4.json)、[生成与离线校验入口](../scripts/speech-review-r4.py)。生成时冻结输入摘要为 `c878318f6e7118ff99a11ba604f9fbe4ed41a4d009d0a35a79a04797b3863985`，原词句来源为不变的 R2 快照；已有基础教材、声音和真实批准记录未修改。
+资源：[确认文字与注音](../../../content/nanxiang-confirmations-r4.json)、[声音清单](../../../content/audio-review-r4.json)、[生成与离线校验入口](../../../scripts/speech-review-r4.py)。生成时冻结输入摘要为 `c878318f6e7118ff99a11ba604f9fbe4ed41a4d009d0a35a79a04797b3863985`，原词句来源为不变的 R2 快照；已有基础教材、声音和真实批准记录未修改。
 
 本轮可审阅实现已完成，正式语言、注音、连读与声音听审仍待人工完成。没有新增 ASR/LLM 调用、用户录音或生产部署，不把本轮等同于整个批次 A 或步骤 1–4 全部完成。隔离验收服务在收尾关闭，用户自己的开发端口、`.env` 与数据库保留；已有 R3 页面刷新即可使用本轮更新。
 

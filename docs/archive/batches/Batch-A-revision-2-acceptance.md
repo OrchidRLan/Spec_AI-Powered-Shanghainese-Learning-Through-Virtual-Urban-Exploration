@@ -1,5 +1,7 @@
 # 批次 A 修订 2：实施与验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。需求基线 [Batch-A-revision-2.md](Batch-A-revision-2.md) 已先提交并推送为 `ad5f7b5`，随后实施。本文记录真实工程结果，不表示上海话语言审核、真人发音验证或整个批次 A 已完成。
 
 ## 1. 实际交付
@@ -39,12 +41,12 @@
 
 | 截图 | 场景 |
 | --- | --- |
-| [中文手机 Speak](design/previews/revision-2/speak-mobile-zh.jpg) | 一份练习、字音对齐、慢速与自动提交提示 |
-| [英文窄屏 Speak](design/previews/revision-2/speak-mobile-en.jpg) | 三份练习、本地试听、320px 排版 |
-| [一份堂吃完成](design/previews/revision-2/completed-one-here-en.jpg) | 实际一份堂吃摘要与完成后 Review 入口 |
-| [三份外带完成](design/previews/revision-2/completed-three-go-zh.jpg) | 刷新后保存的三份外带结果 |
-| [英文 Review](design/previews/revision-2/review-desktop-en.jpg) | 完成后的英文表达复习 |
-| [中文 Review](design/previews/revision-2/review-desktop-zh.jpg) | 完成后的中文表达复习 |
+| [中文手机 Speak](../../design/previews/revision-2/speak-mobile-zh.jpg) | 一份练习、字音对齐、慢速与自动提交提示 |
+| [英文窄屏 Speak](../../design/previews/revision-2/speak-mobile-en.jpg) | 三份练习、本地试听、320px 排版 |
+| [一份堂吃完成](../../design/previews/revision-2/completed-one-here-en.jpg) | 实际一份堂吃摘要与完成后 Review 入口 |
+| [三份外带完成](../../design/previews/revision-2/completed-three-go-zh.jpg) | 刷新后保存的三份外带结果 |
+| [英文 Review](../../design/previews/revision-2/review-desktop-en.jpg) | 完成后的英文表达复习 |
+| [中文 Review](../../design/previews/revision-2/review-desktop-zh.jpg) | 完成后的中文表达复习 |
 
 截图中的左侧悬浮翻译图标来自测试浏览器扩展，不是应用功能；中文手机全页拼接可能捕获原本位于视口外的跳转链接，实际 DOM 检查该链接处于屏幕外。
 
@@ -54,7 +56,7 @@
 
 实际调用阿里云北京 `qwen3-tts-flash` + Jada **3 次，无重试**，没有新增 ASR/LLM 请求、没有用户录音。API 计量 28 字符，按 0.8 元/万字符目录价估算 **¥0.00224**；未查询账单或免费额度。硬限制最多 3 次、预算 ¥1，生成后 `plan` 为零待生成请求。
 
-当前 20 条对应 18 个唯一文件、总时长按条目计 24.56 秒。新 WAV 在 `frontend/public/audio/review-r2/`，清单为 [audio-review-r2.json](../content/audio-review-r2.json)。全部仍为 `pending`；字音资料、真实语流和慢放听感需用户及语言审核者核对。
+当前 20 条对应 18 个唯一文件、总时长按条目计 24.56 秒。新 WAV 在 `frontend/public/audio/review-r2/`，清单为 [audio-review-r2.json](../../../content/audio-review-r2.json)。全部仍为 `pending`；字音资料、真实语流和慢放听感需用户及语言审核者核对。
 
 ## 5. 交付边界
 

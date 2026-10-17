@@ -1,76 +1,67 @@
-# 批次 A 内容包与人工审核交接
+# 教学内容与声音审核入口
 
-日期：2026-10-17。当前文本版本：`batch-a-r1.2026-10-17.v1`。按 [批次 A 修订 1](../Batch-A-revision-1.md)，先提供可显示、可试听的候选材料，再由用户及实际审校者提出修改。生产发布仍须通过真实审核门槛。
+当前产品规则见 [Product-spec.md](../Product-spec.md)，部署与审核顺序见 [批次 D/E 计划](../Batch-DE-plan.md)。D 允许交付真实标记为待审、待完整验收的部署版本，配套构建流程尚待实现；E 完成教材审核、模型评估和最终验收。
 
-**本次没有完成外部人工语言或读音审核。** 20 条文本已有沪语汉字候选、分组拉丁注音及双语意思，状态全部为 pending。注音有在线查词依据，含单字调标记与明确的未定项；不能把逐字调号当作整句实际连读，也不能把 TTS 生成成功当作自然度批准。中文近似读音和真人参考读法仍为空。
+**当前汉字、拉丁注音和教学样音仍是待审稿。** [独立审核账本](../../content/reviews.json) 的 `reviewers`、`records`、`releaseApprovals` 均为空。代码测试、查词依据、生成成功和文件校验不等于人工语言审核或听审。
 
-## 实际产物
+## 当前材料
 
-| 文件 | 用途与真实状态 |
+| 入口 | 适用范围 |
 | --- | --- |
-| [batch-a.json](../../content/batch-a.json) | 四站双语元数据；E08/E09/E05；NX-N01–12；5 个支持词；28 条正式音频占位；规则例子。20 条文本已有候选和注音，所有批准仍待审 |
-| [types.ts](../../content/types.ts) | 原文字段保持兼容；新增注音方案类型和方案 ID，非空读音不等于获准 |
-| [旧包快照](../../content/versions/batch-a.2026-10-17.v1.json) | 从修订前 Git HEAD 原样保存，供旧会话绑定旧内容，不能静默改绑 |
-| [Pronunciation-draft-r1.md](Pronunciation-draft-r1.md) | 方案、声调、词组分界、实际查词链接、集中存疑项与 20 条逐句审阅表 |
-| [reviews.json](../../content/reviews.json) | 独立审校人、逐阶段决定、发布决定账本。三个数组仍为空，没有虚构签名 |
-| [language-review-sheet.csv](language-review-sheet.csv) | 20 行、34 列；候选汉字/注音/来源已填，最终版本和真实审校栏留空 |
-| [audio-review-sheet.csv](audio-review-sheet.csv) | 28 行正式音频制作与听审表；尚无批准文本、正式文件和听审决定 |
-| [review-record.template.json](review-record.template.json) | 真实审核记录字段模板；不得把示例直接作为批准 |
-| [validate-content.mjs](../../scripts/validate-content.mjs) | 开发允许 pending；正式发布拒绝未审内容、伪批准、陈旧批准和缺文件 |
-| [validate-content.test.mjs](../../content/validate-content.test.mjs) | 发布门槛和本轮 20 条非空候选的工程回归；合成样本不是人工审核 |
+| [batch-a.json](../../content/batch-a.json) | 当前基础包 `batch-a-r3.2026-10-17.v1`：四站元数据、南翔任务及 20 条保留文本；包含仅供历史记录使用的旧台词，并非全部用于当前练习 |
+| [南翔完整确认句](../../content/nanxiang-confirmations-r4.json) | R4 的 6 种完整订单确认候选，覆盖 1–3 份、堂吃／外带；当前最终核对使用对应完整句 |
+| [batch-bc.json](../../content/batch-bc.json) | 老饭店、梨膏糖、湖心亭的独立内容包，共 36 条候选，含固定练习与确认／结束语 |
+| [audio-review-r2.json](../../content/audio-review-r2.json) | 南翔沿用的 20 条常速样音；R3 复用未改字音的 R2 内容，复用关系由专门脚本检查 |
+| [audio-review-r4.json](../../content/audio-review-r4.json) | 6 条南翔完整确认句样音 |
+| [audio-review-bc.json](../../content/audio-review-bc.json) | 三站的 36 条常速样音 |
+| [审核记录模板](review-record.template.json) | 字段示例，仍带 R1 示例版本；填写前必须替换为实际审核对象、版本和证据，不能直接导入作为批准 |
 
-常速审阅样音使用独立 `content/audio-review-r1.json` 清单和 `frontend/public/audio/review-r1/` 素材，由制作流程记录真实文件、时长、哈希、输入和声音配置。实际生成结果以该清单及应用试听页为准。草稿样音不填入正式 `audioClips` 冒充批准；原包的 28 条生产音频仍为 pending。8 条慢速等常速读法确认后制作，不复制常速充当慢速。
+样音清单记录实际文本、文件、来源、配置与哈希；全部保持 `pending` 听审状态。当前慢速为同一文件保音高 0.75× 播放，不能将其写成独立生成并已批准的慢速音频。当前体验同时需要检查常速与慢放效果。
 
-本轮已有 20 条常速审阅样音，共 29.84 秒；已核文件存在和 SHA256，尚未完成流利者听审。可在 [逐句审阅表](Pronunciation-draft-r1.md#4-逐条审阅表) 打开每条文件，[独立清单](../../content/audio-review-r1.json) 记录实际制作来源与输入版本。
+## 审阅时采用的产品规则
 
-## 前端与规则消费约定
+- 四站只使用已设计的问题，不生成临时追问。南翔先选目标再 Speak，商品、数量、用餐方式与完整订单核对逐题进行；不再固定要求两份外带，也不采用一句话填写多个任务步骤的旧流程。
+- 识别后展示原转写与是否符合目标，由用户明确继续才推进；语音失败后的辅助继续不能计为语音正确。其他三站的具体问题以产品规格与当前内容包为准。
+- 汉字和拉丁注音对应显示；界面隐藏声调数字，不增加声调解释。注音默认开启，可隐藏。历史源数据中的调号不代表当前界面要求。
+- 意思与操作按中英文切换。中文近似读音仍为空时不编造，不为英语增加近似读音入口；字典单字音与 TTS 不能证明整句连读正确。
+- 字稿、注音、音频与审核证据必须对应同一实际内容版本。修改后保留旧记录，重新审核受影响材料；不得静默换字后沿用旧批准或旧音频。
 
-- `expressions`、`dialogues`、`supportTerms` 数组和 20 个 ID 保持不变。`hanzi` 与 `segments[].hanzi/pronunciation` 显示沪语审阅稿；`meaning` 只显示当前界面语言。当前稿全有字和注音，不再以空白等待提示代替正文。
-- 拉丁注音默认开并可隐藏；不隐藏汉字和意思。中文近似读音仅中文模式按需展开；英文无入口。`approximateZh: null` 仍不能伪造谐音。
-- `pronunciationScheme` 与 `pronunciationHelp` 说明单字调、词组分界和特殊项。`gheq` 未带调号表示未定，不是零调；问末伐按助词𠲎暂记 `va6`，不是砍伐的 `vaq8`。
-- 文字、读音与音频必须关联相同 ID、版本及实际输入。审阅清单没有匹配文件或文件加载失败时明确显示状态；不能误播旧字稿。TTS 只接收整句沪语汉字，不混入意思或注音，不逐字拼接。
-- 主流程使用语音和当前轮按钮。历史 text/voice_edited 记录保留，输入来源不改写。当前回答由商品、数量、方式、核对的实际状态决定；语音可一次表达多个明确字段。
-- 小笼馒头是本稿的商品称呼，意思仍为小笼包／xiaolongbao，`NX-ITEM-XLB.semanticValue` 不变。初始订单仍全部未知，不能从任务目标预填。
-- 两笼只有用户确实看到单位说明并保存事件后才能归一为两份。两只不能换算两份；两个缺少单位上下文仍追问。堂吃 `false` 与未知不同；修改使旧确认失效，保存成功后才显示完成。
-- 四站元数据不代表四站业务都已实现；`implementedInBatchA` 是本批范围标记，不能作为全产品验收结论。
+## 正式审核与证据
 
-## 审阅稿制作与正式批准
+以下沿用现有正式审核标准，D 的待验收部署不减免 E 的真实审核：
 
-审阅稿路径可以先运行：冻结文字与注音 → 按真实输入制作常速 TTS → 保存独立清单及稳定文件 → 界面明确标记审阅稿 → 用户逐句看、听、提出修改。制作不需要先伪造语言批准。修改应提升版本并重新制作受影响文件；旧记录保留。音频预算、真实调用和生成结果由实际制作记录说明。
+1. 两位不同的流利上海话使用者独立审核同版原句、自然度、分组、双语释义与语境，记录真实人员、日期、意见及决定。修改意见未解决时不能批准。
+2. 保存许可清楚的真人参考读法及对应文件证据，据此检查字音、连读并记录读音决定。近似读音阶段需要真实试读证据；没有材料或证据时仍保留待审。
+3. 对实际使用的声音逐文件听审，核对自然度、数量／否定、字音和文字一致性，并检查常速与慢放。现行正式基础包仍要求对应的常／慢速音频与各阶段证据；不能直接把预览播放方式当作全部发布条件已满足。
+4. 地图、任务与单位说明另由编辑角色审核；编辑批准不能替代沪语语言审核。全部阶段与文件证据齐备后，再由发布负责人批准对应包哈希。
 
-正式批准路径仍按以下顺序执行：
+R4 与 B+C 当前是专用待审补充包，现行校验不提供“改几个 approved 字段即可正式发布”的捷径。E 需依据真实审核形成正式内容包及声音清单，必要时配套实现候选包到正式包的转换与校验；不能绕过证据检查。
 
-1. 两位不同的流利上海话使用者独立检查同一版本的自然度、汉字、分组、中文/英文意思和语境。记录实际人员稳定 ID、日期、意见与决定；开发者不代签。候选表里的 `draft_*` 列不是最终签字列。
-2. 有修改意见时保存 `changes-requested`，修订内容并提升版本，再取得同版决定。两条相同审校人 ID 不算双人审核；未解决的修改意见阻止批准。
-3. 由实际流利使用者提供许可清楚的完整参考读法，保存文件、SHA256、说话人和日期。依据真实语流检查注音、连读和发音说明，再记录 `pronunciation` 决定；字典与 TTS 不能替代参考读法。
-4. 如正式产品使用中文近似读音，在批准读法上制作并记录一次真实试读意见及修订。把结果填入 `evidence.trialNotes`，再作 `approximation` 决定。没有证据时仍待审。
-5. 基于同版已审文本制作或复核正式常速/慢速音频；店员只需清单列出的常速。记录实际来源、模型、音色、配置、时长和哈希；生成成功只是 generated。
-6. 每个正式文件独立听审，自然度、连读、数量/否定、常慢速一致性和完整性均核对。`audio` 决定绑定 clipId 与文件哈希；缺一语速不得标整条通过。
-7. 地图双语和单位说明由 editorial 角色编辑分别审查四站与 NX-TASK。编辑批准不替代沪语审核。
-8. 全部阶段真实通过后，更新状态与关联 recordIds，最后发布负责人批准整个包哈希。总体产品验收和生产部署仍是另外的条件。
+## 检查入口
 
-审核时区分语义准确、自然口语、字音/连读、近似读音可用和声音质量，不能用一个通过标记替代全部。此流程是材料和工程审核，不引入参与者招募或正式用户研究。
-
-## 校验与审核证据
-
-在仓库目录执行：
+在仓库根目录执行：
 
 ```sh
 node scripts/validate-content.mjs --mode development
 node scripts/validate-content.mjs --mode production
-node scripts/validate-content.mjs --hash E08 --stage language
-node scripts/validate-content.mjs --hash E08 --stage pronunciation
-node scripts/validate-content.mjs --hash E08 --stage approximation
-node scripts/validate-content.mjs --hash E08 --stage audio --clip E08.normal
-node scripts/validate-content.mjs --hash nanxiang --stage editorial
-node scripts/validate-content.mjs --hash package
-node --test content/validate-content.test.mjs
+npm run test:content
+npm run audio:check
 ```
 
-当前开发检查应通过，正式检查应以非零退出，因为尚未取得真实批准和正式音频。这是保护结果；不能绕过 production 模式把预览声称为发布。`--content`、`--reviews` 可复核指定版本；审阅音频另走独立预览制作，不篡改本包批准字段。
+默认内容校验包含基础包、R4 和 B+C；开发模式允许待审状态，正式模式目前应拒绝发布。`audio:check` 检查样音来源、版本、文件及复用关系，不调用生成服务，也不代替听审。本文没有重新执行并记录这些检查的结果。
 
-语言 SHA256 投影为 `{id, version, hanzi, meaning, segments:[{id, hanzi, meaning}], acceptableVariants}`，按对象键递归排序、保留数组顺序、UTF-8、无额外空格计算。读音哈希绑定语言哈希和参考读法，近似读音哈希绑定读音，听审哈希绑定语言与实际音频。任何内容修改后旧哈希不再适用。
+现有 `npm run build:release` 仍执行严格正式审核门槛；D 的待验收构建尚未落地。不要仅关闭校验，或把普通开发构建称为正式教材通过。
 
-正式校验检查双人独立证据、角色与真实能力标记、同版本关联、未解决修改意见、文件路径/存在/类型/实测时长/哈希、参考读法和发布决定。PCM WAV 可直接测；其他支持容器需要 ffprobe。文件探测不读取网络播放列表。测试中的合成审校人只在临时测试目录，不写入真实账本。
+需要计算基础包审核对象哈希时，使用 [validate-content.mjs](../../scripts/validate-content.mjs) 的 `--hash`、`--stage`、`--clip` 参数；指定历史包使用 `--content` 与 `--reviews`。哈希投影与批准关联以脚本为准，不手工复制旧哈希到新版本。
 
-内容工程检查见 [validation.md](validation.md)。本文不把尚未执行的生成、听审或用户审阅写成完成。
+## 历史资料的边界
+
+以下保留为初稿和既往证据，**不是当前四站完整审核清单**：
+
+- [Pronunciation-draft-r1.md](Pronunciation-draft-r1.md)：R1 查词依据、声调讨论与 20 条初稿审阅表；未覆盖后续改词、R4 完整确认句及 B+C。
+- [language-review-sheet.csv](language-review-sheet.csv)：R1 的 20 行文字初稿表；版本及候选可能已过时，不能直接作为现行材料的签字表。
+- [audio-review-sheet.csv](audio-review-sheet.csv)：R1 的 28 行正式音频规划表；不是当前 R2／R4／B+C 样音清单或全四站听审进度。
+- [validation.md](validation.md)：R1 当时的工程检查记录，保留原计数与结果，不代表当前包已复验或已获人工批准。
+- [历史内容快照](../../content/versions/) 与 [R1 样音清单](../../content/audio-review-r1.json)：用于版本追溯和既有音频来源核验，不能删除或将旧审核决定移作新版本批准。
+
+开始 E 审核前，应按当前实际使用的 ID、版本和声音重新整理全四站审阅清单，并明确哪些历史条目不再用于练习。未执行的听审、模型验证和用户验收继续标为未完成。

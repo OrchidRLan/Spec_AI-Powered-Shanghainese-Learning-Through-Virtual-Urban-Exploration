@@ -1,5 +1,7 @@
 # 批次 2 修改 2：实现与检查
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。需求先保存于 [修改 2](Batch-2-revision-2.md)，再实施界面调整。工作起点为已推送的 `ff814c5`；本轮不变更后端、教学内容和声音资源。
 
 ## 已交付
@@ -8,7 +10,7 @@
 - 地图底部重复介绍及公开页脚状态册入口移除。开发可直接访问 `/#design`；生产构建对该路由显示地图，不渲染状态册。
 - 设置只保留语言、注音、减少动态、店员声音；普通重开入口移除。旧版本会话仍保留专门的显式恢复确认，各站重练不变。
 - 设置和四站使用同一开关：46 × 26 px 轨道、20 px 圆点、3 px 内缩、44 px 点击高度，文字间距 12 px。支持键盘、保存禁用和减少动态。
-- 桌面 Logo 分别排版现有图标与原字标，通过 SVG 视窗复用原图文字；视觉间距约 14–15 px，手机紧凑组合保留。素材像素未修改，说明见 [品牌交接](design/brand/README.md)。
+- 桌面 Logo 分别排版现有图标与原字标，通过 SVG 视窗复用原图文字；视觉间距约 14–15 px，手机紧凑组合保留。素材像素未修改，说明见 [品牌交接](../../design/brand/README.md)。
 
 ## 工程检查
 
@@ -33,11 +35,11 @@
 
 | 画面 | 文件 |
 | --- | --- |
-| 中文桌面介绍页 | [完整](design/previews/batch-2-revision-2/about-zh-desktop.png)、[首屏](design/previews/batch-2-revision-2/about-zh-desktop-overview.png) |
-| 英文桌面介绍页 | [截图](design/previews/batch-2-revision-2/about-en-desktop.png) |
-| 中文／英文手机介绍页 | [中文](design/previews/batch-2-revision-2/about-zh-mobile.png)、[英文](design/previews/batch-2-revision-2/about-en-mobile.png) |
-| 英文设置桌面／手机 | [桌面](design/previews/batch-2-revision-2/settings-en-desktop.png)、[手机](design/previews/batch-2-revision-2/settings-en-mobile.png) |
-| 南翔开关桌面／320 px | [桌面](design/previews/batch-2-revision-2/nanxiang-en-desktop.png)、[320 px](design/previews/batch-2-revision-2/nanxiang-en-320.png) |
+| 中文桌面介绍页 | [完整](../../design/previews/batch-2-revision-2/about-zh-desktop.png)、[首屏](../../design/previews/batch-2-revision-2/about-zh-desktop-overview.png) |
+| 英文桌面介绍页 | [截图](../../design/previews/batch-2-revision-2/about-en-desktop.png) |
+| 中文／英文手机介绍页 | [中文](../../design/previews/batch-2-revision-2/about-zh-mobile.png)、[英文](../../design/previews/batch-2-revision-2/about-en-mobile.png) |
+| 英文设置桌面／手机 | [桌面](../../design/previews/batch-2-revision-2/settings-en-desktop.png)、[手机](../../design/previews/batch-2-revision-2/settings-en-mobile.png) |
+| 南翔开关桌面／320 px | [桌面](../../design/previews/batch-2-revision-2/nanxiang-en-desktop.png)、[320 px](../../design/previews/batch-2-revision-2/nanxiang-en-320.png) |
 
 截图中粉色悬浮翻译按钮来自浏览器扩展，不属于应用。
 

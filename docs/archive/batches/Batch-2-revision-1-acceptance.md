@@ -1,5 +1,7 @@
 # 批次 2 修改 1 · 验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。依据：[修订需求](Batch-2-revision-1.md)。本记录说明本轮实现及工程验证；用户体验验收和教学内容批准仍由用户确认。
 
 ## 已交付
@@ -7,7 +9,7 @@
 - 四站结束语在本页面最后一次 Continue 保存成功后自动播放一次，遵循店员声音开关，手动重听保留。已完成页刷新/重进，以及刷新后查询恢复旧保存请求，保持静默；同页丢失响应后查询可补播一次。说话动画不覆盖南翔已保存的份数、堂吃/外带画面。修复保存中关闭声音后旧回调仍排队播放的边界。
 - `/#review` 为四站状态总览，0/4 也可访问；`/#review/{station}` 为已完成站点的表达详情。支持完成页直达、刷新、浏览器前进/返回；未解锁或非法详情回总览。历史成功保留复习资格。
 - 详情每句独立标准速/慢速按钮，1× / 0.75× 保音高；切句互斥、离开停音，不修改任务语速偏好。注音遵循设置。
-- 接入已选“园亭对话”：桌面横版，手机紧凑品牌，浏览器图标；透明网页资产、三份原图与提示记录见 [Logo 交接](design/brand/README.md)。
+- 接入已选“园亭对话”：桌面横版，手机紧凑品牌，浏览器图标；透明网页资产、三份原图与提示记录见 [Logo 交接](../../design/brand/README.md)。
 
 ## 自动化与审查
 
@@ -38,13 +40,13 @@
 
 | 画面 | 文件 |
 | --- | --- |
-| 中文桌面 0/4 总览 | [截图](design/previews/batch-2-revision-1/review-empty-zh-desktop.png) |
-| 英文桌面部分完成总览 | [截图](design/previews/batch-2-revision-1/review-overview-en-desktop.png) |
-| 中文手机总览 | [截图](design/previews/batch-2-revision-1/review-overview-zh-mobile.png) |
-| 英文 320 px 总览 | [截图](design/previews/batch-2-revision-1/review-overview-en-320.png) |
-| 中文桌面逐句双速 | [截图](design/previews/batch-2-revision-1/review-restaurant-zh-desktop.png) |
-| 英文手机逐句双速 | [截图](design/previews/batch-2-revision-1/review-restaurant-en-mobile.png) |
-| 南翔完成后重听的说话姿态 | [截图](design/previews/batch-2-revision-1/nanxiang-completed-speaking-zh-desktop.png) |
+| 中文桌面 0/4 总览 | [截图](../../design/previews/batch-2-revision-1/review-empty-zh-desktop.png) |
+| 英文桌面部分完成总览 | [截图](../../design/previews/batch-2-revision-1/review-overview-en-desktop.png) |
+| 中文手机总览 | [截图](../../design/previews/batch-2-revision-1/review-overview-zh-mobile.png) |
+| 英文 320 px 总览 | [截图](../../design/previews/batch-2-revision-1/review-overview-en-320.png) |
+| 中文桌面逐句双速 | [截图](../../design/previews/batch-2-revision-1/review-restaurant-zh-desktop.png) |
+| 英文手机逐句双速 | [截图](../../design/previews/batch-2-revision-1/review-restaurant-en-mobile.png) |
+| 南翔完成后重听的说话姿态 | [截图](../../design/previews/batch-2-revision-1/nanxiang-completed-speaking-zh-desktop.png) |
 
 截图来自真实浏览器，手机尺寸为桌面视口模拟。粉色悬浮翻译工具属于测试浏览器扩展，不是项目界面。
 

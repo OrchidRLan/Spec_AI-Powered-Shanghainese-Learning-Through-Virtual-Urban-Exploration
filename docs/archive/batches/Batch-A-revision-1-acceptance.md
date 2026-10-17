@@ -1,5 +1,7 @@
 # 批次 A 修订 1：实施与验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。依据：[已确认范围与 12 项条件](Batch-A-revision-1.md)。需求文档先于开发以 `aa16169` 提交并推送；本记录对应随后实施的修订，不沿用原批次截图代替新检查。
 
 本轮产品改动已实现，属于可审阅的开发交付。**不表示沪语/声音已经人工批准，不表示批次 A、十步中的 1–4 或完整四站已经全部完成。** 本轮没有部署。
@@ -39,18 +41,18 @@
 
 | 页面 | 中文 | 英文 | 视口 |
 | --- | --- | --- | --- |
-| 地图桌面 | [查看](design/previews/revision-1/map-desktop-zh.jpg) | [查看](design/previews/revision-1/map-desktop-en.jpg) | 1440×900 |
-| 南翔桌面 | [查看](design/previews/revision-1/nanxiang-desktop-zh.jpg) | [查看](design/previews/revision-1/nanxiang-desktop-en.jpg) | 1440×900；中文为核对、英文为商品轮 |
-| 地图手机 | [查看](design/previews/revision-1/map-mobile-zh.jpg) | [查看](design/previews/revision-1/map-mobile-en.jpg) | 390×844 |
-| 南翔手机 | [查看](design/previews/revision-1/nanxiang-mobile-zh.jpg) | [查看](design/previews/revision-1/nanxiang-mobile-en.jpg) | 390×844 |
-| 其他状态 | [保存完成](design/previews/revision-1/completed-desktop-zh.jpg) | [手机表达合集](design/previews/revision-1/phrasebook-mobile-en.jpg) | 桌面/390px |
-| 额外适配 | [平板地图](design/previews/revision-1/map-tablet-en.jpg) | [最窄英文南翔](design/previews/revision-1/nanxiang-320-en.jpg) | 768×1024 / 320×740 |
+| 地图桌面 | [查看](../../design/previews/revision-1/map-desktop-zh.jpg) | [查看](../../design/previews/revision-1/map-desktop-en.jpg) | 1440×900 |
+| 南翔桌面 | [查看](../../design/previews/revision-1/nanxiang-desktop-zh.jpg) | [查看](../../design/previews/revision-1/nanxiang-desktop-en.jpg) | 1440×900；中文为核对、英文为商品轮 |
+| 地图手机 | [查看](../../design/previews/revision-1/map-mobile-zh.jpg) | [查看](../../design/previews/revision-1/map-mobile-en.jpg) | 390×844 |
+| 南翔手机 | [查看](../../design/previews/revision-1/nanxiang-mobile-zh.jpg) | [查看](../../design/previews/revision-1/nanxiang-mobile-en.jpg) | 390×844 |
+| 其他状态 | [保存完成](../../design/previews/revision-1/completed-desktop-zh.jpg) | [手机表达合集](../../design/previews/revision-1/phrasebook-mobile-en.jpg) | 桌面/390px |
+| 额外适配 | [平板地图](../../design/previews/revision-1/map-tablet-en.jpg) | [最窄英文南翔](../../design/previews/revision-1/nanxiang-320-en.jpg) | 768×1024 / 320×740 |
 
 实测 390px 地图与南翔、320px 英文地图与南翔没有横向溢出，检查到的可见按钮高度不少于 44px。浏览器控制台最终未见 error。完成页面刷新不自动播放；系统与应用减少动态均有样式支持，本次实际操作验证应用开关。
 
 ## 4. 尚待用户审阅与后续检查
 
-- 用户核对 [20 条注音与声音](content-review/Pronunciation-draft-r1.md)。词典单字调和词组分段不是已验证的整句连读，特别注意弱读、语气词、实际 TTS 声音是否一致。确认常速后再制作慢速。
+- 用户核对 [20 条注音与声音](../../content-review/Pronunciation-draft-r1.md)。词典单字调和词组分段不是已验证的整句连读，特别注意弱读、语气词、实际 TTS 声音是否一致。确认常速后再制作慢速。
 - 正式语言审核、参考读法、中文近似读音、慢速听审和正式发布批准尚未完成。不能将 preview 的 generated 当成 approved。
 - 真人麦克风录制、Safari/Chrome 实体设备、完整读屏、200% 缩放、网络故障注入仍待检查；目前语音生命周期由源码审查和后端测试支持，未冒称浏览器真实录音闭环通过。
 - E08 合成样音的 1 次 ASR 已在用户明确授权后成功执行，结果见上。不能据此推定其他措辞、真人口音或嘈杂录音均能正确识别。

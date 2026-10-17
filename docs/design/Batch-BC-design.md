@@ -2,7 +2,7 @@
 
 版本：`batch-bc-art.2026-10-17.v1`。范围是老饭店、梨膏糖店、湖心亭三站的原创场景、角色动作与选择物件；已通过批次 A 的南翔场景和地图继续使用。
 
-依据：[B+C 开发计划](../Batch-BC-plan.md)、[老饭店草案](../Shanghai-old-restaurant-draft.md)、[糖店草案](../Pear-candy-shop-draft.md)、[茶楼草案](../Huxinting-teahouse-draft.md)。旧草案里的自由追问、Type、常驻解释和独立 Phrase book 不由本设计恢复。
+依据：[B+C 开发计划](../archive/batches/Batch-BC-plan.md)、[老饭店草案](../archive/planning/Shanghai-old-restaurant-draft.md)、[糖店草案](../archive/planning/Pear-candy-shop-draft.md)、[茶楼草案](../archive/planning/Huxinting-teahouse-draft.md)。旧草案里的自由追问、Type、常驻解释和独立 Phrase book 不由本设计恢复。
 
 ## 1. 实际交付
 

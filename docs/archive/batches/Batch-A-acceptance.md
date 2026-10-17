@@ -1,18 +1,20 @@
 # 批次 A 子里程碑验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。状态：**批次 A 工程与设计子里程碑已形成并完成下述检查；语言审核与完整真实语音/设备验收未完成，不能将批次 A 全部标为完成。** 已有 7 次用户授权的真实 API 技术诊断，使用短英文文字和合成英文录音，不是上海话质量验收。显式新匿名探索已接入并完成浏览器检查，最终集成检查与开发构建均已通过。
 
-本记录只验收 [十步路线](Product-development-roadmap.md) 第 13.2 节的批次 A 子交付：地图/南翔设计初稿、首批内容结构与审核流程、可启动的应用基础、南翔规则/保存和语音接口准备。**通过这一子里程碑不等于步骤 1–4 全部完成，不等于步骤 5 南翔完整验收，不等于正式部署。**
+本记录只验收 [十步路线](../planning/Product-development-roadmap.md) 第 13.2 节的批次 A 子交付：地图/南翔设计初稿、首批内容结构与审核流程、可启动的应用基础、南翔规则/保存和语音接口准备。**通过这一子里程碑不等于步骤 1–4 全部完成，不等于步骤 5 南翔完整验收，不等于正式部署。**
 
 ## 1. 可检查产物与范围
 
 | 子交付 | 实际产物 | 本次边界 |
 | --- | --- | --- |
-| 地图/南翔界面与设计系统 | [前端](../frontend/src/App.tsx)、[设计交接](design/Batch-A-design.md)、[原创 SVG 清单](design/Asset-manifest.json)、可运行 `#design` 状态册 | 用户尚未批准视觉；状态册为固定呈现，不是实际服务结果 |
-| 四站元数据和首批内容 | [batch-a.json](../content/batch-a.json)、[类型](../content/types.ts) | 4 站双语元数据、3 表达、12 店员语义稿、5 支持词、28 待制作音频；其他三站业务未实现 |
-| 人工审核交接和正式发布门槛 | [审核交接](content-review/README.md)、[空审核账本](../content/reviews.json)、[校验器](../scripts/validate-content.mjs) | 无虚构审核人、注音、听审或批准；正式构建目前必须拒绝 |
-| 会话、尝试、规则与恢复 | [后端接口说明](../backend/API.md)、[后端实现](../backend/app/main.py)、[规则](../backend/app/rules.py) | 本地 FastAPI/SQLite，绑定 cookie 会话；不代表生产部署与运维完成 |
-| 可替换语音与理解边界 | [语音接入说明](Speech-integration.md)、[制作入口](../scripts/speech.py) | 提供商合约、配置隔离、模拟网络测试和 7 次真实技术诊断；真实上海话质量、完整任务与产品延迟指标仍待验证 |
+| 地图/南翔界面与设计系统 | [前端](../../../frontend/src/App.tsx)、[设计交接](../../design/Batch-A-design.md)、[原创 SVG 清单](../../design/Asset-manifest.json)、可运行 `#design` 状态册 | 用户尚未批准视觉；状态册为固定呈现，不是实际服务结果 |
+| 四站元数据和首批内容 | [batch-a.json](../../../content/batch-a.json)、[类型](../../../content/types.ts) | 4 站双语元数据、3 表达、12 店员语义稿、5 支持词、28 待制作音频；其他三站业务未实现 |
+| 人工审核交接和正式发布门槛 | [审核交接](../../content-review/README.md)、[空审核账本](../../../content/reviews.json)、[校验器](../../../scripts/validate-content.mjs) | 无虚构审核人、注音、听审或批准；正式构建目前必须拒绝 |
+| 会话、尝试、规则与恢复 | [后端接口说明](../../../backend/API.md)、[后端实现](../../../backend/app/main.py)、[规则](../../../backend/app/rules.py) | 本地 FastAPI/SQLite，绑定 cookie 会话；不代表生产部署与运维完成 |
+| 可替换语音与理解边界 | [语音接入说明](../../engineering/Speech-integration.md)、[制作入口](../../../scripts/speech.py) | 提供商合约、配置隔离、模拟网络测试和 7 次真实技术诊断；真实上海话质量、完整任务与产品延迟指标仍待验证 |
 
 本轮未引入参与者招募、用户测试、正式模型对照或研究报告。语言材料审核与工程检查仍执行。
 
@@ -22,7 +24,7 @@
 
 | 检查 | 当前证据 | 结果 |
 | --- | --- | --- |
-| 内容开发校验 | `node scripts/validate-content.mjs --mode development`；见 [内容检查记录](content-review/validation.md) | 已执行，通过；20 条教学文本均提示待审核 |
+| 内容开发校验 | `node scripts/validate-content.mjs --mode development`；见 [内容检查记录](../../content-review/validation.md) | 已执行，通过；20 条教学文本均提示待审核 |
 | 内容正式发布门槛 | `node scripts/validate-content.mjs --production` | 最终退出 1、332 项未满足条件，符合预期；28 条音频中 0 条批准，缺少真实读音/音频/审批时阻止发布 |
 | 内容门槛回归 | `node --test content/validate-content.test.mjs` | 已执行，21 项通过、0 失败；只使用明确标记的合成测试样本 |
 | Python / Node 语言审核哈希一致性 | E08 subject SHA256，两端结果相同 | 已执行，一致；改字不能沿用同版本旧批准 |
@@ -33,7 +35,7 @@
 | 真实麦克风/转换/ASR/理解全链路 | 必须使用真实录音、实际配置和当前内容版本 | 待验证；当前没有真实服务质量结论 |
 | 原创图片视觉验收 | 已有源码来源和图层清单 | 尚未形成用户审阅批准；不得写成图片已审 |
 | 双人语言、读音与听审 | 审核账本为空 | 未完成，正式教材不得发布 |
-| 真实 API 技术诊断 | 4 LLM、1 合成英文 ASR、2 英文 Jada TTS；见 [逐次记录](Speech-integration.md) | 已执行 7 次；修复本轮单位遗漏和 WAV 占位长度头，保留失败及重跑证据；非上海话质量结论 |
+| 真实 API 技术诊断 | 4 LLM、1 合成英文 ASR、2 英文 Jada TTS；见 [逐次记录](../../engineering/Speech-integration.md) | 已执行 7 次；修复本轮单位遗漏和 WAV 占位长度头，保留失败及重跑证据；非上海话质量结论 |
 | 显式新匿名探索 | `POST /api/session/new` 与设置中的选择/确认入口 | 浏览器已验证旧 1/4 → 新 0/4、英文偏好保留、回地图主内容焦点；三项偏好、旧记录保留和访问隔离有 API 测试 |
 | 文档与提交候选检查 | 本地 Markdown 链接、候选文件与 `.env` 实际凭据字节比较、忽略规则 | 链接通过、凭据无命中；`.env`、数据库和诊断目录确认被忽略 |
 
@@ -62,15 +64,15 @@
 
 | 画面/状态 | 桌面中文 1440px | 桌面英文 1440px | 手机中文 390px | 手机英文 390px |
 | --- | --- | --- | --- | --- |
-| 地图、四站标记与地点详情 | [实拍](design/previews/map-desktop-zh.jpg) | [实拍](design/previews/map-desktop-en.jpg) | [实拍](design/previews/map-mobile-zh.jpg) | [实拍](design/previews/map-mobile-en.jpg) |
-| 南翔场景/订单/输入界面 | [实拍](design/previews/nanxiang-desktop-zh.jpg) | [实拍](design/previews/nanxiang-desktop-en.jpg) | [实拍](design/previews/nanxiang-mobile-zh.jpg) | [实拍](design/previews/nanxiang-mobile-en.jpg) |
-| 学习卡、候选标记、释义与读音状态 | 未单独留图 | 未单独留图 | [实拍](design/previews/phrases-mobile-zh.jpg) | 已检查无中文近似读音入口；未单独留图 |
+| 地图、四站标记与地点详情 | [实拍](../../design/previews/map-desktop-zh.jpg) | [实拍](../../design/previews/map-desktop-en.jpg) | [实拍](../../design/previews/map-mobile-zh.jpg) | [实拍](../../design/previews/map-mobile-en.jpg) |
+| 南翔场景/订单/输入界面 | [实拍](../../design/previews/nanxiang-desktop-zh.jpg) | [实拍](../../design/previews/nanxiang-desktop-en.jpg) | [实拍](../../design/previews/nanxiang-mobile-zh.jpg) | [实拍](../../design/previews/nanxiang-mobile-en.jpg) |
+| 学习卡、候选标记、释义与读音状态 | 未单独留图 | 未单独留图 | [实拍](../../design/previews/phrases-mobile-zh.jpg) | 已检查无中文近似读音入口；未单独留图 |
 | 单位说明与两份示意 | 未独立记录四组 | 未独立记录四组 | 未独立记录四组 | 未独立记录四组 |
 | 当前订单核对/修改 | 实际流程已检查，未另存四组截图 | 同左 | 同左 | 同左 |
-| 保存后完成/回顾 | 未单独留图 | 未单独留图 | [实拍](design/previews/completed-mobile-zh.jpg) | 未单独留图 |
+| 保存后完成/回顾 | 未单独留图 | 未单独留图 | [实拍](../../design/previews/completed-mobile-zh.jpg) | 未单独留图 |
 | 设置与设计状态册 | 有可运行页面；未完整记录四组 | 同左 | 同左 | 同左 |
 
-另有 [320px 英文南翔截图](design/previews/nanxiang-narrow-en.jpg)。390px 与 320px 英文现场检查无横向溢出，检查到的可见按钮点击区域至少 44px。中文近似读音默认收起、英文无入口已检查。
+另有 [320px 英文南翔截图](../../design/previews/nanxiang-narrow-en.jpg)。390px 与 320px 英文现场检查无横向溢出，检查到的可见按钮点击区域至少 44px。中文近似读音默认收起、英文无入口已检查。
 
 尚未执行：真实麦克风、实体手机软键盘、手机横屏、全面 Chrome/Safari、200% 缩放、完整键盘/焦点及读屏验收、所有正文/注音字号和颜色组合的完整检查、低动态完整设备检查。浏览器网络故障注入未执行，恢复行为目前以 API 自动化为证据；不把媒体查询、`aria-*` 或静态截图当作这些项目通过。
 

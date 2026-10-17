@@ -1,5 +1,7 @@
 # 批次 A 修订 3：实施与验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。需求基线 [Batch-A-revision-3.md](Batch-A-revision-3.md) 已先提交并推送为 `6f014e6`，随后实施。用户追加的“取消所有追问，只保留设计好的问题”已纳入本轮。本文记录工程与浏览器结果，不代表真人识别效果、语言审核或整个批次 A 已完成。
 
 ## 1. 实际交付
@@ -46,12 +48,12 @@ Chrome 使用隔离的 `localhost:5174` 前端、8001 后端与测试数据库�
 
 | 截图 | 场景 |
 | --- | --- |
-| [中文桌面正确结果](design/previews/revision-3/correct-desktop-zh.jpg) | “两分。”原文保留、正确结果停留、订单尚未提交 |
-| [中文桌面错误结果](design/previews/revision-3/incorrect-desktop-zh.jpg) | “七份。”不正确、重试与辅助继续 |
-| [中文手机错误结果](design/previews/revision-3/incorrect-mobile-zh.jpg) | 390px 视口中的完整结果卡与操作 |
-| [英文窄屏错误结果](design/previews/revision-3/incorrect-mobile-en.jpg) | 320px 英文界面与保留的中文转写 |
-| [最终确认仍待继续](design/previews/revision-3/confirm-desktop-zh.jpg) | 正确确认结果与显式确认并完成按钮 |
-| [保存完成并刷新](design/previews/revision-3/completed-desktop-zh.jpg) | 实际两份堂吃、完成后 Review 入口 |
+| [中文桌面正确结果](../../design/previews/revision-3/correct-desktop-zh.jpg) | “两分。”原文保留、正确结果停留、订单尚未提交 |
+| [中文桌面错误结果](../../design/previews/revision-3/incorrect-desktop-zh.jpg) | “七份。”不正确、重试与辅助继续 |
+| [中文手机错误结果](../../design/previews/revision-3/incorrect-mobile-zh.jpg) | 390px 视口中的完整结果卡与操作 |
+| [英文窄屏错误结果](../../design/previews/revision-3/incorrect-mobile-en.jpg) | 320px 英文界面与保留的中文转写 |
+| [最终确认仍待继续](../../design/previews/revision-3/confirm-desktop-zh.jpg) | 正确确认结果与显式确认并完成按钮 |
+| [保存完成并刷新](../../design/previews/revision-3/completed-desktop-zh.jpg) | 实际两份堂吃、完成后 Review 入口 |
 
 截图中的悬浮翻译图标来自测试浏览器扩展，不是应用组件。六张截图均为上述隔离测试数据。
 

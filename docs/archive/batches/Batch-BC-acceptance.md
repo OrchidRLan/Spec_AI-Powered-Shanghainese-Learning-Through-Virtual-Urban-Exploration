@@ -1,5 +1,7 @@
 # 批次 B 与 C 实现与验收记录
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。实施依据：[合并计划](Batch-BC-plan.md)。用户已通过批次 A 修订 4；本记录说明 B+C 的代码交付和实际工程检查，不代表用户已验收 B+C、语言听审通过或已经部署。
 
 ## 本批交付
@@ -13,7 +15,7 @@
 | 湖心亭茶楼 | 正面评价茶 → 向主人道谢 → 自然收尾。评价其他对象、明确否定或提问不能代替本题表达，没有额外订单确认题 |
 | 共用体验 | 中英界面、独立室内场景与角色动作、汉字和注音对齐、注音默认显示且可隐藏、1×/0.75× 保音高播放、原转写与正误停留、显式继续、失败辅助、完成后单站与路线回顾 |
 
-新增内容版本为 `batch-bc.2026-10-17.v1`，规则为 `station-lessons.v1`。内容共 36 条候选，包含完整订单确认句；正式语言、注音与声音状态均保持待审。主要入口为 [内容包](../content/batch-bc.json)、[三站规则](../backend/app/lessons.py)、[练习接口](../backend/app/lesson_api.py)、[共用练习界面](../frontend/src/components/StationLesson.tsx) 和 [场景组件](../frontend/src/components/StationScenes.tsx)。
+新增内容版本为 `batch-bc.2026-10-17.v1`，规则为 `station-lessons.v1`。内容共 36 条候选，包含完整订单确认句；正式语言、注音与声音状态均保持待审。主要入口为 [内容包](../../../content/batch-bc.json)、[三站规则](../../../backend/app/lessons.py)、[练习接口](../../../backend/app/lesson_api.py)、[共用练习界面](../../../frontend/src/components/StationLesson.tsx) 和 [场景组件](../../../frontend/src/components/StationScenes.tsx)。
 
 ## 自动化与构建
 
@@ -57,21 +59,21 @@
 
 | 站点 | 中文桌面 | 英文桌面 | 中文手机 | 英文手机 |
 | --- | --- | --- | --- | --- |
-| 老饭店 | [截图](design/previews/batch-bc/restaurant-desktop-zh.png) | [截图](design/previews/batch-bc/restaurant-desktop-en.png) | [截图](design/previews/batch-bc/restaurant-mobile-zh.png) | [截图](design/previews/batch-bc/restaurant-mobile-en.png) |
-| 梨膏糖 | [截图](design/previews/batch-bc/candy-desktop-zh.png) | [截图](design/previews/batch-bc/candy-desktop-en.png) | [截图](design/previews/batch-bc/candy-mobile-zh.png) | [截图](design/previews/batch-bc/candy-mobile-en.png) |
-| 湖心亭 | [截图](design/previews/batch-bc/teahouse-desktop-zh.png) | [截图](design/previews/batch-bc/teahouse-desktop-en.png) | [截图](design/previews/batch-bc/teahouse-mobile-zh.png) | [截图](design/previews/batch-bc/teahouse-mobile-en.png) |
+| 老饭店 | [截图](../../design/previews/batch-bc/restaurant-desktop-zh.png) | [截图](../../design/previews/batch-bc/restaurant-desktop-en.png) | [截图](../../design/previews/batch-bc/restaurant-mobile-zh.png) | [截图](../../design/previews/batch-bc/restaurant-mobile-en.png) |
+| 梨膏糖 | [截图](../../design/previews/batch-bc/candy-desktop-zh.png) | [截图](../../design/previews/batch-bc/candy-desktop-en.png) | [截图](../../design/previews/batch-bc/candy-mobile-zh.png) | [截图](../../design/previews/batch-bc/candy-mobile-en.png) |
+| 湖心亭 | [截图](../../design/previews/batch-bc/teahouse-desktop-zh.png) | [截图](../../design/previews/batch-bc/teahouse-desktop-en.png) | [截图](../../design/previews/batch-bc/teahouse-mobile-zh.png) | [截图](../../design/previews/batch-bc/teahouse-mobile-en.png) |
 
-补充：[饭店完整确认](design/previews/batch-bc/restaurant-confirm-mobile-en.png)、[四站回顾桌面](design/previews/batch-bc/four-stop-review-desktop-en.png)、[四站回顾手机](design/previews/batch-bc/four-stop-review-mobile-en.png)。
+补充：[饭店完整确认](../../design/previews/batch-bc/restaurant-confirm-mobile-en.png)、[四站回顾桌面](../../design/previews/batch-bc/four-stop-review-desktop-en.png)、[四站回顾手机](../../design/previews/batch-bc/four-stop-review-mobile-en.png)。
 
 ## 真实声音制作
 
 本批按冻结清单调用阿里云北京 `qwen3-tts-flash` + Jada **35 次**，无自动重试，未新增 ASR 或 LLM 请求。供应商返回计量合计 **516 字符**；按已核验目录价估算 **¥0.04128**，未查询账单或优惠。执行上限为 35 次、预算 ¥2。
 
-新增 35 个本地 WAV，另复用既有“对个”声音，形成 [36 条声音清单](../content/audio-review-bc.json)，共 55.92 秒。每条保留原文/版本、配置、字节校验、实测时长、来源与待审状态；前端不依赖供应商临时下载地址。慢速为已有常速文件的 0.75× 保音高播放，没有伪造独立慢读文件或听审结果。制作与核验入口为 [speech-review-bc.py](../scripts/speech-review-bc.py)，详细接入记录见 [Speech-integration.md](Speech-integration.md)。
+新增 35 个本地 WAV，另复用既有“对个”声音，形成 [36 条声音清单](../../../content/audio-review-bc.json)，共 55.92 秒。每条保留原文/版本、配置、字节校验、实测时长、来源与待审状态；前端不依赖供应商临时下载地址。慢速为已有常速文件的 0.75× 保音高播放，没有伪造独立慢读文件或听审结果。制作与核验入口为 [speech-review-bc.py](../../../scripts/speech-review-bc.py)，详细接入记录见 [Speech-integration.md](../../engineering/Speech-integration.md)。
 
 ## 数据隔离与技术备注
 
-浏览器验收未启停用户自己的 5173/8000 服务，也未用用户业务会话进行练习。早期 pytest 导入模块时，默认应用曾对开发 SQLite 执行 `CREATE TABLE IF NOT EXISTS` 的结构初始化；该步骤没有读取或修改业务记录。随后已将 [conftest.py](../backend/tests/conftest.py) 改为在导入应用之前设置临时数据库，后续自动化与浏览器验证使用隔离数据。此处保留实际发生的技术记录，不笼统宣称从未接触默认数据库。
+浏览器验收未启停用户自己的 5173/8000 服务，也未用用户业务会话进行练习。早期 pytest 导入模块时，默认应用曾对开发 SQLite 执行 `CREATE TABLE IF NOT EXISTS` 的结构初始化；该步骤没有读取或修改业务记录。随后已将 [conftest.py](../../../backend/tests/conftest.py) 改为在导入应用之前设置临时数据库，后续自动化与浏览器验证使用隔离数据。此处保留实际发生的技术记录，不笼统宣称从未接触默认数据库。
 
 收尾时已关闭临时 Chrome 标签、恢复视窗设置并停止 5174/8001 测试服务；端口核验确认用户原有 5173/8000 服务仍保留。
 
@@ -80,5 +82,5 @@
 - 用户尚未对 B+C 体验和视觉作出验收结论。
 - 真人上海话麦克风 → ASR → 反馈完整链路、实体手机、Safari、完整读屏/键盘/缩放与弱网场景尚未全部执行；没有把模拟识别或桌面窄视窗记为这些检查通过。
 - 三站及原南翔的逐句语言、注音、连读和声音听审仍需真实审阅。候选稿可体验，不作为正式批准教材。
-- 后续安排已按用户要求调整为 [D 部署准备与部署、E 集中验证评估与修正](Batch-DE-plan.md)，两批尚未执行。B+C 已有开发环境四站串联和回顾，不等于部署或最终验收完成；上述历史检查结果不因重排而改变。
+- 后续安排已按用户要求调整为 [D 部署准备与部署、E 集中验证评估与修正](../../Batch-DE-plan.md)，两批尚未执行。B+C 已有开发环境四站串联和回顾，不等于部署或最终验收完成；上述历史检查结果不因重排而改变。
 - 需求基线已提交并推送 `cd829b7`。实现与本记录随本次里程碑提交，最终提交标识和远端同步以 Git 历史及真实核验为准，不预填提交号或部署网址；测试服务与临时浏览器已清理。

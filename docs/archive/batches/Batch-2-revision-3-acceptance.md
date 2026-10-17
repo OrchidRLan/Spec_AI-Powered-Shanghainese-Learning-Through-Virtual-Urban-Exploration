@@ -1,5 +1,7 @@
 # 批次 2 修改 3：实现与验收
 
+> 历史归档：保留本阶段当时的方案与检查结果。当前规则见 [产品规格](../../Product-spec.md)，后续安排见 [D/E 计划](../../Batch-DE-plan.md)；旧范围与状态不覆盖现行决定。
+
 日期：2026-10-17。范围以 [修改 3](Batch-2-revision-3.md) 为准，先保存方案再开发。工程检查已完成，待用户体验确认；不代表生产上线或语言材料批准。以下首轮记录保留原始证据，密码和用户名主键的追加调整见末节。
 
 ## 已实现
@@ -39,16 +41,16 @@
 
 | 画面 | 文件 |
 | --- | --- |
-| 桌面中文欢迎页 | [welcome-desktop-zh.png](design/previews/batch-2-revision-3/welcome-desktop-zh.png) |
-| 桌面英文欢迎页 | [welcome-desktop-en.png](design/previews/batch-2-revision-3/welcome-desktop-en.png) |
-| 320 px 英文登录与游客入口 | [welcome-mobile-320-en.png](design/previews/batch-2-revision-3/welcome-mobile-320-en.png) |
-| 390 px 英文注册 | [register-mobile-en.png](design/previews/batch-2-revision-3/register-mobile-en.png) |
-| 账号 About 英文桌面 | [about-account-desktop-en.png](design/previews/batch-2-revision-3/about-account-desktop-en.png) |
-| 账号 About 中文手机 | [about-account-mobile-zh.png](design/previews/batch-2-revision-3/about-account-mobile-zh.png) |
-| 游客注册后保留南翔第二题 | [account-retained-progress-en.png](design/previews/batch-2-revision-3/account-retained-progress-en.png) |
-| 游客糖店实际播放后的状态 | [guest-candy-playback-en.png](design/previews/batch-2-revision-3/guest-candy-playback-en.png) |
-| 登录已有账号后的两站记录 | [merged-progress-zh.png](design/previews/batch-2-revision-3/merged-progress-zh.png) |
-| 长用户名与 681 px 导航 | [header-tablet-zh.png](design/previews/batch-2-revision-3/header-tablet-zh.png) |
+| 桌面中文欢迎页 | [welcome-desktop-zh.png](../../design/previews/batch-2-revision-3/welcome-desktop-zh.png) |
+| 桌面英文欢迎页 | [welcome-desktop-en.png](../../design/previews/batch-2-revision-3/welcome-desktop-en.png) |
+| 320 px 英文登录与游客入口 | [welcome-mobile-320-en.png](../../design/previews/batch-2-revision-3/welcome-mobile-320-en.png) |
+| 390 px 英文注册 | [register-mobile-en.png](../../design/previews/batch-2-revision-3/register-mobile-en.png) |
+| 账号 About 英文桌面 | [about-account-desktop-en.png](../../design/previews/batch-2-revision-3/about-account-desktop-en.png) |
+| 账号 About 中文手机 | [about-account-mobile-zh.png](../../design/previews/batch-2-revision-3/about-account-mobile-zh.png) |
+| 游客注册后保留南翔第二题 | [account-retained-progress-en.png](../../design/previews/batch-2-revision-3/account-retained-progress-en.png) |
+| 游客糖店实际播放后的状态 | [guest-candy-playback-en.png](../../design/previews/batch-2-revision-3/guest-candy-playback-en.png) |
+| 登录已有账号后的两站记录 | [merged-progress-zh.png](../../design/previews/batch-2-revision-3/merged-progress-zh.png) |
+| 长用户名与 681 px 导航 | [header-tablet-zh.png](../../design/previews/batch-2-revision-3/header-tablet-zh.png) |
 
 ## 运行与未覆盖范围
 
@@ -72,7 +74,7 @@
 
 | 画面 | 文件 |
 | --- | --- |
-| 1440 px 英文注册 | [register-simplified-desktop-en.png](design/previews/batch-2-revision-3/register-simplified-desktop-en.png) |
-| 390 px 英文注册 | [register-simplified-mobile-en.png](design/previews/batch-2-revision-3/register-simplified-mobile-en.png) |
+| 1440 px 英文注册 | [register-simplified-desktop-en.png](../../design/previews/batch-2-revision-3/register-simplified-desktop-en.png) |
+| 390 px 英文注册 | [register-simplified-mobile-en.png](../../design/previews/batch-2-revision-3/register-simplified-mobile-en.png) |
 
 本次未操作用户数据库、原开发服务或 `.env`，没有云服务请求。临时标签、视口和测试服务已清理。用户重启原 `npm run dev` 后加载新密码规则，并自动升级本地账号表；本次验证使用旧结构测试夹具，未提前迁移用户真实数据库。

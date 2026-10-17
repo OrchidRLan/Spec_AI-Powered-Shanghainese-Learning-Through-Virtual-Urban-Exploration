@@ -1,20 +1,22 @@
 # 语音服务边界与内容制作
 
-最新交付（2026-10-17）：[批次 B+C](Batch-BC-plan.md) 沿用南翔的语音适配与明确继续交互，新增三站固定目标核对及 36 条待审声音。三站独立内容/规则版本不改变现有南翔会话；本轮实际执行仅有下述 35 次 TTS，没有新增 ASR、LLM 或真人录音。完整证据见 [B+C 验收](Batch-BC-acceptance.md)。
+本文保留语音适配、制作和真实调用记录；分批计数描述对应历史执行，不代表完整质量验收。现行产品行为见 [产品规格](../Product-spec.md)，待完成验证见 [D/E 计划](../Batch-DE-plan.md)。
 
-当前覆盖性决定（2026-10-17）：[批次 A 修订 4](Batch-A-revision-4.md) 精简中英常驻提示、将实际订单带入最后确认及配套声音、统一完成按钮并重排地点卡。流程沿用 [修订 3](Batch-A-revision-3.md)：只保留商品、数量、方式、订单核对四道既定问题，取消临时追问；识别后显示原转写与正误，明确点击继续才推进，失败可重试或辅助继续。未覆盖部分沿用 [修订 2](Batch-A-revision-2.md)；下方历史冲突规定由最新修订覆盖，实际完成状态见 [开发进度](Development-status.md)。
+最新交付（2026-10-17）：[批次 B+C](../archive/batches/Batch-BC-plan.md) 沿用南翔的语音适配与明确继续交互，新增三站固定目标核对及 36 条待审声音。三站独立内容/规则版本不改变现有南翔会话；本轮实际执行仅有下述 35 次 TTS，没有新增 ASR、LLM 或真人录音。完整证据见 [B+C 验收](../archive/batches/Batch-BC-acceptance.md)。
 
-核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+当前覆盖性决定（2026-10-17）：[批次 A 修订 4](../archive/batches/Batch-A-revision-4.md) 精简中英常驻提示、将实际订单带入最后确认及配套声音、统一完成按钮并重排地点卡。流程沿用 [修订 3](../archive/batches/Batch-A-revision-3.md)：只保留商品、数量、方式、订单核对四道既定问题，取消临时追问；识别后显示原转写与正误，明确点击继续才推进，失败可重试或辅助继续。未覆盖部分沿用 [修订 2](../archive/batches/Batch-A-revision-2.md)；下方历史冲突规定由最新修订覆盖，实际完成状态见 [开发进度](../Development-status.md)。
+
+核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](../content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
 
 ## 批次 B+C：三站待审声音与核对
 
-[三站内容包](../content/batch-bc.json) 版本为 `batch-bc.2026-10-17.v1`，共 36 条候选，包含店员问题、学习表达、口味介绍、完整订单确认及收尾。对应规则 `station-lessons.v1`、表达核对来源 `station-target-check.v1`；仍在原 ASR 转写上核对所选目标，保留原文，不调用自由对话 LLM，不自动推进。
+[三站内容包](../../content/batch-bc.json) 版本为 `batch-bc.2026-10-17.v1`，共 36 条候选，包含店员问题、学习表达、口味介绍、完整订单确认及收尾。对应规则 `station-lessons.v1`、表达核对来源 `station-target-check.v1`；仍在原 ASR 转写上核对所选目标，保留原文，不调用自由对话 LLM，不自动推进。
 
 本批对冻结清单执行 **35 次阿里云北京 `qwen3-tts-flash` + Jada TTS，无自动重试**。供应商 `usage.characters` 合计 **516**，按已核验的 [北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **¥0.04128**；没有查询账户账单、免费额度或优惠，不能将该估算写作实际扣费。调用上限 35 次、预算 ¥2。生成配置为 `tts-7f9e533827ac529c`；目标语种 `wuu` 与提供商参数 `Chinese` 分开记录，后者不构成沪语发音质量认证。
 
-新增 **35 个 PCM16 WAV**，均为 24 kHz、单声道，保存在 `frontend/public/audio/review-bc/`；“对个”复用原 R1 E05 的完整录音，没有重新计费。合计 [36 条声音记录](../content/audio-review-bc.json)、36 个唯一文件，按条目共 **55.92 秒**。清单保存原文/注音版本、冻结哈希、配置、请求标识、时长、SHA256、用量与复用出处；所有条目维持 `reviewStatus:pending`、`listeningReview:pending`、空批准记录。慢速沿用同文件 0.75× 保音高播放，未生成独立慢读或伪造听审。
+新增 **35 个 PCM16 WAV**，均为 24 kHz、单声道，保存在 `frontend/public/audio/review-bc/`；“对个”复用原 R1 E05 的完整录音，没有重新计费。合计 [36 条声音记录](../../content/audio-review-bc.json)、36 个唯一文件，按条目共 **55.92 秒**。清单保存原文/注音版本、冻结哈希、配置、请求标识、时长、SHA256、用量与复用出处；所有条目维持 `reviewStatus:pending`、`listeningReview:pending`、空批准记录。慢速沿用同文件 0.75× 保音高播放，未生成独立慢读或伪造听审。
 
-[制作与离线核验工具](../scripts/speech-review-bc.py) 按文本、版本和配置核对缓存；在独占锁内重新核算清单与费用，不自动重试失败或不明结果。现有文件和历史复用来源均通过离线检查，检查不调用网络。正式内容校验包含 B+C 独立门槛，不能只改候选状态字段绕过审阅。
+[制作与离线核验工具](../../scripts/speech-review-bc.py) 按文本、版本和配置核对缓存；在独占锁内重新核算清单与费用，不自动重试失败或不明结果。现有文件和历史复用来源均通过离线检查，检查不调用网络。正式内容校验包含 B+C 独立门槛，不能只改候选状态字段绕过审阅。
 
 糖店介绍通过会话归属校验后的 `/api/attempts/{attempt_id}/introduction/audio` 提供完整本地录音；文件与文本/注音/版本/SHA256 不匹配时拒绝播放。返回状态不暴露隐藏口味；播放成功提供音频与真正播放完成分开处理，前端播放失败不标为已听，显式文字帮助才揭示介绍并记录帮助事实。
 
@@ -22,11 +24,11 @@
 
 ## 修订 4：完整订单确认声音
 
-[独立确认内容](../content/nanxiang-confirmations-r4.json) 包含一/二/三份 × 堂吃/外带六种完整句，沿用既有候选词句与注音，均保留待审。播放从当前规范化保存订单匹配，显示、自动播放与手动播放一致；修改订单后不会复用旧句。原 R3 基础内容与规则不变，新增资源单独版本化，无需重置已有 R3 进度。
+[独立确认内容](../../content/nanxiang-confirmations-r4.json) 包含一/二/三份 × 堂吃/外带六种完整句，沿用既有候选词句与注音，均保留待审。播放从当前规范化保存订单匹配，显示、自动播放与手动播放一致；修改订单后不会复用旧句。原 R3 基础内容与规则不变，新增资源单独版本化，无需重置已有 R3 进度。
 
-真实调用北京 `qwen3-tts-flash` + Jada 六次、无重试，输入文本合计 84 字符，供应商计量 150 字符，按已有目录费率估算 ¥0.012；未查询账单。执行上限六次、估算预算 ¥1，无 ASR/LLM/用户录音调用。六个整句 WAV 总长 15.6 秒，位于 `frontend/public/audio/review-r4/`；[清单](../content/audio-review-r4.json) 全部 pending。慢速为同文件保音高 0.75×，未制作独立慢读。
+真实调用北京 `qwen3-tts-flash` + Jada 六次、无重试，输入文本合计 84 字符，供应商计量 150 字符，按已有目录费率估算 ¥0.012；未查询账单。执行上限六次、估算预算 ¥1，无 ASR/LLM/用户录音调用。六个整句 WAV 总长 15.6 秒，位于 `frontend/public/audio/review-r4/`；[清单](../../content/audio-review-r4.json) 全部 pending。慢速为同文件保音高 0.75×，未制作独立慢读。
 
-`scripts/speech-review-r4.py plan/check` 只做离线检查，生成后计划为零待调用；`generate` 要求冻结输入摘要及显式调用标记，严格限制预算、次数，不自动重试。`npm run check` 已包含 R4 音频审计，开发/正式内容校验均覆盖独立补充包，避免未来基础教材批准后漏放未审确认句。完整操作和浏览器证据见 [修订 4 验收](Batch-A-revision-4-acceptance.md)。
+`scripts/speech-review-r4.py plan/check` 只做离线检查，生成后计划为零待调用；`generate` 要求冻结输入摘要及显式调用标记，严格限制预算、次数，不自动重试。`npm run check` 已包含 R4 音频审计，开发/正式内容校验均覆盖独立补充包，避免未来基础教材批准后漏放未审确认句。完整操作和浏览器证据见 [修订 4 验收](../archive/batches/Batch-A-revision-4-acceptance.md)。
 
 ## 修订 2：自由点单改稿与慢速播放
 
@@ -42,7 +44,7 @@ backend/.venv/bin/python scripts/speech-review-r2.py plan
 npm run audio:check
 ```
 
-`audio:check` 同时核验历史 R1 与当前 R2。前端慢速只改变已有文件的播放速度至 0.75×，并设置保音高；不重复调用 TTS、不生成伪造的独立慢速文件，也不将慢放听感标为已审核。标准与慢速偏好本地保存。自动录音结束→ASR→提交原转写、取消/迟到隔离由媒体与事件处理模拟回归覆盖，本轮未声称真人浏览器录音成功；具体证据见 [修订 2 验收](Batch-A-revision-2-acceptance.md)。
+`audio:check` 同时核验历史 R1 与当前 R2。前端慢速只改变已有文件的播放速度至 0.75×，并设置保音高；不重复调用 TTS、不生成伪造的独立慢速文件，也不将慢放听感标为已审核。标准与慢速偏好本地保存。自动录音结束→ASR→提交原转写、取消/迟到隔离由媒体与事件处理模拟回归覆盖，本轮未声称真人浏览器录音成功；具体证据见 [修订 2 验收](../archive/batches/Batch-A-revision-2-acceptance.md)。
 
 ## 官方合约与初选配置
 
@@ -128,7 +130,7 @@ CLI 只从仓库 `content/` 内的内容包取 `hanzi`，没有任意文本参�
 
 实际共 **20 次 TTS 请求，无重试**；API 返回 `usage.characters` 合计 **260**。按 [官方北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **0.0208 元**，低于本轮 1 元预算。未查询账户账单、免费额度或优惠，此数为估算。原文 Python 字符串长度合计 141，并不等于 API 返回计量；后续预留费用采用更保守的 UTF-8 字节数，完成请求按 API usage 累计，含不明结果的失败请求也预留预算。
 
-实际保存 20 个 PCM16 WAV，均为 24 kHz、单声道，总长 **29,840 ms**。资源位于 `frontend/public/audio/review-r1/<generationId>.wav`，[独立清单](../content/audio-review-r1.json) 保存每句的原文、版本、配置、SHA256、时长、时间、请求 ID、用量与成本估算。供应商 WAV 占位长度头按已验证规则收尾，PCM 样本不变；没有做变速、普通话替代或额外收费重试。下载只用于保存用户授权的应用资产；提供商的 [临时 URL 有效期为 24 小时](https://help.aliyun.com/zh/model-studio/qwen-tts-api)，清单和前端不依赖这些地址。
+实际保存 20 个 PCM16 WAV，均为 24 kHz、单声道，总长 **29,840 ms**。资源位于 `frontend/public/audio/review-r1/<generationId>.wav`，[独立清单](../../content/audio-review-r1.json) 保存每句的原文、版本、配置、SHA256、时长、时间、请求 ID、用量与成本估算。供应商 WAV 占位长度头按已验证规则收尾，PCM 样本不变；没有做变速、普通话替代或额外收费重试。下载只用于保存用户授权的应用资产；提供商的 [临时 URL 有效期为 24 小时](https://help.aliyun.com/zh/model-studio/qwen-tts-api)，清单和前端不依赖这些地址。
 
 所有条目仍为 `status:generated`、`reviewStatus:pending`、`reviewIds:[]`。正式内容包 28 条音频和审核账本保持原有待审状态；前端只有在 `text`、`textVersion` 与当前内容精确匹配时才允许播放，不能把旧声音绑定到新文字。首次生成后的离线检查已核对 20 条完整性、原文/注音版本、生成配置、路径、WAV、SHA256、时长及生产审批状态未变。
 
