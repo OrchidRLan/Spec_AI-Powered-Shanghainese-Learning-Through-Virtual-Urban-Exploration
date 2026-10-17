@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateBatchBCContent } from './validate-bc-content.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const STAGES = ['language', 'pronunciation', 'approximation', 'audio'];
@@ -423,6 +424,12 @@ function main() {
   result.errors.push(...supplement.errors);
   result.ok = result.ok && supplement.ok;
   Object.assign(result.summary, supplement.summary);
+  const stationPack = JSON.parse(readFileSync(resolve(ROOT, 'content/batch-bc.json'), 'utf8'));
+  const stationAudio = JSON.parse(readFileSync(resolve(ROOT, 'content/audio-review-bc.json'), 'utf8'));
+  const stations = validateBatchBCContent(stationPack, { mode: result.mode, audioManifest: stationAudio, requireAudio: true });
+  result.errors.push(...stations.errors);
+  result.ok = result.ok && stations.ok;
+  Object.assign(result.summary, stations.summary);
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exitCode = 1;
 }

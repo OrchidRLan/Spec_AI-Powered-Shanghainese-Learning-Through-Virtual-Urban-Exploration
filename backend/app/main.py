@@ -22,6 +22,8 @@ from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, R1_CONTENT_VERSION, 
 from .guided import GUIDED_SOURCE, PracticeError, apply_practice, assess
 from .semantic import configure_interpreter
 from .storage import Database, encode
+from . import lessons
+from .lesson_api import register as register_lessons
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT.parent / ".env", override=False)
@@ -41,7 +43,7 @@ def problem(code: str, message: str, status: int = 409, **extra):
 
 
 def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
-    app = FastAPI(title="Shanghai learning — Batch A", version="0.1.0")
+    app = FastAPI(title="Shanghai learning — Four stations", version="0.2.0")
     app.state.database = Database(database_path or os.environ.get("DATABASE_PATH", str(ROOT / "data" / "app.db")))
     text_mode = os.environ.get("TEXT_INTERPRETER", "development_parser")
     selected_interpreter, interpreter_config_id = configure_interpreter(text_mode)
@@ -89,7 +91,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         return attempt
 
     def public_attempt(connection, attempt: dict) -> dict:
-        result = dict(attempt)
+        result = lessons.public_fields(attempt)
         add_bound_versions(connection, result)
         turns = connection.execute(
             "SELECT request_id,status,payload,interpretation,created_at FROM turns WHERE attempt_id=? ORDER BY created_at, rowid", (attempt["id"],)
@@ -238,7 +240,17 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                 if latest and latest["status"] == "completed":
                     return public_attempt(connection, latest)
             bound = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
-            attempt = new_attempt(identifier(), now(), content_version=bound["content_version"], rule_version=bound["rule_version"])
+            if body.station_id == "nanxiang":
+                attempt = new_attempt(identifier(), now(), content_version=bound["content_version"], rule_version=bound["rule_version"])
+            else:
+                if bound["rule_version"] != RULE_VERSION or bound["content_version"] != CONTENT_VERSION:
+                    problem("lesson_version_required", "Start a new journey to use the new station lessons.")
+                if (bound.get("lesson_content_version", lessons.CONTENT_VERSION) != lessons.CONTENT_VERSION
+                        or bound.get("lesson_rule_version", lessons.RULE_VERSION) != lessons.RULE_VERSION):
+                    problem("lesson_version_required", "This session uses an earlier station lesson package.")
+                bound.update(lesson_content_version=lessons.CONTENT_VERSION, lesson_rule_version=lessons.RULE_VERSION)
+                connection.execute("UPDATE sessions SET data=? WHERE id=?", (encode(bound), sid))
+                attempt = lessons.new_attempt(identifier(), now(), body.station_id)
             connection.execute("INSERT INTO attempts VALUES (?,?,?)", (attempt["id"], sid, encode(attempt)))
             database.event(connection, sid, attempt["id"], identifier(), "attempt_started", {}, now())
             return public_attempt(connection, attempt)
@@ -443,7 +455,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
         with database.transaction() as connection:
             sid = session_id(request, connection)
             attempt = owned_attempt(connection, sid, attempt_id)
-            if attempt["rule_version"] == RULE_VERSION:
+            if attempt["rule_version"] == RULE_VERSION or "lesson" in attempt:
                 problem("guided_practice_required", "Use the guided practice flow for this session.", attempt=public_attempt(connection, attempt))
             previous = connection.execute("SELECT * FROM turns WHERE attempt_id=? AND request_id=?", (attempt_id, body.request_id)).fetchone()
             if previous:
@@ -646,6 +658,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
             problem(**result["error"])
         return result
 
+    register_lessons(app, database, session_id=session_id, owned_attempt=owned_attempt,
+                     public_attempt=public_attempt, problem=problem, now=now,
+                     identifier=identifier, root=ROOT.parent)
     return app
 
 

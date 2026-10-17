@@ -1,4 +1,4 @@
-# 批次 A／修订 3 本地 API
+# 四站本地 API（批次 A 修订 4 与 B+C）
 
 Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
 
@@ -22,11 +22,15 @@ python3.11 -m venv .venv
 | POST /api/session/new | 已有会话 Cookie；JSON `{}` | 用户明确选择新的探索时创建 Session 并替换 Cookie；保留三项偏好，进度从零开始 |
 | GET /api/services | 无 | asr.enabled/formats/config；text.mode=development_parser |
 | GET /api/content | 会话 Cookie | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
-| POST /api/attempts | station_id: nanxiang, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
+| POST /api/attempts | station_id: nanxiang/restaurant/candy/teahouse, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
 | GET /api/attempts/{id} | Cookie | Attempt |
 | POST /api/attempts/{id}/practice | PracticeInput，仅 R3 | PracticeResult；保存本题选择/评估或显式推进 |
 | GET /api/attempts/{id}/practice/{request_id} | Cookie | 原始 PracticeResult；未知 404 |
 | POST /api/attempts/{id}/practice/{request_id}/cancel | expected_revision | 已保存结果或取消 tombstone，保护迟到原请求 |
+| POST /api/attempts/{id}/lesson | LessonInput，仅 B+C 三站 | PracticeResult；保存选择、评估、明确继续、编辑或听辨接触 |
+| GET /api/attempts/{id}/lesson/{request_id} | Cookie | 原始 PracticeResult；未知 404 |
+| POST /api/attempts/{id}/lesson/{request_id}/cancel | expected_revision | 原始结果或取消 tombstone |
+| GET /api/attempts/{id}/introduction/audio | Cookie；仅本人糖店尝试 | 版本、原文、注音与文件哈希核验后的 WAV；不发送目标文件名 |
 | POST /api/attempts/{id}/turns | TurnInput | TurnResult |
 | GET /api/attempts/{id}/turns/{request_id} | Cookie | TurnResult；未知 404 |
 | POST /api/attempts/{id}/turns/{request_id}/cancel | expected_revision | TurnResult；支持取消先于原 POST 到达 |
@@ -39,12 +43,12 @@ python3.11 -m venv .venv
 type Order = {
   item: string | null;
   quantity: number | null;
-  unit: 'serving' | 'basket' | 'piece' | 'unknown' | null;
+  unit: 'serving' | 'basket' | 'piece' | 'pack' | 'unknown' | null;
   normalized_servings: number | null;
   takeaway: boolean | null;
 };
 type Attempt = {
-  id: string; station_id: 'nanxiang';
+  id: string; station_id: 'nanxiang'|'restaurant'|'candy'|'teahouse';
   content_version: string; rule_version: string;
   status: 'collecting'|'confirming'|'completed'|'skipped';
   revision: number; order: Order; unresolved_issues: string[];
@@ -53,6 +57,7 @@ type Attempt = {
   metrics: {voice_attempts:number;help_used:number};
   unit_convention_seen: boolean; turns: Turn[];
   practice?: Practice; // 仅 R3，历史版本没有此字段
+  lesson?: Lesson; // B+C 三站，南翔继续使用 practice
   created_at:string; updated_at:string;
 };
 type TurnInput = {
@@ -70,9 +75,47 @@ type Session = {
   mode:'development';content_version:string;rule_version:string;
   model_config_id:string;asr_config_id:string|null;created_at:string;attempts:Attempt[];
   completed_station_ids:string[];
+  lesson_content_version?:string;lesson_rule_version?:string;
   services:{text:'development_parser'|'qwen';asr:'unconfigured'|'configured'};
 };
 ```
+
+## B+C：三站固定问题
+
+南翔和基础会话继续绑定 R3 内容与规则；第一次开始 B+C 站点时，为当前 R3 会话追加 `lesson_content_version=batch-bc.2026-10-17.v1`、`lesson_rule_version=station-lessons.v1`。三站 Attempt 分别绑定这两个版本，不重置南翔进度。旧 R1/R2 会话与未知扩展绑定不静默迁移，返回 `lesson_version_required`；已有尝试按原绑定恢复。`/turns` 和 `/practice` 不能绕过新站规则。
+
+```ts
+type Lesson = {
+  step:string;step_id:string;target:string|null;can_choose:boolean;
+  result:Practice['result'];answers:Record<string,string>;
+  history:Array<{step:string;step_id:string;option_id:string;assisted:boolean;
+    result:Practice['result'];revision:number}>;
+  listening:null|{audio_url:string;played:boolean;text_revealed:boolean;
+    introduction_text_id:string|null};
+};
+type LessonInput = {
+  request_id:string;expected_revision:number;
+  operation:'select'|'evaluate'|'continue'|'edit'|'listened'|'help';
+  option_id?:string; // select
+  text?:string;asr_request_id?:string;failure_kind?:'recognition'|'technical'; // evaluate
+  assisted?:boolean;result_request_id?:string; // continue
+  step?:string; // edit
+};
+```
+
+| 站点 | 固定步骤 | 本题选项 |
+| --- | --- | --- |
+| restaurant | preference → recommendation → dish → confirm | not_spicy；recommend；fish/chicken/tofu；confirm |
+| candy | flavor → quantity → confirm | rose/osmanthus/mint；two_packs；confirm |
+| teahouse | appreciation → thanks | good_tea；thanks |
+
+- 所有步骤均先选目标、再识别核对、结果停留；`continue` 才写入 `answers`。前置选择、播放台词、展示推荐均不冒充用户回答。最终 `confirm` 的目标自动设为 `confirm`，仍需语音尝试或技术回退后明确继续；茶楼的 thanks 明确继续直接保存完成，不生成订单核对。
+- 新三站使用有限的 `station-target-check.v1`，对原始转写做目标表达核对，另外执行任务约束。豆腐为辣菜，不能完成不辣任务；糖店口味必须匹配服务端固定目标。因此清楚说出不合任务的预选项会返回 `incorrect/task_mismatch`，辅助继续同样不能绕过任务约束。用户可以重选与练习，不产生追问。
+- 双重否定、错对象、转述／引用、数量冲突和询问不按关键词误记为目标完成。有限语义核对不是任意自由对话理解或逐字发音评分。全部教材选项均有原句回归；不修改保存的 ASR 原文。
+- 糖店每次尝试随机分配一个固定口味，刷新、切语言、重播、错误选择和恢复都不改变。私有目标不会出现在 Attempt、Session、错误、幂等快照或日志中；音频通过无口味标记的私有 URL 发送。`listened` 需先成功取得该尝试的音频，且由播放器正常结束后调用；服务端把结束事实记录为 `reported_by:client`，不称为已听懂。音频下载、播放失败、取消、仅打开词卡均不算已听。
+- `help` 是明确查看介绍文字，保存不可撤销的曝光记录，之后才返回对应 `introduction_text_id`。完整播完或使用文字帮助后才能核对/继续口味题。音频缺失或身份校验失败返回 503，文字帮助仍可完成任务。
+- `edit` 只能从餐厅／糖店确认题回到之前的既定步骤，清除该步及后续已提交答案、旧结果和确认版本，开始新 `step_id` 并重新先 Speak。过去回答保留在 history；新的确认只依据最新有效答案。完成后修改被拒绝，重练产生新尝试。
+- 评估的原文绑定、ASR 一次消费、故障原文恢复、结果 ID、幂等与取消和原子保存与南翔相同；同一 ASR 也不能跨南翔和新三站重复消费。响应丢失可查询或取消原请求，客户端必须按 revision 防止原快照覆盖后续状态。保存失败不会记录完成、消耗 ASR 或留下半条历史。
 
 ## 修订 3：固定练习与手动继续
 

@@ -1,0 +1,58 @@
+.bc-station { --station-accent: #47634e; }
+.bc-restaurant { --station-accent: #795340; }
+.bc-candy { --station-accent: #9b6868; }
+.bc-teahouse { --station-accent: #4e7976; }
+.bc-welcome { border-radius:24px; overflow:hidden; background:var(--white); border:1px solid var(--line); }
+.bc-welcome > div:last-child { padding:28px; text-align:center; }
+.bc-welcome p { max-width:38rem; margin:0 auto 24px; font-size:19px; line-height:1.7; }
+.bc-stage-column { min-width:0; }
+.bc-station .bc-scene-stage { aspect-ratio:1100 / 650; display:flex; background:#ebe4cf; }
+.bc-station .bc-scene-stage > svg { width:100%; height:100%; max-width:none; margin:0; object-fit:cover; }
+.bc-mission { font-size:16px; line-height:1.75; color:var(--muted); margin:20px 4px; }
+.bc-saved-summary { padding:20px; background:#f1efe3; border:1px solid var(--line); border-radius:15px; display:grid; gap:10px; margin-bottom:24px; }
+.bc-saved-summary strong { font-weight:600; line-height:1.65; }
+.bc-saved-summary small { display:flex; align-items:center; gap:5px; color:var(--muted); justify-self:end; }
+.bc-display { padding:22px; border-radius:19px; background:rgba(255,255,255,.5); border:1px solid var(--line); margin-top:24px; }
+.bc-display h2 { margin:0 0 14px; font-family:inherit; font-size:15px; color:var(--station-accent); letter-spacing:.04em; }
+.bc-display > div { display:grid; gap:14px; }
+.bc-display article { display:flex; align-items:center; gap:15px; }
+.bc-display article > svg { width:94px; height:74px; flex:0 0 94px; }
+.bc-display article strong { font-size:16px; }
+.bc-display article p { color:var(--muted); margin:6px 0 0; font-size:13px; line-height:1.5; }
+.bc-turn-panel { min-width:0; scroll-margin-top:24px; }
+.bc-turn-panel .r1-question .learning-hanzi { font-size:clamp(24px,2.3vw,33px); }
+.bc-turn-panel .r1-question .learning-reading { font-size:15px; }
+.bc-confirm-summary { display:grid; gap:8px; padding:18px 20px; margin:20px 0; border-left:3px solid var(--station-accent); background:#f1efe4; border-radius:0 12px 12px 0; }
+.bc-confirm-summary span { font-size:12px; color:var(--muted); }
+.bc-confirm-summary strong { line-height:1.7; font-size:17px; }
+.bc-picker > div { gap:9px; }
+.bc-picture-picker > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.bc-picture-picker button { display:flex; flex-direction:column; justify-content:flex-start; align-items:center; position:relative; min-width:0; padding:14px 9px; gap:10px; font-size:14px; line-height:1.5; text-align:center; }
+.bc-picture-picker button > svg:not(.lucide) { width:100%; max-width:100px; height:78px; }
+.bc-picture-picker button > .lucide-check { position:absolute; top:8px; right:8px; color:var(--station-accent); }
+.bc-picture-picker button span { overflow-wrap:anywhere; }
+.bc-listening { margin:22px 0 26px; border:1px solid #d9c9bc; background:#f4eee5; border-radius:17px; padding:22px; }
+.bc-listening > .lucide { color:var(--station-accent); }
+.bc-listening > p { font-size:16px; line-height:1.65; margin:12px 0 20px; }
+.bc-listening .primary { font-size:15px; }
+.bc-listening progress { width:100%; height:5px; margin:14px 0 0; accent-color:var(--station-accent); }
+.bc-listening-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; margin-top:14px; }
+.bc-listening-actions small { display:flex; align-items:center; gap:5px; color:var(--muted); }
+.bc-introduction-text { border-top:1px solid #d9c9bc; margin-top:18px; padding-top:20px; }
+.bc-introduction-text > .overline { margin-bottom:16px; display:block; }
+.bc-completed { padding-top:26px; }
+.bc-completed h2 { font-size:32px; }
+.bc-review-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:26px 0; }
+.bc-review-tabs button { display:flex; gap:9px; align-items:center; border:1px solid var(--line); border-radius:999px; padding:12px 18px; background:#fffdf7; color:var(--ink); font:inherit; font-size:14px; }
+.bc-review-tabs button[aria-pressed=true] { background:var(--green); color:white; border-color:var(--green); }
+.bc-route-review { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:30px 0; }
+.bc-route-review article { border:1px solid var(--line); border-radius:17px; background:#fffdf7; padding:22px 18px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.bc-route-review article > svg { width:100%; height:115px; }
+.bc-route-review h2 { font-family:inherit; font-size:17px; line-height:1.4; margin:15px 0 12px; }
+.bc-route-review p { color:var(--muted); font-size:14px; margin:0 0 18px; line-height:1.6; }
+.bc-route-review button { margin-top:auto; }
+.bc-route-banner { display:flex; align-items:center; gap:18px; background:#e9eee1; border-radius:18px; padding:23px 26px; margin:28px 0; }
+.bc-route-banner p { margin:0; line-height:1.65; }
+@media (min-width:1000px) { .bc-conversation-grid { grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); gap:34px; } .bc-stage-column { position:sticky; top:24px; align-self:start; } }
+@media (max-width:999px) { .bc-display > div { grid-template-columns:repeat(3,minmax(0,1fr)); } .bc-display article { flex-direction:column; text-align:center; gap:7px; } .bc-display article > svg { flex-basis:auto; } .bc-display article p { font-size:12px; } .bc-mission { margin:17px 3px; } .bc-route-review { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:560px) { .bc-station .bc-scene-stage { aspect-ratio:1.4; } .bc-display { padding:17px 12px; margin-top:18px; } .bc-display article > svg { width:78px; height:62px; } .bc-display article strong { font-size:13px; } .bc-display article p { display:none; } .bc-turn-panel .r1-reading-tools { gap:13px; align-items:flex-start; } .bc-listening { padding:18px; } .bc-picker button { min-height:50px; } .bc-picture-picker > div { grid-template-columns:minmax(0,1fr); } .bc-picture-picker button { flex-direction:row; justify-content:flex-start; align-items:center; text-align:left; min-height:88px; font-size:15px; padding:12px 34px 12px 14px; gap:16px; } .bc-picture-picker button > svg:not(.lucide) { width:64px; height:64px; flex:0 0 64px; } .bc-picture-picker button > span { min-width:0; overflow-wrap:normal; word-break:normal; } .bc-picture-picker button > .lucide-check { top:50%; right:12px; transform:translateY(-50%); } .bc-review-tabs { gap:8px; } .bc-review-tabs button { padding:11px 14px; font-size:13px; } .bc-route-review { gap:10px; } .bc-route-review article { padding:16px 10px; } .bc-route-review h2 { font-size:15px; } .bc-route-review article > svg { height:90px; } .bc-route-banner { padding:20px; align-items:flex-start; } }

@@ -12,10 +12,10 @@
     "preview": "vite preview --host 127.0.0.1",
     "content:check": "node scripts/validate-content.mjs",
     "test:api": "backend/.venv/bin/python -m pytest backend/tests -q",
-    "test:content": "node --test content/validate-content.test.mjs",
+    "test:content": "node --test content/*.test.mjs",
     "check": "npm run typecheck && npm run test:content && npm run test:ui && npm run test:api && npm run audio:check",
     "test:ui": "node --experimental-strip-types --test frontend/tests/*.test.mjs",
-    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && node scripts/check-audio-r3.mjs && backend/.venv/bin/python scripts/speech-review-r4.py check"
+    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && node scripts/check-audio-r3.mjs && backend/.venv/bin/python scripts/speech-review-r4.py check && backend/.venv/bin/python scripts/speech-review-bc.py check"
   },
   "engines": {
     "node": ">=22.12"

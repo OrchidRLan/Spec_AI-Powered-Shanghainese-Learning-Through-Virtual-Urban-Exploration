@@ -11,9 +11,15 @@ const manifest = JSON.parse(await readFile(new URL('../../content/audio-review-r
 const confirmationContent = JSON.parse(await readFile(new URL('../../content/nanxiang-confirmations-r4.json', import.meta.url), 'utf8'));
 const confirmationManifest = JSON.parse(await readFile(new URL('../../content/audio-review-r4.json', import.meta.url), 'utf8'));
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
-const files = ['lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'lib/orderConfirmation.ts', 'App.tsx'];
+const stationContentData = JSON.parse(await readFile(new URL('../../content/batch-bc.json', import.meta.url), 'utf8'));
+const jsonDependencies = {};
+const files = ['lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'lib/orderConfirmation.ts', 'lib/stationContent.ts', 'App.tsx'];
 const executable = (await Promise.all(files.map(async file => {
-  const source = await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8');
+  let source = await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8');
+  if (file === 'lib/stationContent.ts') source = source.replace(/\bcontent\b/g, 'stationContentData');
+  else for (const match of source.matchAll(/^import (\w+) from '([^']+\.json)';/gm)) {
+    jsonDependencies[match[1]] = JSON.parse(await readFile(new URL(match[2], new URL(`../src/${file}`, import.meta.url)), 'utf8'));
+  }
   const transformed = await transformWithOxc(source, file, { jsx: { runtime: 'classic' } });
   return transformed.code.replace(/^import\b[\s\S]*?;\n/gm, '')
     .replace(/export default function /g, 'function ').replace(/export (?=(?:function|const) )/g, '');
@@ -54,8 +60,10 @@ function harness(options = {}) {
   const attempt = options.attempt ?? makeAttempt();
   const serverSession = {
     id: 'session-r2', locale: options.locale ?? 'en', show_romanization: true, reduced_motion: false,
-    content_version: content.contentVersion, rule_version: 'test', attempts: [attempt],
-    completed_station_ids: options.completed ? ['nanxiang'] : [], services: {},
+    content_version: content.contentVersion, rule_version: 'test',
+    attempts: options.attempts ?? (options.completed && attempt.status !== 'completed'
+      ? [makeAttempt({ id: 'previous-completed', status: 'completed' }), attempt] : [attempt]),
+    completed_station_ids: options.completedStationIds ?? (options.completed ? ['nanxiang'] : []), services: {},
   };
   const audio = { src: '', playbackRate: 1, preservesPitch: false, playCalls: 0,
     async play() { this.playCalls += 1; }, pause() {}, currentTime: 0 };
@@ -78,7 +86,7 @@ function harness(options = {}) {
       effects.push(() => { slot.cleanup?.(); slot.cleanup = callback(); });
     }
   };
-  const components = Object.fromEntries(['Dialog', 'Recorder', 'GuidedPractice', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
+  const components = Object.fromEntries(['Dialog', 'Recorder', 'GuidedPractice', 'StationLesson', 'GardenMap', 'Landmark', 'NanxiangScene', 'LearningText', ...icons]
     .map(name => [name, function boundaryComponent() {}]));
   const window = {
     location: { hash: options.hash ?? '#nanxiang' },
@@ -92,7 +100,7 @@ function harness(options = {}) {
     }
   }
   const context = {
-    content, manifest, confirmationContent, confirmationManifest, ...components, useState, useRef, useEffect,
+    content, manifest, confirmationContent, confirmationManifest, stationContentData, ...jsonDependencies, ...components, useState, useRef, useEffect,
     React: { createElement: (type, attributes, ...children) => {
       if (type === 'audio' && attributes.ref) attributes.ref.current = audio;
       return { type, props: { ...attributes, children } };
@@ -111,6 +119,7 @@ function harness(options = {}) {
     post: async (path, body, signal) => {
       requests.push({ path, body, signal });
       if (path === '/events') return {};
+      if (path === '/attempts' && options.beginResponse) return responseValue(options.beginResponse, path, body);
       if (path.endsWith('/cancel') && options.cancelResponse) return responseValue(options.cancelResponse, path, body);
       if (path.endsWith('/turns')) {
         if (options.turnError === 'terminal') throw new ApiError('provider_unavailable', 'Provider unavailable', undefined, true, true);
@@ -147,9 +156,11 @@ function harness(options = {}) {
     get turnRequests() { return requests.filter(request => request.path.endsWith('/turns')); },
     get text() { return text(); },
     get hash() { return window.location.hash; },
+    get title() { return context.document.title; },
     find, textOf: text,
     get recorder() { return find(node => node.type === components.Recorder)?.props; },
     get guided() { return find(node => node.type === components.GuidedPractice)?.props; },
+    get lesson() { return find(node => node.type === components.StationLesson)?.props; },
     tab(id) { return find(node => node.props?.id === `tab-${id}`)?.props; },
     click(predicate) {
       const button = typeof predicate === 'string'
@@ -575,7 +586,7 @@ test('R4 incomplete and unsupported orders never borrow a confirmation for anoth
   }
 });
 
-test('R4 map cards have one full-width content order and honest closed-stop status in both languages', async t => {
+test('R4 map card hierarchy remains intact as B+C opens all four stops in both languages', async t => {
   for (const locale of ['zh', 'en']) {
     const h = harness({ hash: '#map', locale }); t.after(() => h.dispose()); await h.settle();
     const card = h.find(node => node.type === 'aside' && node.props.className.includes('r4-station-detail'));
@@ -587,10 +598,12 @@ test('R4 map cards have one full-width content order and honest closed-stop stat
     assert.doesNotMatch(h.text, /A conversation awaits|Nanxiang first|Work in progress|About this preview|这一站，聊什么|南翔先行|关于本次预览/);
     assert.equal(h.find(node => node.props?.className === 'phrase-tags'), undefined);
     h.click(node => node.type === 'button' && node.props.className?.includes('marker-candy'));
-    assert.match(h.text, locale === 'zh' ? /尚未开放/ : /Not open yet/);
-    assert.doesNotMatch(h.text, /development batch|后续批次/);
-    h.click(locale === 'zh' ? '去南翔看看' : 'Explore Nanxiang');
-    assert.ok(h.find(node => node.type === 'aside' && node.props.className.includes('station-nanxiang')));
+    assert.doesNotMatch(h.text, /尚未开放|Not open yet|development batch|后续批次/);
+    const open = h.find(node => node.props?.className === 'r4-station-action').props.children.flat(Infinity).find(node => node.type === 'button');
+    assert.equal(open.props.disabled, false, 'the candy station is now available');
+    h.click(node => node === open);
+    assert.equal(h.hash, 'candy');
+    assert.equal(h.lesson.station, 'candy');
   }
 });
 
@@ -614,4 +627,73 @@ test('R4 completion actions keep every icon before its label and remove repeated
     assert.equal(h.hash, 'review');
     assert.doesNotMatch(h.text, /This records conversations and practice|这里记录交流与练习/);
   }
+});
+
+function makeLessonAttempt(station, changes = {}) {
+  const plan = stationContentData.stationPlans.find(item => item.id === station);
+  const step = plan.steps[0];
+  return makeAttempt({ id: `saved-${station}`, station_id: station, prompt_id: step.hostEntryId,
+    lesson: { step: step.id, step_id: `${station}-step-1`, target: null, answers: {}, result: null, can_choose: false }, ...changes });
+}
+
+test('B+C direct station links restore their own saved attempts and shared preferences', async t => {
+  for (const station of ['restaurant', 'candy', 'teahouse']) {
+    const saved = makeLessonAttempt(station, { revision: 9 });
+    const h = harness({ hash: `#${station}`, attempts: [makeAttempt(), saved], localStorage: storage({ 'shanghai-audio-speed': '0.75', 'shanghai-review-autovoice': 'off' }) });
+    t.after(() => h.dispose()); await h.settle();
+    assert.equal(h.lesson.station, station); assert.equal(h.lesson.attempt.id, saved.id); assert.equal(h.lesson.attempt.revision, 9);
+    assert.equal(h.lesson.locale, 'en'); assert.equal(h.lesson.romanization, true); assert.equal(h.lesson.audioSpeed, 0.75);
+    assert.equal(h.lesson.servicesReady, true); assert.equal(h.requests.filter(item => item.path === '/attempts').length, 0);
+  }
+});
+
+test('B+C starting a station sends that station identity and preserves existing Nanxiang progress', async t => {
+  for (const station of ['restaurant', 'candy', 'teahouse']) {
+    const saved = makeLessonAttempt(station);
+    const h = harness({ hash: `#${station}`, beginResponse: saved }); t.after(() => h.dispose()); await h.settle();
+    assert.equal(h.lesson.attempt, null); h.lesson.onStart(); await h.settle();
+    const request = h.requests.find(item => item.path === '/attempts');
+    assert.equal(request.body.station_id, station); assert.equal(request.body.restart, false);
+    assert.equal(h.lesson.attempt.id, saved.id); assert.equal(h.hash, station);
+    h.hashChange('#nanxiang'); await h.settle();
+    assert.equal(h.tab('speak')['aria-selected'], true, 'the original Nanxiang attempt stays usable');
+  }
+});
+
+test('B+C Review unlocks only completed stations and remains available while a completed station is retried', async t => {
+  for (const station of ['restaurant', 'candy', 'teahouse']) for (const locale of ['zh', 'en']) {
+    const saved = makeLessonAttempt(station, { status: 'completed' });
+    const retry = makeLessonAttempt(station, { id: `retry-${station}` });
+    const h = harness({ hash: '#review', locale, attempts: [makeAttempt(), saved, retry], completedStationIds: [station] });
+    t.after(() => h.dispose()); await h.settle();
+    assert.ok(h.find(node => node.props?.className === 'review-page page-shell'));
+    const pageHeading = h.find(node => node.props?.className === 'page-heading');
+    assert.doesNotMatch(h.textOf(pageHeading), /Nanxiang|南翔/);
+    assert.match(h.textOf(pageHeading), locale === 'zh' ? /回顾已完成地点的表达/ : /Revisit expressions from the stops you have completed/);
+    const expressionHeading = h.find(node => node.props?.className === 'r2-review-heading');
+    assert.doesNotMatch(h.textOf(expressionHeading), /Nanxiang|南翔/);
+    const plan = stationContentData.stationPlans.find(item => item.id === station);
+    assert.ok(h.textOf(expressionHeading).includes(plan.taskDescription[locale]), 'review help describes the selected station task');
+    if (station === 'teahouse') assert.match(h.textOf(expressionHeading), locale === 'zh' ? /湖心亭茶楼的表达/ : /Your Huxin Pavilion expressions/);
+    assert.match(h.title, locale === 'zh' ? /复习$/ : /Review$/);
+    const tabs = h.find(node => node.props?.className === 'bc-review-tabs');
+    const buttons = tabs.props.children.flat(Infinity).filter(Boolean);
+    assert.equal(buttons.length, 1, 'unfinished stations have no expression review tab');
+    for (const id of stationContentData.stationPlans.find(item => item.id === station).reviewEntryIds) {
+      assert.ok(h.find(node => node.props?.entry?.id === id), `${id} is available after this station completes`);
+    }
+    assert.equal(h.find(node => node.props?.entry?.id === 'NX-ITEM-XLB'), undefined);
+    h.click(locale === 'zh' ? '返回这一站' : 'Back to this stop'); await h.settle();
+    assert.equal(h.lesson.attempt.id, saved.id, 'review returns to the successful attempt, not its unfinished retry');
+  }
+});
+
+test('completing the teahouse first records one real stop and does not claim the full route is complete', async t => {
+  const h = harness({ hash: '#teahouse', attempts: [makeLessonAttempt('teahouse')] }); t.after(() => h.dispose()); await h.settle();
+  h.lesson.onAttempt(makeLessonAttempt('teahouse', { revision: 4, status: 'completed' })); await h.settle();
+  h.lesson.onReview(); await h.settle();
+  const stats = h.find(node => node.props?.className === 'review-stats');
+  assert.match(h.textOf(stats), /^1\/ 4/);
+  assert.doesNotMatch(h.text, /Four stops\. A little more Shanghai|You have shared a meal/);
+  assert.equal(h.find(node => node.props?.className === 'bc-route-banner'), undefined);
 });

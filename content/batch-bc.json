@@ -1,0 +1,3175 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "batch-bc.2026-10-17.v1",
+  "purpose": "review-draft",
+  "status": "draft",
+  "reviewStatus": "pending",
+  "createdAt": "2026-10-17",
+  "localeKeys": [
+    "zh",
+    "en"
+  ],
+  "compatibleBaseContentVersions": [
+    "batch-a-r3.2026-10-17.v1"
+  ],
+  "notice": {
+    "zh": "汉字、注音与样音均为待审稿。",
+    "en": "Wording, romanization, and sample audio are review drafts."
+  },
+  "pronunciationScheme": {
+    "id": "wugniu-shanghai-untoned-draft-bc-v1",
+    "sourceScheme": "吴语学堂上海中派拼音",
+    "toneDisplay": "hidden",
+    "connectedSpeechReview": "pending",
+    "note": {
+      "zh": "按字词资料提供无调号候选；字音与连读、词句自然度仍须人工审阅。",
+      "en": "Unnumbered draft readings based on lexical references; wording and connected speech still need review."
+    }
+  },
+  "sources": [
+    {
+      "id": "ngli-shanghai-dictionary",
+      "kind": "lexical-reference",
+      "url": "https://github.com/NGLI/rime-wugniu_zaonhe",
+      "rawUrl": "https://raw.githubusercontent.com/NGLI/rime-wugniu_zaonhe/master/wugniu_zaonhe.dict.yaml",
+      "version": "2026.10.16",
+      "retrievedAt": "2026-10-17",
+      "sha256": "c7e06298071622ebe1dd78af4ad4e8dbd21d061bfa8255ff036b2095fe2bc039",
+      "note": "实际查询上海中派字词；单字资料不能证明整句自然度、连读或审核通过。"
+    },
+    {
+      "id": "restaurant-draft",
+      "kind": "project-specification",
+      "path": "docs/Shanghai-old-restaurant-draft.md"
+    },
+    {
+      "id": "candy-draft",
+      "kind": "project-specification",
+      "path": "docs/Pear-candy-shop-draft.md"
+    },
+    {
+      "id": "teahouse-draft",
+      "kind": "project-specification",
+      "path": "docs/Huxinting-teahouse-draft.md"
+    },
+    {
+      "id": "batch-bc-scope",
+      "kind": "user-approved-scope",
+      "note": "批次B、C合并实现；沿用A修订4及固定问题、不自动推进、完成后Review约定。"
+    },
+    {
+      "id": "batch-a-shared",
+      "kind": "existing-review-draft",
+      "path": "content/batch-a.json",
+      "note": "对个沿用既有候选；不继承不存在的正式批准。"
+    }
+  ],
+  "lexicalNotes": [
+    {
+      "text": "薄荷",
+      "pronunciation": "bu wu",
+      "source": "ngli-shanghai-dictionary",
+      "reason": "使用整词条，未按薄的另一字音boq拼读。"
+    },
+    {
+      "text": "味道",
+      "pronunciation": "mi dau",
+      "source": "ngli-shanghai-dictionary",
+      "reason": "使用整词条；味在口味名中暂用vi，仍需整句听审。"
+    },
+    {
+      "text": "鱼",
+      "pronunciation": "ng",
+      "source": "ngli-shanghai-dictionary",
+      "reason": "字库提供ng与yu候选；本包使用口语候选ng，须整词审核。"
+    },
+    {
+      "text": "请 / 想",
+      "pronunciation": "tshin / sian",
+      "source": "ngli-shanghai-dictionary",
+      "reason": "按此次字库的显式拼写；与A历史草稿chin/shian并存，未擅自重写既有版本。"
+    }
+  ],
+  "entries": [
+    {
+      "id": "BC-CONFIRM",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant",
+        "candy"
+      ],
+      "hanzi": "对个",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "对的。",
+        "en": "Yes, that's right."
+      },
+      "segments": [
+        {
+          "id": "BC-CONFIRM-S01",
+          "hanzi": "对个",
+          "meaning": {
+            "zh": "对的。",
+            "en": "Yes, that's right."
+          },
+          "pronunciation": "te gheq",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "te gheq",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CONFIRM.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "batch-a-shared"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "confirm_current_summary"
+    },
+    {
+      "id": "BC-OLD-ASK-PREFERENCE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "侬吃辣伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "你吃辣吗？",
+        "en": "Do you eat spicy food?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-ASK-PREFERENCE-S01",
+          "hanzi": "侬",
+          "meaning": {
+            "zh": "你",
+            "en": "you"
+          },
+          "pronunciation": "non",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-PREFERENCE-S02",
+          "hanzi": "吃辣伐？",
+          "meaning": {
+            "zh": "吃辣吗？",
+            "en": "eat spicy food?"
+          },
+          "pronunciation": "chiq laq va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non / chiq laq va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-ASK-PREFERENCE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "preference"
+    },
+    {
+      "id": "BC-OLD-ASK-RECOMMENDATION",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "想听听推荐伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "想听听推荐吗？",
+        "en": "Would you like a recommendation?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-ASK-RECOMMENDATION-S01",
+          "hanzi": "想听听",
+          "meaning": {
+            "zh": "想听听",
+            "en": "would you like to hear"
+          },
+          "pronunciation": "sian thin thin",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-RECOMMENDATION-S02",
+          "hanzi": "推荐伐？",
+          "meaning": {
+            "zh": "推荐吗？",
+            "en": "a recommendation?"
+          },
+          "pronunciation": "the tsi va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "sian thin thin / the tsi va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-ASK-RECOMMENDATION.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "recommendation"
+    },
+    {
+      "id": "BC-OLD-ASK-DISH",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "我推荐清蒸鱼勿辣，白斩鸡也勿辣。侬想要哪一道？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我推荐清蒸鱼，不辣；白斩鸡也不辣。你想要哪一道？",
+        "en": "I recommend the steamed fish; it isn't spicy. The poached chicken isn't spicy either. Which would you like?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-ASK-DISH-S01",
+          "hanzi": "我推荐清蒸鱼",
+          "meaning": {
+            "zh": "我推荐清蒸鱼",
+            "en": "I recommend the steamed fish"
+          },
+          "pronunciation": "ngu the tsi tshin tsen ng",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-DISH-S02",
+          "hanzi": "勿辣，",
+          "meaning": {
+            "zh": "不辣，",
+            "en": "not spicy,"
+          },
+          "pronunciation": "veq laq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-DISH-S03",
+          "hanzi": "白斩鸡",
+          "meaning": {
+            "zh": "白斩鸡",
+            "en": "poached chicken"
+          },
+          "pronunciation": "baq tse ci",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-DISH-S04",
+          "hanzi": "也勿辣。",
+          "meaning": {
+            "zh": "也不辣。",
+            "en": "is not spicy either."
+          },
+          "pronunciation": "gha veq laq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-DISH-S05",
+          "hanzi": "侬想要",
+          "meaning": {
+            "zh": "你想要",
+            "en": "you would like"
+          },
+          "pronunciation": "non sian iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-ASK-DISH-S06",
+          "hanzi": "哪一道？",
+          "meaning": {
+            "zh": "哪一道？",
+            "en": "which dish?"
+          },
+          "pronunciation": "na iq dau",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu the tsi tshin tsen ng / veq laq / baq tse ci / gha veq laq / non sian iau / na iq dau",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-ASK-DISH.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "dish"
+    },
+    {
+      "id": "BC-OLD-PREFERENCE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "我勿吃辣个。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我不吃辣。",
+        "en": "I don't eat spicy food."
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-PREFERENCE-S01",
+          "hanzi": "我",
+          "meaning": {
+            "zh": "我",
+            "en": "I"
+          },
+          "pronunciation": "ngu",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-PREFERENCE-S02",
+          "hanzi": "勿吃辣个。",
+          "meaning": {
+            "zh": "不吃辣。",
+            "en": "do not eat spicy food."
+          },
+          "pronunciation": "veq chiq laq gheq",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu / veq chiq laq gheq",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-PREFERENCE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "non_spicy"
+    },
+    {
+      "id": "BC-OLD-RECOMMEND",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "有啥推荐伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "有什么推荐？",
+        "en": "What would you recommend?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-RECOMMEND-S01",
+          "hanzi": "有啥",
+          "meaning": {
+            "zh": "有什么",
+            "en": "what is there"
+          },
+          "pronunciation": "yeu sa",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-RECOMMEND-S02",
+          "hanzi": "推荐伐？",
+          "meaning": {
+            "zh": "推荐吗？",
+            "en": "a recommendation?"
+          },
+          "pronunciation": "the tsi va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "yeu sa / the tsi va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-RECOMMEND.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "request_recommendation"
+    },
+    {
+      "id": "BC-OLD-DISH-FISH",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "清蒸鱼",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "清蒸鱼",
+        "en": "Steamed fish"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-DISH-FISH-S01",
+          "hanzi": "清蒸鱼",
+          "meaning": {
+            "zh": "清蒸鱼",
+            "en": "steamed fish"
+          },
+          "pronunciation": "tshin tsen ng",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "tshin tsen ng",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-DISH-FISH.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "dish",
+        "value": "fish"
+      }
+    },
+    {
+      "id": "BC-OLD-CHOOSE-FISH",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "我要清蒸鱼。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要清蒸鱼。",
+        "en": "I'd like the steamed fish."
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-CHOOSE-FISH-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CHOOSE-FISH-S02",
+          "hanzi": "清蒸鱼。",
+          "meaning": {
+            "zh": "清蒸鱼。",
+            "en": "steamed fish."
+          },
+          "pronunciation": "tshin tsen ng",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / tshin tsen ng",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-CHOOSE-FISH.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_dish",
+      "semanticValue": {
+        "type": "dish",
+        "value": "fish"
+      }
+    },
+    {
+      "id": "BC-OLD-CONFIRM-FISH",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "一份清蒸鱼，勿辣，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "一份清蒸鱼，不辣，对吗？",
+        "en": "One serving of steamed fish, not spicy. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-CONFIRM-FISH-S01",
+          "hanzi": "一份",
+          "meaning": {
+            "zh": "一份",
+            "en": "one serving of"
+          },
+          "pronunciation": "iq ven",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-FISH-S02",
+          "hanzi": "清蒸鱼，",
+          "meaning": {
+            "zh": "清蒸鱼，",
+            "en": "steamed fish,"
+          },
+          "pronunciation": "tshin tsen ng",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-FISH-S03",
+          "hanzi": "勿辣，",
+          "meaning": {
+            "zh": "不辣，",
+            "en": "not spicy,"
+          },
+          "pronunciation": "veq laq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-FISH-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iq ven / tshin tsen ng / veq laq / te va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-CONFIRM-FISH.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "confirm",
+      "summary": {
+        "dish": "fish",
+        "preference": "not_spicy"
+      }
+    },
+    {
+      "id": "BC-OLD-DISH-CHICKEN",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "白斩鸡",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "白斩鸡",
+        "en": "Poached chicken"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-DISH-CHICKEN-S01",
+          "hanzi": "白斩鸡",
+          "meaning": {
+            "zh": "白斩鸡",
+            "en": "poached chicken"
+          },
+          "pronunciation": "baq tse ci",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "baq tse ci",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-DISH-CHICKEN.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "dish",
+        "value": "chicken"
+      }
+    },
+    {
+      "id": "BC-OLD-CHOOSE-CHICKEN",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "我要白斩鸡。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要白斩鸡。",
+        "en": "I'd like the poached chicken."
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-CHOOSE-CHICKEN-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CHOOSE-CHICKEN-S02",
+          "hanzi": "白斩鸡。",
+          "meaning": {
+            "zh": "白斩鸡。",
+            "en": "poached chicken."
+          },
+          "pronunciation": "baq tse ci",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / baq tse ci",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-CHOOSE-CHICKEN.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_dish",
+      "semanticValue": {
+        "type": "dish",
+        "value": "chicken"
+      }
+    },
+    {
+      "id": "BC-OLD-CONFIRM-CHICKEN",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "一份白斩鸡，勿辣，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "一份白斩鸡，不辣，对吗？",
+        "en": "One serving of poached chicken, not spicy. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-CONFIRM-CHICKEN-S01",
+          "hanzi": "一份",
+          "meaning": {
+            "zh": "一份",
+            "en": "one serving of"
+          },
+          "pronunciation": "iq ven",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-CHICKEN-S02",
+          "hanzi": "白斩鸡，",
+          "meaning": {
+            "zh": "白斩鸡，",
+            "en": "poached chicken,"
+          },
+          "pronunciation": "baq tse ci",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-CHICKEN-S03",
+          "hanzi": "勿辣，",
+          "meaning": {
+            "zh": "不辣，",
+            "en": "not spicy,"
+          },
+          "pronunciation": "veq laq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CONFIRM-CHICKEN-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iq ven / baq tse ci / veq laq / te va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-CONFIRM-CHICKEN.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "confirm",
+      "summary": {
+        "dish": "chicken",
+        "preference": "not_spicy"
+      }
+    },
+    {
+      "id": "BC-OLD-DISH-TOFU",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "辣味豆腐",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "辣味豆腐",
+        "en": "Spicy tofu"
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-DISH-TOFU-S01",
+          "hanzi": "辣味豆腐",
+          "meaning": {
+            "zh": "辣味豆腐",
+            "en": "spicy tofu"
+          },
+          "pronunciation": "laq vi deu vu",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "laq vi deu vu",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-DISH-TOFU.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "dish",
+        "value": "tofu"
+      }
+    },
+    {
+      "id": "BC-OLD-CHOOSE-TOFU",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "我要辣味豆腐。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要辣味豆腐。",
+        "en": "I'd like the spicy tofu."
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-CHOOSE-TOFU-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-CHOOSE-TOFU-S02",
+          "hanzi": "辣味豆腐。",
+          "meaning": {
+            "zh": "辣味豆腐。",
+            "en": "spicy tofu."
+          },
+          "pronunciation": "laq vi deu vu",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / laq vi deu vu",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-CHOOSE-TOFU.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_dish",
+      "semanticValue": {
+        "type": "dish",
+        "value": "tofu"
+      }
+    },
+    {
+      "id": "BC-OLD-COMPLETE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "restaurant"
+      ],
+      "hanzi": "好个，侬慢慢吃。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "好的，请慢用。",
+        "en": "All right. Enjoy your meal."
+      },
+      "segments": [
+        {
+          "id": "BC-OLD-COMPLETE-S01",
+          "hanzi": "好个，",
+          "meaning": {
+            "zh": "好的，",
+            "en": "all right,"
+          },
+          "pronunciation": "hau gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-OLD-COMPLETE-S02",
+          "hanzi": "侬慢慢吃。",
+          "meaning": {
+            "zh": "请慢用。",
+            "en": "enjoy your meal."
+          },
+          "pronunciation": "non me me chiq",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "hau gheq / non me me chiq",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-OLD-COMPLETE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "restaurant-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "completed"
+    },
+    {
+      "id": "BC-CND-ASK-FLAVOR",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "侬要哪一种？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "你想要哪一种？",
+        "en": "Which one would you like?"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-ASK-FLAVOR-S01",
+          "hanzi": "侬要",
+          "meaning": {
+            "zh": "你要",
+            "en": "you would like"
+          },
+          "pronunciation": "non iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-ASK-FLAVOR-S02",
+          "hanzi": "哪一种？",
+          "meaning": {
+            "zh": "哪一种？",
+            "en": "which one?"
+          },
+          "pronunciation": "na iq tson",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non iau / na iq tson",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-ASK-FLAVOR.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "flavor"
+    },
+    {
+      "id": "BC-CND-ASK-QUANTITY",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "侬要几包？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "你要几包？",
+        "en": "How many packs would you like?"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-ASK-QUANTITY-S01",
+          "hanzi": "侬要",
+          "meaning": {
+            "zh": "你要",
+            "en": "you would like"
+          },
+          "pronunciation": "non iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-ASK-QUANTITY-S02",
+          "hanzi": "几包？",
+          "meaning": {
+            "zh": "几包？",
+            "en": "how many packs?"
+          },
+          "pronunciation": "ci pau",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non iau / ci pau",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-ASK-QUANTITY.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "quantity"
+    },
+    {
+      "id": "BC-CND-WORD-ROSE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "玫瑰",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "玫瑰",
+        "en": "Rose"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-WORD-ROSE-S01",
+          "hanzi": "玫瑰",
+          "meaning": {
+            "zh": "玫瑰",
+            "en": "rose"
+          },
+          "pronunciation": "me kue",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "me kue",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-WORD-ROSE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "flavor",
+        "value": "rose"
+      }
+    },
+    {
+      "id": "BC-CND-ROSE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "我要玫瑰味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要玫瑰味梨膏糖。",
+        "en": "I'd like the rose-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-ROSE-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-ROSE-S02",
+          "hanzi": "玫瑰味个",
+          "meaning": {
+            "zh": "玫瑰味的",
+            "en": "rose-flavored"
+          },
+          "pronunciation": "me kue vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-ROSE-S03",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / me kue vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-ROSE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_flavor",
+      "semanticValue": {
+        "type": "flavor",
+        "value": "rose"
+      }
+    },
+    {
+      "id": "BC-CND-INTRO-ROSE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "今朝介绍玫瑰味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "今天介绍的是玫瑰味梨膏糖。",
+        "en": "Today we're featuring rose-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-INTRO-ROSE-S01",
+          "hanzi": "今朝",
+          "meaning": {
+            "zh": "今天",
+            "en": "today"
+          },
+          "pronunciation": "cin tsau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-ROSE-S02",
+          "hanzi": "介绍",
+          "meaning": {
+            "zh": "介绍",
+            "en": "introducing"
+          },
+          "pronunciation": "ka zau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-ROSE-S03",
+          "hanzi": "玫瑰味个",
+          "meaning": {
+            "zh": "玫瑰味的",
+            "en": "rose-flavored"
+          },
+          "pronunciation": "me kue vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-ROSE-S04",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "cin tsau / ka zau / me kue vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-INTRO-ROSE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "listening_introduction",
+      "listeningFlavor": "rose"
+    },
+    {
+      "id": "BC-CND-CONFIRM-ROSE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "两包玫瑰味个梨膏糖，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两包玫瑰味梨膏糖，对吗？",
+        "en": "Two packs of rose-flavored pear candy. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-CONFIRM-ROSE-S01",
+          "hanzi": "两包",
+          "meaning": {
+            "zh": "两包",
+            "en": "two packs of"
+          },
+          "pronunciation": "lian pau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-ROSE-S02",
+          "hanzi": "玫瑰味个",
+          "meaning": {
+            "zh": "玫瑰味的",
+            "en": "rose-flavored"
+          },
+          "pronunciation": "me kue vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-ROSE-S03",
+          "hanzi": "梨膏糖，",
+          "meaning": {
+            "zh": "梨膏糖，",
+            "en": "pear candy,"
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-ROSE-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian pau / me kue vi gheq / li kau daon / te va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-CONFIRM-ROSE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "confirm",
+      "summary": {
+        "flavor": "rose",
+        "quantity": 2,
+        "unit": "pack"
+      }
+    },
+    {
+      "id": "BC-CND-WORD-OSMANTHUS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "桂花",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "桂花",
+        "en": "Osmanthus"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-WORD-OSMANTHUS-S01",
+          "hanzi": "桂花",
+          "meaning": {
+            "zh": "桂花",
+            "en": "osmanthus"
+          },
+          "pronunciation": "kue ho",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "kue ho",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-WORD-OSMANTHUS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "flavor",
+        "value": "osmanthus"
+      }
+    },
+    {
+      "id": "BC-CND-OSMANTHUS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "我要桂花味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要桂花味梨膏糖。",
+        "en": "I'd like the osmanthus-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-OSMANTHUS-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-OSMANTHUS-S02",
+          "hanzi": "桂花味个",
+          "meaning": {
+            "zh": "桂花味的",
+            "en": "osmanthus-flavored"
+          },
+          "pronunciation": "kue ho vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-OSMANTHUS-S03",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / kue ho vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-OSMANTHUS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_flavor",
+      "semanticValue": {
+        "type": "flavor",
+        "value": "osmanthus"
+      }
+    },
+    {
+      "id": "BC-CND-INTRO-OSMANTHUS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "今朝介绍桂花味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "今天介绍的是桂花味梨膏糖。",
+        "en": "Today we're featuring osmanthus-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-INTRO-OSMANTHUS-S01",
+          "hanzi": "今朝",
+          "meaning": {
+            "zh": "今天",
+            "en": "today"
+          },
+          "pronunciation": "cin tsau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-OSMANTHUS-S02",
+          "hanzi": "介绍",
+          "meaning": {
+            "zh": "介绍",
+            "en": "introducing"
+          },
+          "pronunciation": "ka zau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-OSMANTHUS-S03",
+          "hanzi": "桂花味个",
+          "meaning": {
+            "zh": "桂花味的",
+            "en": "osmanthus-flavored"
+          },
+          "pronunciation": "kue ho vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-OSMANTHUS-S04",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "cin tsau / ka zau / kue ho vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-INTRO-OSMANTHUS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "listening_introduction",
+      "listeningFlavor": "osmanthus"
+    },
+    {
+      "id": "BC-CND-CONFIRM-OSMANTHUS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "两包桂花味个梨膏糖，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两包桂花味梨膏糖，对吗？",
+        "en": "Two packs of osmanthus-flavored pear candy. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-CONFIRM-OSMANTHUS-S01",
+          "hanzi": "两包",
+          "meaning": {
+            "zh": "两包",
+            "en": "two packs of"
+          },
+          "pronunciation": "lian pau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-OSMANTHUS-S02",
+          "hanzi": "桂花味个",
+          "meaning": {
+            "zh": "桂花味的",
+            "en": "osmanthus-flavored"
+          },
+          "pronunciation": "kue ho vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-OSMANTHUS-S03",
+          "hanzi": "梨膏糖，",
+          "meaning": {
+            "zh": "梨膏糖，",
+            "en": "pear candy,"
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-OSMANTHUS-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian pau / kue ho vi gheq / li kau daon / te va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-CONFIRM-OSMANTHUS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "confirm",
+      "summary": {
+        "flavor": "osmanthus",
+        "quantity": 2,
+        "unit": "pack"
+      }
+    },
+    {
+      "id": "BC-CND-WORD-MINT",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "support-term",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "薄荷",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "薄荷",
+        "en": "Mint"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-WORD-MINT-S01",
+          "hanzi": "薄荷",
+          "meaning": {
+            "zh": "薄荷",
+            "en": "mint"
+          },
+          "pronunciation": "bu wu",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "bu wu",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-WORD-MINT.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "semanticValue": {
+        "type": "flavor",
+        "value": "mint"
+      }
+    },
+    {
+      "id": "BC-CND-MINT",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "我要薄荷味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要薄荷味梨膏糖。",
+        "en": "I'd like the mint-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-MINT-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-MINT-S02",
+          "hanzi": "薄荷味个",
+          "meaning": {
+            "zh": "薄荷味的",
+            "en": "mint-flavored"
+          },
+          "pronunciation": "bu wu vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-MINT-S03",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / bu wu vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-MINT.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "choose_flavor",
+      "semanticValue": {
+        "type": "flavor",
+        "value": "mint"
+      }
+    },
+    {
+      "id": "BC-CND-INTRO-MINT",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "今朝介绍薄荷味个梨膏糖。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "今天介绍的是薄荷味梨膏糖。",
+        "en": "Today we're featuring mint-flavored pear candy."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-INTRO-MINT-S01",
+          "hanzi": "今朝",
+          "meaning": {
+            "zh": "今天",
+            "en": "today"
+          },
+          "pronunciation": "cin tsau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-MINT-S02",
+          "hanzi": "介绍",
+          "meaning": {
+            "zh": "介绍",
+            "en": "introducing"
+          },
+          "pronunciation": "ka zau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-MINT-S03",
+          "hanzi": "薄荷味个",
+          "meaning": {
+            "zh": "薄荷味的",
+            "en": "mint-flavored"
+          },
+          "pronunciation": "bu wu vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-INTRO-MINT-S04",
+          "hanzi": "梨膏糖。",
+          "meaning": {
+            "zh": "梨膏糖。",
+            "en": "pear candy."
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "cin tsau / ka zau / bu wu vi gheq / li kau daon",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-INTRO-MINT.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "listening_introduction",
+      "listeningFlavor": "mint"
+    },
+    {
+      "id": "BC-CND-CONFIRM-MINT",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "两包薄荷味个梨膏糖，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两包薄荷味梨膏糖，对吗？",
+        "en": "Two packs of mint-flavored pear candy. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "BC-CND-CONFIRM-MINT-S01",
+          "hanzi": "两包",
+          "meaning": {
+            "zh": "两包",
+            "en": "two packs of"
+          },
+          "pronunciation": "lian pau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-MINT-S02",
+          "hanzi": "薄荷味个",
+          "meaning": {
+            "zh": "薄荷味的",
+            "en": "mint-flavored"
+          },
+          "pronunciation": "bu wu vi gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-MINT-S03",
+          "hanzi": "梨膏糖，",
+          "meaning": {
+            "zh": "梨膏糖，",
+            "en": "pear candy,"
+          },
+          "pronunciation": "li kau daon",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-CONFIRM-MINT-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te va",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian pau / bu wu vi gheq / li kau daon / te va",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-CONFIRM-MINT.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "confirm",
+      "summary": {
+        "flavor": "mint",
+        "quantity": 2,
+        "unit": "pack"
+      }
+    },
+    {
+      "id": "BC-CND-TWO-PACKS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "我要两包。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "我要两包。",
+        "en": "I'd like two packs."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-TWO-PACKS-S01",
+          "hanzi": "我要",
+          "meaning": {
+            "zh": "我要",
+            "en": "I would like"
+          },
+          "pronunciation": "ngu iau",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-TWO-PACKS-S02",
+          "hanzi": "两包。",
+          "meaning": {
+            "zh": "两包。",
+            "en": "two packs."
+          },
+          "pronunciation": "lian pau",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "ngu iau / lian pau",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-TWO-PACKS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "quantity",
+      "semanticValue": {
+        "type": "packs",
+        "value": 2
+      }
+    },
+    {
+      "id": "BC-CND-COMPLETE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "candy"
+      ],
+      "hanzi": "好个，请侬拿好。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "好的，请拿好。",
+        "en": "All right. Here you are."
+      },
+      "segments": [
+        {
+          "id": "BC-CND-COMPLETE-S01",
+          "hanzi": "好个，",
+          "meaning": {
+            "zh": "好的，",
+            "en": "all right,"
+          },
+          "pronunciation": "hau gheq",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-CND-COMPLETE-S02",
+          "hanzi": "请侬拿好。",
+          "meaning": {
+            "zh": "请拿好。",
+            "en": "here you are."
+          },
+          "pronunciation": "tshin non na hau",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "hau gheq / tshin non na hau",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-CND-COMPLETE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "candy-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "completed"
+    },
+    {
+      "id": "BC-TEA-ASK-APPRECIATION",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "teahouse"
+      ],
+      "hanzi": "请吃茶，味道哪能？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "请喝茶，味道怎么样？",
+        "en": "Please enjoy the tea. How does it taste?"
+      },
+      "segments": [
+        {
+          "id": "BC-TEA-ASK-APPRECIATION-S01",
+          "hanzi": "请吃茶，",
+          "meaning": {
+            "zh": "请喝茶，",
+            "en": "please enjoy the tea,"
+          },
+          "pronunciation": "tshin chiq zo",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-TEA-ASK-APPRECIATION-S02",
+          "hanzi": "味道哪能？",
+          "meaning": {
+            "zh": "味道怎么样？",
+            "en": "how does it taste?"
+          },
+          "pronunciation": "mi dau na nen",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "tshin chiq zo / mi dau na nen",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-TEA-ASK-APPRECIATION.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "teahouse-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "appreciation"
+    },
+    {
+      "id": "BC-TEA-RESPONSE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "teahouse"
+      ],
+      "hanzi": "侬欢喜就好。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "你喜欢就好。",
+        "en": "I'm glad you like it."
+      },
+      "segments": [
+        {
+          "id": "BC-TEA-RESPONSE-S01",
+          "hanzi": "侬欢喜",
+          "meaning": {
+            "zh": "你喜欢",
+            "en": "you like it"
+          },
+          "pronunciation": "non huoe shi",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-TEA-RESPONSE-S02",
+          "hanzi": "就好。",
+          "meaning": {
+            "zh": "就好。",
+            "en": "and that is good."
+          },
+          "pronunciation": "zieu hau",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "non huoe shi / zieu hau",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-TEA-RESPONSE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "teahouse-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "thanks"
+    },
+    {
+      "id": "BC-TEA-PRAISE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "teahouse"
+      ],
+      "hanzi": "搿茶老好吃个。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "这茶很好喝。",
+        "en": "This tea is really good."
+      },
+      "segments": [
+        {
+          "id": "BC-TEA-PRAISE-S01",
+          "hanzi": "搿茶",
+          "meaning": {
+            "zh": "这茶",
+            "en": "this tea"
+          },
+          "pronunciation": "geq zo",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-TEA-PRAISE-S02",
+          "hanzi": "老好吃个。",
+          "meaning": {
+            "zh": "很好喝。",
+            "en": "is really good."
+          },
+          "pronunciation": "lau hau chiq gheq",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "geq zo / lau hau chiq gheq",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-TEA-PRAISE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "teahouse-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "praise_tea"
+    },
+    {
+      "id": "BC-TEA-THANKS",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "expression",
+      "stationIds": [
+        "teahouse"
+      ],
+      "hanzi": "谢谢侬。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "谢谢你。",
+        "en": "Thank you."
+      },
+      "segments": [
+        {
+          "id": "BC-TEA-THANKS-S01",
+          "hanzi": "谢谢侬。",
+          "meaning": {
+            "zh": "谢谢你。",
+            "en": "thank you."
+          },
+          "pronunciation": "zia zia non",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "zia zia non",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-TEA-THANKS.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "teahouse-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "intent": "thank_host"
+    },
+    {
+      "id": "BC-TEA-COMPLETE",
+      "version": "batch-bc.2026-10-17.v1",
+      "kind": "dialogue",
+      "stationIds": [
+        "teahouse"
+      ],
+      "hanzi": "勿用客气，欢迎再来。",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "不客气，欢迎再来。",
+        "en": "You're welcome. Come again."
+      },
+      "segments": [
+        {
+          "id": "BC-TEA-COMPLETE-S01",
+          "hanzi": "勿用客气，",
+          "meaning": {
+            "zh": "不客气，",
+            "en": "you are welcome,"
+          },
+          "pronunciation": "veq yon khaq chi",
+          "approximateZh": null
+        },
+        {
+          "id": "BC-TEA-COMPLETE-S02",
+          "hanzi": "欢迎再来。",
+          "meaning": {
+            "zh": "欢迎再来。",
+            "en": "come again."
+          },
+          "pronunciation": "huoe gnin tse le",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "veq yon khaq chi / huoe gnin tse le",
+      "pronunciationSchemeId": "wugniu-shanghai-untoned-draft-bc-v1",
+      "approximateZh": null,
+      "pronunciationHelp": {
+        "zh": null,
+        "en": null
+      },
+      "referenceReading": {
+        "file": null,
+        "sha256": null,
+        "speakerId": null,
+        "recordedAt": null
+      },
+      "acceptableVariants": [],
+      "audio": {
+        "normal": "BC-TEA-COMPLETE.normal",
+        "slowPlaybackRate": 0.75
+      },
+      "sourceIds": [
+        "ngli-shanghai-dictionary",
+        "batch-bc-scope",
+        "teahouse-draft"
+      ],
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "role": "server",
+      "trigger": "completed"
+    }
+  ],
+  "stationPlans": [
+    {
+      "id": "restaurant",
+      "title": {
+        "zh": "上海老饭店",
+        "en": "Shanghai Old Restaurant"
+      },
+      "taskTitle": {
+        "zh": "找一道合口味的菜",
+        "en": "Find a dish you'll enjoy"
+      },
+      "taskDescription": {
+        "zh": "告诉店员你不吃辣，问问推荐，再选择并确认一道菜。",
+        "en": "Say you do not eat spicy food, ask for a recommendation, then choose and confirm a dish."
+      },
+      "estimatedMinutes": [
+        5,
+        6
+      ],
+      "completionEntryId": "BC-OLD-COMPLETE",
+      "reviewEntryIds": [
+        "BC-OLD-PREFERENCE",
+        "BC-OLD-RECOMMEND",
+        "BC-OLD-CHOOSE-FISH",
+        "BC-OLD-CHOOSE-CHICKEN",
+        "BC-CONFIRM"
+      ],
+      "steps": [
+        {
+          "id": "preference",
+          "title": {
+            "zh": "表达口味",
+            "en": "Your preference"
+          },
+          "hostEntryId": "BC-OLD-ASK-PREFERENCE",
+          "options": [
+            {
+              "id": "not_spicy",
+              "entryId": "BC-OLD-PREFERENCE"
+            }
+          ]
+        },
+        {
+          "id": "recommendation",
+          "title": {
+            "zh": "询问推荐",
+            "en": "Ask for a recommendation"
+          },
+          "hostEntryId": "BC-OLD-ASK-RECOMMENDATION",
+          "options": [
+            {
+              "id": "recommend",
+              "entryId": "BC-OLD-RECOMMEND"
+            }
+          ]
+        },
+        {
+          "id": "dish",
+          "title": {
+            "zh": "选一道菜",
+            "en": "Choose a dish"
+          },
+          "hostEntryId": "BC-OLD-ASK-DISH",
+          "options": [
+            {
+              "id": "fish",
+              "entryId": "BC-OLD-CHOOSE-FISH"
+            },
+            {
+              "id": "chicken",
+              "entryId": "BC-OLD-CHOOSE-CHICKEN"
+            },
+            {
+              "id": "tofu",
+              "entryId": "BC-OLD-CHOOSE-TOFU"
+            }
+          ]
+        },
+        {
+          "id": "confirm",
+          "title": {
+            "zh": "核对选择",
+            "en": "Check your choice"
+          },
+          "hostEntryId": null,
+          "options": [
+            {
+              "id": "confirm",
+              "entryId": "BC-CONFIRM"
+            }
+          ],
+          "summaryEntryIds": {
+            "fish": "BC-OLD-CONFIRM-FISH",
+            "chicken": "BC-OLD-CONFIRM-CHICKEN"
+          }
+        }
+      ]
+    },
+    {
+      "id": "candy",
+      "title": {
+        "zh": "上海梨膏糖商店",
+        "en": "Shanghai Pear Candy Shop"
+      },
+      "taskTitle": {
+        "zh": "听介绍，买两包糖",
+        "en": "Listen and choose two packs"
+      },
+      "taskDescription": {
+        "zh": "听听店员介绍的口味，再买两包对应的梨膏糖。",
+        "en": "Listen for the featured flavor, then ask for two packs of that pear candy."
+      },
+      "estimatedMinutes": [
+        5,
+        6
+      ],
+      "completionEntryId": "BC-CND-COMPLETE",
+      "reviewEntryIds": [
+        "BC-CND-ROSE",
+        "BC-CND-OSMANTHUS",
+        "BC-CND-MINT",
+        "BC-CND-TWO-PACKS",
+        "BC-CONFIRM"
+      ],
+      "steps": [
+        {
+          "id": "flavor",
+          "title": {
+            "zh": "听介绍，选口味",
+            "en": "Listen and choose a flavor"
+          },
+          "hostEntryId": "BC-CND-ASK-FLAVOR",
+          "options": [
+            {
+              "id": "rose",
+              "entryId": "BC-CND-ROSE"
+            },
+            {
+              "id": "osmanthus",
+              "entryId": "BC-CND-OSMANTHUS"
+            },
+            {
+              "id": "mint",
+              "entryId": "BC-CND-MINT"
+            }
+          ],
+          "requiresIntroduction": true
+        },
+        {
+          "id": "quantity",
+          "title": {
+            "zh": "说出数量",
+            "en": "Ask for two packs"
+          },
+          "hostEntryId": "BC-CND-ASK-QUANTITY",
+          "options": [
+            {
+              "id": "two_packs",
+              "entryId": "BC-CND-TWO-PACKS"
+            }
+          ]
+        },
+        {
+          "id": "confirm",
+          "title": {
+            "zh": "核对订单",
+            "en": "Check your order"
+          },
+          "hostEntryId": null,
+          "options": [
+            {
+              "id": "confirm",
+              "entryId": "BC-CONFIRM"
+            }
+          ],
+          "summaryEntryIds": {
+            "rose": "BC-CND-CONFIRM-ROSE",
+            "osmanthus": "BC-CND-CONFIRM-OSMANTHUS",
+            "mint": "BC-CND-CONFIRM-MINT"
+          }
+        }
+      ],
+      "listening": {
+        "assignment": "server-random-stable-per-attempt",
+        "flavorOrder": [
+          "rose",
+          "osmanthus",
+          "mint"
+        ],
+        "introductionEntryIds": {
+          "rose": "BC-CND-INTRO-ROSE",
+          "osmanthus": "BC-CND-INTRO-OSMANTHUS",
+          "mint": "BC-CND-INTRO-MINT"
+        },
+        "revealRequiresUserAction": true,
+        "audioOnlyUntilRevealed": true
+      }
+    },
+    {
+      "id": "teahouse",
+      "title": {
+        "zh": "湖心亭茶楼",
+        "en": "Huxinting Teahouse"
+      },
+      "taskTitle": {
+        "zh": "品茶与道谢",
+        "en": "Enjoy the tea and say thanks"
+      },
+      "taskDescription": {
+        "zh": "说说你喜欢这杯茶，再谢谢招待你的店员。",
+        "en": "Say you enjoyed the tea, then thank your host."
+      },
+      "estimatedMinutes": [
+        3,
+        4
+      ],
+      "completionEntryId": "BC-TEA-COMPLETE",
+      "reviewEntryIds": [
+        "BC-TEA-PRAISE",
+        "BC-TEA-THANKS"
+      ],
+      "steps": [
+        {
+          "id": "appreciation",
+          "title": {
+            "zh": "说说这杯茶",
+            "en": "Enjoy the tea"
+          },
+          "hostEntryId": "BC-TEA-ASK-APPRECIATION",
+          "options": [
+            {
+              "id": "good_tea",
+              "entryId": "BC-TEA-PRAISE"
+            }
+          ]
+        },
+        {
+          "id": "thanks",
+          "title": {
+            "zh": "谢谢店员",
+            "en": "Thank your host"
+          },
+          "hostEntryId": "BC-TEA-RESPONSE",
+          "options": [
+            {
+              "id": "thanks",
+              "entryId": "BC-TEA-THANKS"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dishes": [
+    {
+      "id": "fish",
+      "title": {
+        "zh": "清蒸鱼",
+        "en": "Steamed fish"
+      },
+      "description": {
+        "zh": "本练习中为不辣菜。",
+        "en": "Not spicy in this practice menu."
+      },
+      "entryId": "BC-OLD-DISH-FISH",
+      "choiceEntryId": "BC-OLD-CHOOSE-FISH",
+      "spicy": false,
+      "recommended": true
+    },
+    {
+      "id": "chicken",
+      "title": {
+        "zh": "白斩鸡",
+        "en": "Poached chicken"
+      },
+      "description": {
+        "zh": "本练习中为不辣菜。",
+        "en": "Not spicy in this practice menu."
+      },
+      "entryId": "BC-OLD-DISH-CHICKEN",
+      "choiceEntryId": "BC-OLD-CHOOSE-CHICKEN",
+      "spicy": false,
+      "recommended": false
+    },
+    {
+      "id": "tofu",
+      "title": {
+        "zh": "辣味豆腐",
+        "en": "Spicy tofu"
+      },
+      "description": {
+        "zh": "本练习中为辣味菜。",
+        "en": "Spicy in this practice menu."
+      },
+      "entryId": "BC-OLD-DISH-TOFU",
+      "choiceEntryId": "BC-OLD-CHOOSE-TOFU",
+      "spicy": true,
+      "recommended": false
+    }
+  ],
+  "flavors": [
+    {
+      "id": "rose",
+      "title": {
+        "zh": "玫瑰",
+        "en": "Rose"
+      },
+      "description": {
+        "zh": "玫瑰味梨膏糖",
+        "en": "Rose-flavored pear candy"
+      },
+      "entryId": "BC-CND-WORD-ROSE",
+      "choiceEntryId": "BC-CND-ROSE"
+    },
+    {
+      "id": "osmanthus",
+      "title": {
+        "zh": "桂花",
+        "en": "Osmanthus"
+      },
+      "description": {
+        "zh": "桂花味梨膏糖",
+        "en": "Osmanthus-flavored pear candy"
+      },
+      "entryId": "BC-CND-WORD-OSMANTHUS",
+      "choiceEntryId": "BC-CND-OSMANTHUS"
+    },
+    {
+      "id": "mint",
+      "title": {
+        "zh": "薄荷",
+        "en": "Mint"
+      },
+      "description": {
+        "zh": "薄荷味梨膏糖",
+        "en": "Mint-flavored pear candy"
+      },
+      "entryId": "BC-CND-WORD-MINT",
+      "choiceEntryId": "BC-CND-MINT"
+    }
+  ],
+  "audioPolicy": {
+    "manifestPath": "content/audio-review-bc.json",
+    "normalPlaybackRate": 1,
+    "slowPlaybackRate": 0.75,
+    "preservePitch": true,
+    "slowIsPlaybackMode": true,
+    "allTextIds": [
+      "BC-CONFIRM",
+      "BC-OLD-ASK-PREFERENCE",
+      "BC-OLD-ASK-RECOMMENDATION",
+      "BC-OLD-ASK-DISH",
+      "BC-OLD-PREFERENCE",
+      "BC-OLD-RECOMMEND",
+      "BC-OLD-DISH-FISH",
+      "BC-OLD-CHOOSE-FISH",
+      "BC-OLD-CONFIRM-FISH",
+      "BC-OLD-DISH-CHICKEN",
+      "BC-OLD-CHOOSE-CHICKEN",
+      "BC-OLD-CONFIRM-CHICKEN",
+      "BC-OLD-DISH-TOFU",
+      "BC-OLD-CHOOSE-TOFU",
+      "BC-OLD-COMPLETE",
+      "BC-CND-ASK-FLAVOR",
+      "BC-CND-ASK-QUANTITY",
+      "BC-CND-WORD-ROSE",
+      "BC-CND-ROSE",
+      "BC-CND-INTRO-ROSE",
+      "BC-CND-CONFIRM-ROSE",
+      "BC-CND-WORD-OSMANTHUS",
+      "BC-CND-OSMANTHUS",
+      "BC-CND-INTRO-OSMANTHUS",
+      "BC-CND-CONFIRM-OSMANTHUS",
+      "BC-CND-WORD-MINT",
+      "BC-CND-MINT",
+      "BC-CND-INTRO-MINT",
+      "BC-CND-CONFIRM-MINT",
+      "BC-CND-TWO-PACKS",
+      "BC-CND-COMPLETE",
+      "BC-TEA-ASK-APPRECIATION",
+      "BC-TEA-RESPONSE",
+      "BC-TEA-PRAISE",
+      "BC-TEA-THANKS",
+      "BC-TEA-COMPLETE"
+    ]
+  },
+  "releaseGate": {
+    "requiresIndependentLanguageAndAudioReview": true,
+    "approved": false,
+    "recordIds": []
+  }
+}

@@ -8,6 +8,8 @@ import { alignReading } from '../src/lib/readingAlignment.ts';
 const readJson = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
 const confirmationContent = await readJson('../../content/nanxiang-confirmations-r4.json');
 const manifest = await readJson('../../content/audio-review-r2.json');
+const stationManifest = await readJson('../../content/audio-review-bc.json');
+const stationContent = await readJson('../../content/batch-bc.json');
 const base = await readJson('../../content/batch-a.json');
 const snapshot = await readJson('../../content/versions/batch-a-r2.2026-10-17.v1.json');
 const executable = (await Promise.all(['orderConfirmation.ts', 'reviewAudio.ts'].map(async file => {
@@ -24,7 +26,7 @@ const clipFor = entry => ({
   status: 'generated', reviewStatus: 'pending', listeningReview: 'pending', purpose: 'review-draft', speed: 'normal',
 });
 function harness(clips = []) {
-  const context = { confirmationContent, manifest, confirmationManifest: { clips } };
+  const context = { confirmationContent, manifest, stationManifest, confirmationManifest: { clips } };
   vm.createContext(context);
   vm.runInContext(`${executable}\nglobalThis.subject = { orderConfirmationFor, reviewClipFor };`, context);
   return context.subject;
@@ -131,5 +133,23 @@ test('existing R1/R2 clips remain available with exact version and notation matc
     assert(clip, entry.id);
     assert.equal(clip.text, entry.hanzi);
     assert.match(clip.file, /^\/audio\/review-r[12]\//);
+  }
+});
+
+
+test('all B+C teaching entries bind to their own local audio and reject stale text or readings', () => {
+  const { reviewClipFor } = harness();
+  assert.equal(stationContent.entries.length, 36);
+  for (const entry of stationContent.entries) {
+    const clip = reviewClipFor(entry);
+    assert.ok(clip, `${entry.id} has its exact local clip`);
+    assert.equal(clip.textId, entry.id); assert.equal(clip.textVersion, entry.version);
+    assert.equal(clip.text, entry.hanzi); assert.equal(clip.pronunciation, entry.pronunciation);
+    assert.match(clip.file, /^\/audio\/review-(?:bc|r[124])\/[a-f0-9]{64}\.wav$/);
+    assert.equal(clip.file, stationManifest.clips.find(item => item.id === clip.id).file, 'manifest may reuse an identical existing local clip');
+    assert.ok(clip.file.endsWith(`/${clip.generationId}.wav`));
+    for (const change of [{ version: 'old-version' }, { hanzi: `${entry.hanzi}不对应` }, { pronunciation: 'wrong reading' }]) {
+      assert.equal(reviewClipFor({ ...entry, ...change }), undefined, `${entry.id}: ${JSON.stringify(change)}`);
+    }
   }
 });

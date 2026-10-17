@@ -1,0 +1,39 @@
+.bc-station-scene{display:block;width:100%;height:auto;aspect-ratio:1100/580;overflow:hidden;background:#e8dfc9;border-radius:inherit}
+.bc-dish-illustration,.bc-candy-illustration{display:block;width:100%;height:auto;overflow:visible;flex-shrink:0}
+.bc-dish-illustration{max-width:220px;aspect-ratio:220/140}
+.bc-candy-illustration{max-width:160px;aspect-ratio:160/190}
+.bc-station-scene .bc-host-head{transform-box:fill-box;transform-origin:50% 90%}
+.bc-station-scene .bc-host-mouth{transform-box:fill-box;transform-origin:center}
+.bc-station-scene .bc-host-right-arm{transform-box:fill-box;transform-origin:10% 8%}
+.bc-station-scene .bc-steam{transform-box:fill-box;transform-origin:50% 100%;animation:bc-steam-rise 4s ease-in-out infinite}
+.bc-station-scene .bc-steam-two{animation-delay:1.5s}
+.bc-station-scene[data-pose="listening"] .bc-host-head{transform:rotate(5deg);animation:bc-host-listen 3.2s ease-in-out infinite}
+.bc-station-scene:is([data-pose="thinking"],[data-pose="checking"]) .bc-host-head{transform:rotate(-5deg)}
+.bc-station-scene[data-pose="thinking"] .bc-host-head{animation:bc-host-think 3.8s ease-in-out infinite}
+.bc-station-scene[data-pose="speaking"] .bc-host-mouth{animation:bc-host-speak .48s ease-in-out infinite}
+.bc-station-scene[data-pose="speaking"] .bc-host-right-arm{animation:bc-host-explain 2.5s ease-in-out infinite}
+.bc-station-scene[data-pose="welcome"] .bc-host-right-arm{animation:bc-host-greet 1.2s ease-in-out 1}
+.bc-station-scene:is([data-pose="acknowledging"],[data-pose="packing"]) .bc-host-head{animation:bc-host-nod .9s ease-in-out 1}
+.bc-station-scene[data-pose="packed"] .bc-host-head{transform:rotate(3deg)}
+.bc-station-scene .bc-water-ripples{animation:bc-water-shimmer 6s ease-in-out infinite}
+.bc-station-scene .bc-teapot-pouring{transform-box:fill-box;transform-origin:50% 65%;animation:bc-tea-pour 1.8s ease-in-out 1}
+.bc-station-scene .bc-pour-stream{animation:bc-tea-stream 1.8s ease-in-out 1 both}
+.bc-station-scene[data-pose="packing"] .bc-delivered-dish{animation:bc-dish-serve 1.5s ease-out 1}
+.bc-station-scene[data-pose="packing"] .bc-candy-delivery{animation:bc-bag-offer 1.5s ease-out 1}
+.bc-station-scene[data-pose="packed"] .bc-host *{animation:none}
+@keyframes bc-host-listen{0%,100%{transform:rotate(5deg)}50%{transform:rotate(2deg)}}
+@keyframes bc-host-think{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(-2deg)}}
+@keyframes bc-host-speak{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(1.1)}}
+@keyframes bc-host-explain{0%,100%{transform:rotate(0)}50%{transform:rotate(-3deg)}}
+@keyframes bc-host-greet{0%,100%{transform:rotate(0)}40%{transform:rotate(-6deg)}70%{transform:rotate(-2deg)}}
+@keyframes bc-host-nod{0%,100%{transform:rotate(0)}48%{transform:rotate(6deg)}}
+@keyframes bc-steam-rise{0%,100%{opacity:.35;translate:0 3px}50%{opacity:.8;translate:0 -5px}}
+@keyframes bc-water-shimmer{0%,100%{opacity:.45;translate:0 0}50%{opacity:.75;translate:5px 0}}
+@keyframes bc-tea-pour{0%,100%{rotate:0deg}35%,65%{rotate:-12deg}}
+@keyframes bc-tea-stream{0%,22%,100%{opacity:0}35%,65%{opacity:.9}80%{opacity:0}}
+@keyframes bc-dish-serve{from{translate:0 -15px;opacity:.55}to{translate:0 0;opacity:1}}
+@keyframes bc-bag-offer{from{translate:0 -16px;opacity:.55}to{translate:0 0;opacity:1}}
+@media(max-width:600px){.bc-station-scene{aspect-ratio:1.45;height:auto}.bc-dish-illustration{max-width:160px}.bc-candy-illustration{max-width:115px}}
+@media(prefers-reduced-motion:reduce){.bc-station-scene *{animation:none!important;transition:none!important}.bc-pour-stream{opacity:0}}
+html[data-reduced-motion="true"] .bc-station-scene *{animation:none!important;transition:none!important}
+html[data-reduced-motion="true"] .bc-station-scene .bc-pour-stream{opacity:0}
