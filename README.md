@@ -71,7 +71,7 @@ npm run build        # 开发预览构建，允许显式待审内容
 npm run build:release
 ```
 
-`build:release` 当前**应失败**：正式发布前，文字、注音、近似读音、音频文件与独立审核记录必须满足全部条件。这不是编译故障。不要绕过发布门槛将开发包当正式教材。
+`build:release` 当前**应失败**：正式教材的文字、注音、近似读音、音频文件与独立审核记录必须满足全部条件。这不是编译故障。按 [新 D/E 计划](docs/Batch-DE-plan.md)，D 将实现明确的待完整验收构建并部署，保留真实待审状态及完整性校验；E 审核通过后形成正式教材包。本次仅更新文档，现有命令行为未改变。
 
 `npm run preview` 在同一端口预览已构建的前端，需要单独运行后端；不要和 `npm run dev` 同时启动。
 
@@ -101,8 +101,9 @@ npm run build:release
 | [批次 2 修改 1](docs/Batch-2-revision-1.md) / [验收](docs/Batch-2-revision-1-acceptance.md) | 结束语播放、Review 总览/详情及逐句双速、园亭对话 Logo |
 | [批次 2 修改 2](docs/Batch-2-revision-2.md) / [验收](docs/Batch-2-revision-2-acceptance.md) | 独立介绍页、设置精简、统一开关及桌面 Logo 间距 |
 | [批次 2 修改 3](docs/Batch-2-revision-3.md) / [验收](docs/Batch-2-revision-3-acceptance.md) | 登录注册、临时游客、进度承接、About 默认入口及导航排序 |
+| [批次 D 与 E 计划](docs/Batch-DE-plan.md) | D 部署准备与部署；E 真实语音、设备兼容、模型评估及最终验收 |
 | [内容审核交接](docs/content-review/README.md) | 两位流利使用者可填写的审核资料 |
 | [开发进度](docs/Development-status.md) | 当前状态与下一项工作 |
-| [开发路线](docs/Product-development-roadmap.md) | 批次与十步的原始范围 |
+| [开发路线](docs/Product-development-roadmap.md) | 十个工作项、最新批次与执行依赖 |
 
-没有创建生产网址或云数据库。B+C 后续为 D：完整路线的发布验收与环境准备；E：正式部署。真实麦克风、实体设备和语言听审的覆盖以验收记录为准，开发预览不等于正式教材批准。
+尚未部署。B+C 后续调整为 D：先完成部署准备和基本运行检查，交付可访问、待完整验收的版本；E：集中进行真实语音、设备兼容、ASR／TTS 工程评估、语言听审及修正，完成最终验收。部署成功不表示教材已获批准；当前仅保存新计划。
