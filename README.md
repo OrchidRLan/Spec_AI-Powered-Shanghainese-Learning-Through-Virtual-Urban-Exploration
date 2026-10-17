@@ -6,7 +6,7 @@ Practise everyday Shanghainese through four virtual stops around Yu Garden: Nanx
 - Chinese and English interfaces, aligned romanization, and normal/slow teaching audio.
 - Account-based progress, temporary guest access, and review for completed stops.
 
-Built with React, TypeScript, Vite, FastAPI, and SQLite. The four-stop implementation is available locally; language materials and audio remain review drafts. Deployment and final acceptance are pending.
+Built with React, TypeScript, Vite, FastAPI, and SQLite. [Try the deployed app](https://spec-virtual-shanghainese-learning.vercel.app). Language materials and audio remain review drafts; full speech, device, and final acceptance checks are pending.
 
 ## Local setup
 

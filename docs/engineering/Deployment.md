@@ -2,6 +2,8 @@
 
 This is the Batch D version awaiting full acceptance. Teaching language, romanization, and audio remain review drafts; deployment is not language approval. Current delivery and online verification are recorded in [development status](../Development-status.md).
 
+Production: [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app), with the backend at `https://a-little-shanghai-api.onrender.com`. Both application deployments use commit `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`; later documentation-only commits do not require an application rebuild. Minimum checks and their limits are in [Batch D checks](Batch-D-checks.md).
+
 ## Architecture and source
 
 - Both platforms use `hollis-yang/Spec-Virtual-Shanghainese-Learning`, branch `main`, repository root `./`.
@@ -76,7 +78,7 @@ Render and Vercel automatic Git deployments are initially disabled. Repository s
 | Boundaries | No proxy secret or speech key in the frontend bundle; direct backend API, wrong origin and cross-account requests denied |
 | Maintenance | Verified backup, recovery to a new path, correct database mount and restart persistence; maintain a private off-disk backup copy |
 
-Vercel rewrite routing, real browser cookies, microphone access and platform cancellation still need actual deployment evidence. Aborting a frontend proxy request does not prove that an already started speech-provider call was cancelled or unbilled. Full voice quality, devices, compatibility, language/audio approval and final acceptance belong to E.
+Vercel rewrite routing, real browser registration/login and refresh persistence have been checked on the deployed site. Microphone capture and platform cancellation remain unverified. Aborting a frontend proxy request does not prove that an already started speech-provider call was cancelled or unbilled. Full voice quality, devices, compatibility, language/audio approval and final acceptance belong to E.
 
 ## Update and rollback
 
