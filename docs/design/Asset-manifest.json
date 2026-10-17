@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "version": "batch-a.1",
+  "createdAt": "2026-10-17",
+  "source": "frontend/src/components/SceneArt.tsx",
+  "creator": "Codex, original vector artwork created for this repository",
+  "rights": "Original project artwork; no external images, stock assets, tracing, fonts, or network resources included. Repository licensing governs redistribution.",
+  "historicalPrototypeReused": false,
+  "artDirection": "现代旅行手册与中国园林版画：米色纸面、青绿瓦顶、赭红梁柱、玉绿色水面、竹与木的暖色。所有图层为可编辑 SVG。",
+  "assets": [
+    {
+      "id": "shared-yuyuan-map-v1",
+      "component": "GardenMap",
+      "viewBox": "0 0 1100 690",
+      "purpose": "四站共享教学示意地图。建筑受江南园林风格启发，不是真实店铺复刻或实地导航。",
+      "props": {
+        "label": "Localized accessible image description",
+        "className": "Optional layout class"
+      },
+      "altText": {
+        "zh": "园林教学地图，四处建筑由小径、池塘与曲桥相连。",
+        "en": "An illustrated garden with four learning destinations connected by paths, a pond, and a zigzag bridge."
+      },
+      "safeArea": {
+        "x": 120,
+        "y": 100,
+        "width": 860,
+        "height": 485
+      },
+      "landmarkCenters": {
+        "restaurant": [
+          250,
+          220
+        ],
+        "candy": [
+          710,
+          190
+        ],
+        "nanxiang": [
+          320,
+          485
+        ],
+        "teahouse": [
+          800,
+          460
+        ]
+      },
+      "layers": [
+        "garden-walls",
+        "lake-water",
+        "paths",
+        "back-planting",
+        "restaurant",
+        "candy",
+        "nanxiang",
+        "teahouse",
+        "front-planting"
+      ],
+      "responsiveUse": "Render complete viewBox on small screens and provide the separate accessible destination list. Do not crop away a required destination or rely on illustration for hit targets.",
+      "textPolicy": "No baked labels or actionable text; parent UI supplies localized destination names and keyboard-operable controls."
+    },
+    {
+      "id": "nanxiang-interior-v1",
+      "component": "NanxiangScene",
+      "viewBox": "0 0 1100 580",
+      "purpose": "原创教学柜台，分层窗格、暖灯、女性店员、木柜台、竹蒸笼、小笼包与包装袋。不是门店实景复刻。",
+      "props": {
+        "label": "Localized accessible image description",
+        "className": "Optional layout class",
+        "pose": "welcome | listening | checking | packed; default welcome"
+      },
+      "altText": {
+        "zh": "温暖的木柜台后，店员微笑迎接；柜台上摆着小笼包蒸笼与外带纸袋。",
+        "en": "A welcoming server behind a warm wooden counter with dumpling baskets and a takeaway paper bag."
+      },
+      "safeArea": {
+        "x": 260,
+        "y": 84,
+        "width": 640,
+        "height": 370
+      },
+      "mobileFocalPoint": {
+        "x": 570,
+        "y": 265
+      },
+      "layers": [
+        "window-architecture",
+        "lighting",
+        "back-counter",
+        "original-character",
+        "front-counter",
+        "serving-props",
+        "scene-steam"
+      ],
+      "responsiveUse": "Use a dedicated close composition or contain the whole SVG for narrow screens; central server and dumplings remain primary. Required bag and basket actions need separate text controls.",
+      "motion": "Static SVG by default. Optional parent CSS may animate scene-steam; honor reduced motion. No automatic camera movement or interaction is embedded.",
+      "poseLimits": "welcome and listening share the raised-hand illustration; checking and packed use hands at the counter. packed closes one foreground basket. These presentation poses do not perform order updates, packing, completion, or saving.",
+      "quantityPolicy": "Basket contents are decorative. Front baskets are environment props, not a current order or a verified real-store dumpling count. Parent UI must explicitly distinguish the saved order and servings."
+    },
+    {
+      "id": "shared-landmarks-v1",
+      "component": "Landmark",
+      "viewBox": "-145 -225 290 255",
+      "purpose": "地图对应的四个独立建筑小图，供地点卡和回顾复用。",
+      "props": {
+        "kind": "restaurant | candy | nanxiang | teahouse",
+        "label": "Localized accessible description",
+        "className": "Optional layout class"
+      },
+      "safeArea": {
+        "x": -130,
+        "y": -217,
+        "width": 260,
+        "height": 245
+      },
+      "textPolicy": "Signboard ornament is decorative geometry. Actual place names are rendered by the parent UI."
+    }
+  ],
+  "accessibility": "SVGs have role=img and a per-instance title ID created with React useId. Pass label in the active UI language. Images do not provide interactive controls; the parent interface supplies focusable alternatives.",
+  "fonts": "None in artwork; no font files or embedded typography.",
+  "verification": {
+    "sourceInspection": "Original code-native shapes; no foreign assets or external URLs.",
+    "visualReview": "Integrated desktop (1440 viewport) and phone (390 viewport) in Chinese/English inspected in browser on 2026-10-17; English 320px overflow and button-height checked. Screenshots: docs/design/previews. This is engineering visual inspection, not user design approval or complete device/accessibility acceptance."
+  }
+}

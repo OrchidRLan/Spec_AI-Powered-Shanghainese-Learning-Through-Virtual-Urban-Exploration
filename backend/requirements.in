@@ -1,0 +1,7 @@
+# Direct dependencies; requirements.lock pins the complete installed graph.
+fastapi==0.115.12
+pydantic==2.11.5
+httpx==0.28.1
+uvicorn==0.34.2
+pytest==8.3.5
+python-dotenv==1.1.0
