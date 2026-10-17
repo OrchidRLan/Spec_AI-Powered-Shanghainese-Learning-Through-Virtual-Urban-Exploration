@@ -5,15 +5,18 @@ from copy import deepcopy
 from .models import Interpretation
 
 RULE_VERSION = "nanxiang-rules.v1"
-CONTENT_VERSION = "batch-a.2026-10-17.v1"
+CONTENT_VERSION = "batch-a-r1.2026-10-17.v1"
+LEGACY_CONTENT_VERSION = "batch-a.2026-10-17.v1"
 ORDER_FIELDS = {"item", "quantity", "unit", "takeaway"}
 DERIVED_ISSUES = {"unsupported_item", "quantity_out_of_range", "unit_unknown", "piece_not_serving",
                   "basket_unit_unexplained", "quantity_not_target", "takeaway_required"}
 
 
-def new_attempt(attempt_id: str, now: str) -> dict:
+def new_attempt(attempt_id: str, now: str, *, content_version: str = CONTENT_VERSION,
+                rule_version: str = RULE_VERSION) -> dict:
     return {
         "id": attempt_id, "station_id": "nanxiang", "status": "collecting", "revision": 0,
+        "content_version": content_version, "rule_version": rule_version,
         "order": {"item": None, "quantity": None, "unit": None,
                   "normalized_servings": None, "takeaway": None},
         "unresolved_issues": [], "summary_revision": None, "confirmed_revision": None,

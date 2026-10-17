@@ -16,6 +16,7 @@ export interface PhraseSegment {
   id: string;
   hanzi: string;
   meaning: Bilingual;
+  /** Draft citation readings are displayable; a non-null value is not approval. */
   pronunciation: string | null;
   approximateZh: string | null;
 }
@@ -31,6 +32,8 @@ export interface LearningText {
   meaning: Bilingual;
   segments: PhraseSegment[];
   pronunciation: string | null;
+  /** Identifies the spelling and citation-tone convention, including its limits. */
+  pronunciationSchemeId?: string;
   /** This field and its UI affordance must never be shown in English mode. */
   approximateZh: string | null;
   pronunciationHelp: Bilingual<string | null>;
@@ -52,6 +55,22 @@ export interface LearningText {
   parameters?: Record<string, string[]>;
   reviewFocus?: Bilingual;
   semanticValue?: { type: string; value: string | number | boolean };
+}
+
+export interface PronunciationScheme {
+  id: string;
+  name: Bilingual;
+  version: string;
+  toneNotation: 'citation-category-suffix';
+  toneCategories: Record<string, string>;
+  syllableSeparator: string;
+  /** Teaching groups are not necessarily phonological tone-sandhi domains. */
+  teachingGroupSeparator: string;
+  /** An omitted number means unresolved, not an asserted neutral tone. */
+  unnumberedSyllables: Array<{ hanzi: string; romanization: string; reason: string }>;
+  sandhiStatus: ReviewState;
+  sourceIds: string[];
+  notice: Bilingual;
 }
 
 export interface AudioClip {

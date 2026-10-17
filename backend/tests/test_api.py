@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 from uuid import uuid4
 import io
+import json
 import sqlite3
 import wave
 
@@ -499,3 +500,198 @@ def test_new_session_requires_owned_cookie_and_empty_explicit_body(app, client):
     assert client.get("/api/session").json()["id"] == previous
     with TestClient(app) as no_cookie:
         assert no_cookie.post("/api/session/new", json={}).status_code == 401
+
+
+def mark_session_as_legacy(app, sid):
+    """Represent the pre-R1 persisted schema, without migrating its history."""
+    from app.rules import LEGACY_CONTENT_VERSION
+    from app.storage import encode
+    with app.state.database.transaction() as connection:
+        session = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
+        session.update(content_version=LEGACY_CONTENT_VERSION, model_config_id="development-parser.v1")
+        connection.execute("UPDATE sessions SET data=? WHERE id=?", (encode(session), sid))
+        for row in connection.execute("SELECT id,data FROM attempts WHERE session_id=?", (sid,)).fetchall():
+            attempt = json.loads(row["data"])
+            attempt.pop("content_version", None)
+            attempt.pop("rule_version", None)
+            connection.execute("UPDATE attempts SET data=? WHERE id=?", (encode(attempt), row["id"]))
+            for turn in connection.execute("SELECT request_id,response FROM turns WHERE attempt_id=?", (row["id"],)).fetchall():
+                if turn["response"]:
+                    response = json.loads(turn["response"])
+                    response["attempt"].pop("content_version", None)
+                    response["attempt"].pop("rule_version", None)
+                    connection.execute("UPDATE turns SET response=? WHERE attempt_id=? AND request_id=?", (encode(response), row["id"], turn["request_id"]))
+
+
+def test_r1_content_loading_preserves_legacy_bindings_and_cached_history(app, client):
+    from app.rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION
+    attempt = start(client)
+    body = {"request_id": str(uuid4()), "expected_revision": 0, "channel": "text", "text": "我要两份小笼包外带"}
+    path = f"/api/attempts/{attempt['id']}/turns"
+    accepted = client.post(path, json=body).json()["attempt"]
+    completed = confirm(client, accepted)
+    old_sid = client.get("/api/session").json()["id"]
+    mark_session_as_legacy(app, old_sid)
+    # Opening a new application instance does not migrate the old cookie/session.
+    with TestClient(create_app(app.state.database.path)) as restarted:
+        restarted.cookies.update(client.cookies)
+        old_session = restarted.get("/api/session").json()
+        assert old_session["content_version"] == LEGACY_CONTENT_VERSION
+        assert old_session["model_config_id"] == "development-parser.v1"
+        assert old_session["attempts"][0]["content_version"] == LEGACY_CONTENT_VERSION
+        assert old_session["completed_station_ids"] == ["nanxiang"]
+        old_content = restarted.get("/api/content").json()
+        assert old_content["contentVersion"] == LEGACY_CONTENT_VERSION
+        assert old_content["expressions"][0]["hanzi"] == "我要两份小笼包"
+        assert restarted.get(f"/api/attempts/{attempt['id']}").json()["content_version"] == LEGACY_CONTENT_VERSION
+        for result in (restarted.get(path + "/" + body["request_id"]), restarted.post(path, json=body)):
+            cached = result.json()["attempt"]
+            assert cached["content_version"] == LEGACY_CONTENT_VERSION
+            assert cached["revision"] == accepted["revision"]  # Original snapshot, not latest success.
+            assert cached["status"] == "confirming"
+            assert cached["turns"][0]["text"] == body["text"]
+        practice = start(restarted, restart=True)
+        assert practice["content_version"] == LEGACY_CONTENT_VERSION
+        # New parser behavior is not silently substituted for an old binding.
+        rejected = restarted.post(f"/api/attempts/{practice['id']}/turns", json={**body, "request_id": str(uuid4())})
+        assert rejected.status_code == 409
+        assert rejected.json()["detail"]["code"] == "configuration_changed"
+        new_session = restarted.post("/api/session/new", json={}).json()
+        assert new_session["content_version"] == CONTENT_VERSION == "batch-a-r1.2026-10-17.v1"
+        assert new_session["model_config_id"] == "development-parser.v2"
+        current_content = restarted.get("/api/content").json()
+        assert current_content["contentVersion"] == CONTENT_VERSION
+        assert current_content["expressions"][0]["hanzi"] == "我要两份小笼馒头"
+    # Reads and cached retries did not rewrite the historical content fields.
+    with app.state.database.transaction() as connection:
+        saved = json.loads(connection.execute("SELECT data FROM attempts WHERE id=?", (completed["id"],)).fetchone()["data"])
+        assert "content_version" not in saved
+        assert saved["status"] == "completed"
+
+
+def test_r1_missing_legacy_content_never_falls_back_to_current(app, client, monkeypatch):
+    from pathlib import Path
+    from app.rules import LEGACY_CONTENT_VERSION
+    mark_session_as_legacy(app, client.get("/api/session").json()["id"])
+    exists = Path.exists
+    monkeypatch.setattr(Path, "exists", lambda path: False if path.name == f"{LEGACY_CONTENT_VERSION}.json" else exists(path))
+    response = client.get("/api/content")
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "content_version_unavailable"
+    assert client.get("/api/session").json()["content_version"] == LEGACY_CONTENT_VERSION
+
+
+def test_r1_prepared_legacy_confirmation_recovers_once_without_reinterpretation(app, client):
+    from app.rules import LEGACY_CONTENT_VERSION
+    attempt = order(client, start(client))
+    body = {"request_id": str(uuid4()), "expected_revision": attempt["revision"], "channel": "buttons", "action": {"type": "confirm"}, "summary_revision": attempt["summary_revision"]}
+    def fail_save():
+        raise sqlite3.OperationalError("simulated save interruption")
+    app.state.before_commit = fail_save
+    path = f"/api/attempts/{attempt['id']}/turns"
+    assert client.post(path, json=body).status_code == 503
+    mark_session_as_legacy(app, client.get("/api/session").json()["id"])
+    def must_not_interpret(*_):
+        pytest.fail("A prepared request must not be interpreted again")
+    with TestClient(create_app(app.state.database.path, interpreter=must_not_interpret)) as restarted:
+        restarted.cookies.update(client.cookies)
+        result = restarted.post(path, json=body)
+        assert result.status_code == 200
+        assert result.json()["attempt"]["status"] == "completed"
+        assert result.json()["attempt"]["content_version"] == LEGACY_CONTENT_VERSION
+        assert restarted.post(path, json=body).json() == result.json()
+        assert sum(e["event_type"] == "task_completed" for e in restarted.get("/api/events").json()) == 1
+
+
+def test_r1_buttons_follow_one_question_at_a_time_and_require_later_confirmation(client):
+    attempt = start(client)
+    assert attempt["prompt_id"] == "NX-N01"
+    attempt = submit(client, attempt, {"type": "set_order", "item": "xiaolongbao"})
+    assert attempt["prompt_id"] == "NX-N02"
+    assert attempt["order"]["quantity"] is None
+    assert attempt["order"]["takeaway"] is None
+    attempt = submit(client, attempt, {"type": "set_order", "quantity": 2, "unit": "serving"})
+    assert attempt["prompt_id"] == "NX-N03"
+    attempt = submit(client, attempt, {"type": "set_order", "takeaway": True})
+    assert attempt["prompt_id"] == "NX-N09"
+    assert attempt["status"] == "confirming"
+    assert attempt["confirmed_revision"] is None
+    assert confirm(client, attempt)["status"] == "completed"
+
+
+@pytest.mark.parametrize("phrase,field,expected", [
+    ("我要两份小笼馒头", "item", "xiaolongbao"),
+    ("勿要小笼馒头", "item", None),
+    ("覅打包", "takeaway", False),
+    ("覅 打包", "takeaway", False),
+    ("勿打包", "takeaway", False),
+    ("勿 打包", "takeaway", False),
+    ("勿 要 打包", "takeaway", False),
+    ("勿堂吃，要打包", "takeaway", True),
+])
+def test_r1_development_aliases_preserve_evidence_and_negation(client, phrase, field, expected):
+    attempt = order(client, start(client))
+    changed = submit(client, attempt, text=phrase)
+    if expected is None or type(expected) is bool:
+        assert changed["order"][field] is expected
+    else:
+        assert changed["order"][field] == expected
+    assert changed["turns"][-1]["text"] == phrase
+    assert changed["turns"][-1]["interpretation"]["evidence"][field] == phrase
+    assert changed["turns"][-1]["interpretation"]["model_config_id"] == "development-parser.v2"
+    if expected is None or expected is False:
+        assert changed["status"] == "collecting"
+        assert changed["summary_revision"] is None
+
+
+def test_r1_repeat_plus_correction_cannot_leave_old_summary_confirmable(client):
+    attempt = order(client, start(client))
+    changed = submit(client, attempt, text="请侬再讲一遍，改成三份")
+    assert changed["order"]["quantity"] == 3
+    assert changed["status"] == "collecting"
+    assert changed["summary_revision"] is None
+    assert changed["turns"][-1]["interpretation"]["help_requested"] is True
+
+
+@pytest.mark.parametrize("phrase", ["我要两份小笼馒头，覅 打包", "我要两份小笼馒头，勿 打包", "two servings xiaolongbao not  takeaway"])
+def test_r1_asr_spacing_does_not_turn_negation_into_takeaway(client, phrase):
+    attempt = submit(client, start(client), text=phrase)
+    assert attempt["order"]["takeaway"] is False
+    assert attempt["status"] == "collecting"
+    assert attempt["turns"][-1]["text"] == phrase
+    assert submit(client, attempt, {"type": "confirm"})["status"] != "completed"
+
+
+def test_r1_negating_dine_in_does_not_negate_item_in_next_clause(client):
+    attempt = submit(client, start(client), text="勿 堂吃，我要两份小笼馒头打包")
+    assert attempt["order"]["item"] == "xiaolongbao"
+    assert attempt["order"]["takeaway"] is True
+    assert attempt["status"] == "confirming"
+
+
+def test_r1_voice_alias_can_fill_multiple_fields_and_legacy_voice_edited_remains_readable(app, client, monkeypatch):
+    from app.providers import ASRResult, QwenASR
+    from app.rules import LEGACY_CONTENT_VERSION
+    transcript = "我要两份小笼馒头，打包带走，对个"
+    async def transcribe(_self, _request):
+        return ASRResult(transcript, "ok", 5, "mock-only", "upstream-r1", "test-only")
+    monkeypatch.setattr(QwenASR, "transcribe", transcribe)
+    asr_id = str(uuid4())
+    assert client.post("/api/asr", content=b"test-fixture", headers={"content-type": "audio/wav", "x-request-id": asr_id}).status_code == 200
+    attempt = start(client)
+    body = {"request_id": str(uuid4()), "expected_revision": 0, "channel": "voice", "text": transcript, "asr_request_id": asr_id}
+    path = f"/api/attempts/{attempt['id']}/turns"
+    updated = client.post(path, json=body).json()["attempt"]
+    assert updated["order"] == {"item": "xiaolongbao", "quantity": 2, "unit": "serving", "normalized_servings": 2, "takeaway": True}
+    assert updated["status"] == "confirming"  # The same utterance's 对个 cannot confirm its newly shown summary.
+    edited_text = "我要三份小笼馒头，打包带走"
+    edited_body = {**body, "request_id": str(uuid4()), "expected_revision": updated["revision"], "channel": "voice_edited", "text": edited_text}
+    edited = client.post(path, json=edited_body).json()["attempt"]
+    assert edited["status"] == "collecting"
+    mark_session_as_legacy(app, client.get("/api/session").json()["id"])
+    read = client.get(f"/api/attempts/{attempt['id']}").json()
+    assert read["content_version"] == LEGACY_CONTENT_VERSION
+    assert read["turns"][-1]["channel"] == "voice_edited"
+    assert read["turns"][-1]["text"] == edited_text
+    assert read["turns"][-1]["asr_transcript"] == transcript
+    assert client.get(path + "/" + edited_body["request_id"]).json()["attempt"]["turns"][-1]["asr_transcript"] == transcript

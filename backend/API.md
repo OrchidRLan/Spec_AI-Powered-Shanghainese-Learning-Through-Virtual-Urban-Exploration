@@ -1,4 +1,4 @@
-# 批次 A 本地 API
+# 批次 A／修订 1 本地 API
 
 Python 3.11+。本批次使用 FastAPI + 本地 SQLite；不是云端部署。
 
@@ -21,7 +21,7 @@ python3.11 -m venv .venv
 | PATCH /api/session | locale?: zh/en, show_romanization?: bool, reduced_motion?: bool | Session |
 | POST /api/session/new | 已有会话 Cookie；JSON `{}` | 用户明确选择新的探索时创建 Session 并替换 Cookie；保留三项偏好，进度从零开始 |
 | GET /api/services | 无 | asr.enabled/formats/config；text.mode=development_parser |
-| GET /api/content | 会话 Cookie | 绑定版本的 content/batch-a.json |
+| GET /api/content | 会话 Cookie | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
 | POST /api/attempts | station_id: nanxiang, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
 | GET /api/attempts/{id} | Cookie | Attempt |
 | POST /api/attempts/{id}/turns | TurnInput | TurnResult |
@@ -42,6 +42,7 @@ type Order = {
 };
 type Attempt = {
   id: string; station_id: 'nanxiang';
+  content_version: string; rule_version: string;
   status: 'collecting'|'confirming'|'completed'|'skipped';
   revision: number; order: Order; unresolved_issues: string[];
   summary_revision: number|null; confirmed_revision: number|null;
@@ -71,14 +72,20 @@ type Session = {
 
 `POST /api/session/new` 只供用户明确点击“开始新的探索”并确认后调用，不在配置冲突或普通刷新时自动调用。它保留当前语言、注音显示及减少动态偏好，为新会话绑定当前内容/规则/模型配置，并返回空 attempts 与完成列表。旧会话、已保存尝试和成功记录留在数据库中，既不删除也不转入新会话；新 Cookie 没有访问旧会话的权限。前端应先取消在途任务并清空旧会话的本地草稿/请求状态，防止迟到界面结果覆盖新探索。
 
+修订 1 新会话绑定 `batch-a-r1.2026-10-17.v1`，规则仍为 `nanxiang-rules.v1`。旧会话保留 `batch-a.2026-10-17.v1`，从 `content/versions/batch-a.2026-10-17.v1.json` 读取原内容；缺失、未知或文件内版本不匹配时返回 `content_version_unavailable`，不能用新文案静默替换旧包。所有 Attempt 响应附所属 `content_version/rule_version`；早期记录缺这些字段时从其原会话补充到响应，不迁移数据库。历史回合的缓存响应仍是当时的订单和修订，附原版本，不替换成最新订单。
+
+R1 界面只呈现语音与按钮，后端仍保留 `text`、`voice_edited` 数据结构、历史读取和已提交请求的幂等结果。旧成功、旧文本、ASR 原转写及编辑文本不删除或改写。当前静态界面若只带 R1 包，遇旧会话应说明版本差异并提供用户主动“开始新的探索”入口，不把旧进度标为新内容下的结果。
+
 允许事件：`expression_opened`, `expression_inserted`, `unit_explanation_viewed`, `recording_started`, `recording_stopped`, `recording_cancelled`, `recording_played`, `recording_permission_denied`, `asr_submitted`, `asr_succeeded`, `asr_failed`, `asr_cancelled`, `audio_started`, `audio_ended`, `audio_interrupted`, `pronunciation_support_changed`, `input_channel_changed`, `station_entered`, `assistance_recorded`, `logging_gap`。只在真的展示“一笼示意对应一份”后发 `unit_explanation_viewed`；之后提交的 basket 单位才可归一。事件不能直接完成订单。录音权限拒绝不能发 `recording_started`。客户端 ASR 与回听事件只是 UI 诊断，后端强制记录 `reported_by:client`，不会增加语音尝试、帮助、成功或完成计数；真正识别结果由服务端单独记录 `asr_finished`（`reported_by:server`），客户端不能提交该事件。
 
 HTTP 409 的 `detail={code,message,attempt?}` 表示冲突；刷新 attempt 并展示最新版本。422 为请求校验失败；503 表示服务或保存失败。保存失败时不得显示完成；先查询原 ID，再用原负载重试。已准备的解释会落盘，最终事务失败后可重试提交而不重新解释；状态、完成事件与结果在同一事务保存。进行中的解释可取消；崩溃后遗留 pending 可查询并取消，再以新 ID 提交。
 
 解释失败会终结该回合并返回 `detail.terminal=true`，明确重试时生成新 ID；这与保存失败和网络未知结果的原 ID 重试不同。页面刷新后也要根据 `attempt.pending_request_id` 展示查询/取消入口，不能只依赖内存中的请求对象。
 
-语音原转写成功后，用户明确提交 `channel:'voice',text,asr_request_id`；如手动编辑则 `channel:'voice_edited'`。ASR ID 必须属于当前会话，原转写从服务端保存结果读取；`voice` 文本必须完全匹配原转写。回合分别返回 `asr_transcript` 与 `text`，不把编辑后的内容伪记为识别结果。ASR 出错返回稳定 `detail.code/retryable/terminal`；只有终结失败重新试才换 ID，未知结果仍复用原 ID。转写处理超过 30 秒的未知请求允许用户明确开始新请求；不会自动重调模型。
+语音原转写成功后，用户在只读转写核对中明确选择“使用这句话”，提交 `channel:'voice',text,asr_request_id`。R1 界面不再提供文字编辑；旧客户端及历史的 `voice_edited` 兼容结构保留。ASR ID 必须属于当前会话，原转写从服务端保存结果读取；`voice` 文本必须完全匹配原转写。回合分别返回 `asr_transcript` 与 `text`，不把编辑后的内容伪记为识别结果。ASR 出错返回稳定 `detail.code/retryable/terminal`；只有终结失败重新试才换 ID，未知结果仍复用原 ID。转写处理超过 30 秒的未知请求允许用户明确开始新请求；不会自动重调模型。
 
 文字解析默认是有限开发解析器，覆盖草案中的常见中文/英文、数量/单位/否定修正；不承诺任意自然语言，不把模型输出或 UI 文案伪称已审核上海话。设置 `TEXT_INTERPRETER=qwen` 可选择实际 Qwen 解释适配器；还必须显式启用服务并配置凭据，不会在失败后静默回退到开发解析器。会话绑定解释/ASR 配置 ID，变更模型或模式后使用新会话，不静默修改历史会话来源。ASR/TTS 的真实调用必须显式启用且配置凭据，未配置清楚报错。ASR 在内存中处理录音，不在磁盘存原始音频；请求 ID 对同一录音去重。实际真人语音、模型质量与听审状态以验证记录为准。
+
+R1 开发解析器标为 `development-parser.v2`：本轮明确说出的“小笼包／小笼馒头”均映射到 `xiaolongbao`；数量、否定、单位与确认仍单独校验，证据和原文保持原句。重复请求和修正同时出现时必须先保留修正，不以“再讲一遍”绕过订单变更。旧 `development-parser.v1` 会话的历史和缓存重试可读取；新文字或语音解释返回 `configuration_changed`，提示显式新探索，按钮规则及已准备好、只待保存的回合仍可恢复。此处有限解析器回归不代表真实 ASR／LLM 对新沪语稿的质量已审核。
 
 自动测试的 `tests/conftest.py` 在加载应用前关闭所有真实调用并选择开发解析器，避免用户本地 `.env` 引发测试计费。适配器通过 mock HTTP 测试；通过测试不等于已验证上海话效果。

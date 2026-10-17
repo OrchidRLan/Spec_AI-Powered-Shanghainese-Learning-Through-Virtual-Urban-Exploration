@@ -1,13 +1,13 @@
 """Explicit provider selection. No silent fallback after a live provider fails."""
 from dataclasses import asdict
-from .interpreter import parse_development
+from .interpreter import PARSER_VERSION, parse_development
 from .models import Interpretation
 from .providers import ProviderConfig, ProviderError, QwenInterpreter
 
 
 def configure_interpreter(mode: str):
     if mode == "development_parser":
-        return parse_development, "development-parser.v1"
+        return parse_development, PARSER_VERSION
     if mode != "qwen":
         raise ValueError("TEXT_INTERPRETER must be development_parser or qwen")
     config = ProviderConfig.from_env("llm")

@@ -9,6 +9,10 @@ from __future__ import annotations
 import re
 from .models import Interpretation
 
+PARSER_VERSION = "development-parser.v2"
+ITEM_PATTERN = r"(?:小笼包|小笼馒头|xiaolongbao|soup dumplings)"
+NEGATIVE_PREFIX = r"(?:(?:不|勿)\s*(?:是|要|想(?:\s*(?:要|吃))?|用|需要)?|覅)\s*"
+SAME_CLAUSE = r"[^，,。.!！?？;；\n]*"
 NUMBERS = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
            "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
@@ -18,15 +22,14 @@ QUANTITY = re.compile(r"(?P<n>\d+|[零一二两三四五六七八九十百千万
 def parse_development(text: str, attempt: dict) -> Interpretation:
     original = text.strip()
     value = original.lower().strip("。.!！?？ ")
-    result = Interpretation()
+    result = Interpretation(model_config_id=PARSER_VERSION)
     if re.fullmatch(r"(对[的个]?|是的|确认|确认订单|没错|好[的]?|yes|yes,? (that'?s )?right|correct|confirm|that'?s right)", value):
         result.intent = "confirm"
         return result
-    if re.search(r"没听清|再[说讲]一[遍次]|repeat|say that again|didn'?t hear", value):
-        result.intent, result.help_requested = "repeat", True
-        return result
+    repeat_requested = bool(re.search(r"没听清|再[说讲]一[遍次]|repeat|say that again|didn'?t hear", value))
+    result.help_requested = repeat_requested
 
-    modification = bool(re.search(r"改|换|不要|不想|不是|不，|不,|change|instead|actually|don'?t|not ", value))
+    modification = bool(re.search(r"改|换|不要|不想|不是|不，|不,|勿|覅|change|instead|actually|don'?t|not ", value))
     if modification:
         result.intent = "modify"
     if re.search(r"不知道.*(数量|几份)|not sure how many|clear quantity", value):
@@ -71,14 +74,14 @@ def parse_development(text: str, attempt: dict) -> Interpretation:
                 result.changes.update(quantity=quantity, unit=unit)
                 result.evidence["quantity"] = match.group(0)
                 result.evidence.setdefault("unit", match.group(0))
-        if matches and re.search(r"不要\s*[一二两三四五六七八九十\d]|不[是要]\s*[一二两三四五六七八九十\d]|\b(?:not|don'?t want)\s+(?:one|two|three|\d)", value) and not re.search(r"改|instead|actually|不[，,]", value):
+        if matches and re.search(NEGATIVE_PREFIX + r"[一二两三四五六七八九十\d]|\b(?:not|don'?t\s+want)\s+(?:one|two|three|\d)", value) and not re.search(r"改|instead|actually|不[，,]", value):
             # A rejected amount is not a positive replacement amount.
             result.changes.pop("quantity", None)
             result.changes.pop("unit", None)
             result.uncertainties.append("ambiguous_quantity")
 
-    if re.search(r"小笼包|xiaolongbao|soup dumplings", value):
-        if re.search(r"不(?:是|要|想要|想吃).*小笼包|(?:don'?t|do not) want.*(xiaolongbao|dumplings)|not (?:the )?(xiaolongbao|soup dumplings)", value):
+    if re.search(ITEM_PATTERN, value):
+        if re.search(NEGATIVE_PREFIX + SAME_CLAUSE + r"小笼(?:包|馒头)|(?:don'?t|do\s+not)\s+want" + SAME_CLAUSE + r"(xiaolongbao|dumplings)|not\s+(?:the\s+)?(xiaolongbao|soup dumplings)", value):
             result.changes["item"] = None
         else:
             result.changes["item"] = "xiaolongbao"
@@ -88,10 +91,10 @@ def parse_development(text: str, attempt: dict) -> Interpretation:
         result.evidence["item"] = original
 
     # Do not infer an item solely because only one is on the task menu.
-    negative_takeaway = bool(re.search(r"不(?:是|要|想|用|需要)?(?:打包|外带|带走)|(?:打包|外带|带走)(?:不要|取消)|(?:don'?t|do not).*(take ?away|to go)|not (?:take ?away|takeout|to go)|no take ?away", value))
+    negative_takeaway = bool(re.search(NEGATIVE_PREFIX + r"(?:打包|外带|带走)|(?:打包|外带|带走)\s*(?:不\s*要|取消)|(?:don'?t|do\s+not)" + SAME_CLAUSE + r"(take\s*away|to\s+go)|(?:not|no)\s+(?:take\s*away|takeout|to\s+go)", value))
     positive_takeaway = bool(re.search(r"打包|外带|带走|take ?away|takeout|to go", value))
     here = bool(re.search(r"堂吃|for here|eat here|dine in", value))
-    negative_here = bool(re.search(r"不(?:要|是|想)?堂吃|不在[这这儿里]+吃|not (for |eat |dine )?here|(?:don'?t|do not).*eat here", value))
+    negative_here = bool(re.search(NEGATIVE_PREFIX + r"堂吃|不\s*在[这这儿里]+吃|not\s+(for\s+|eat\s+|dine\s+)?here|(?:don'?t|do\s+not)" + SAME_CLAUSE + r"eat\s+here", value))
     if negative_takeaway:
         result.changes["takeaway"] = False
     elif positive_takeaway:
@@ -111,4 +114,6 @@ def parse_development(text: str, attempt: dict) -> Interpretation:
         result.intent = "provide"
     if modification and not result.changes:
         result.uncertainties.append("unclear_modification")
+    if repeat_requested and not result.changes and not result.uncertainties:
+        result.intent = "repeat"
     return result

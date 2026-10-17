@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 from .interpreter import parse_development
 from .models import AttemptInput, EventInput, Interpretation, NewSessionInput, Preferences, RevisionInput, TurnInput
-from .rules import CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
+from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
 from .semantic import configure_interpreter
 from .storage import Database, encode
 
@@ -87,6 +87,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     def public_attempt(connection, attempt: dict) -> dict:
         result = dict(attempt)
+        add_bound_versions(connection, result)
         turns = connection.execute(
             "SELECT request_id,status,payload,interpretation,created_at FROM turns WHERE attempt_id=? ORDER BY created_at, rowid", (attempt["id"],)
         ).fetchall()
@@ -109,6 +110,15 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                 "created_at": row["created_at"],
             })
         return result
+
+    def add_bound_versions(connection, attempt: dict):
+        # Older persisted attempts predate these explicit fields. Read their
+        # owning session's binding; never label them with today's content.
+        if "content_version" not in attempt or "rule_version" not in attempt:
+            row = connection.execute("SELECT s.data FROM sessions s JOIN attempts a ON a.session_id=s.id WHERE a.id=?", (attempt["id"],)).fetchone()
+            bound = json.loads(row["data"])
+            attempt.setdefault("content_version", bound["content_version"])
+            attempt.setdefault("rule_version", bound["rule_version"])
 
     def services() -> dict:
         try:
@@ -193,12 +203,18 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
     @app.get("/api/content")
     def get_content(request: Request):
         with database.transaction() as connection:
-            session_id(request, connection)
-        path = ROOT.parent / "content" / "batch-a.json"
-        if not path.exists():
-            problem("content_unavailable", "The Batch A content package is not installed.", 503)
+            sid = session_id(request, connection)
+            bound = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
+        content_paths = {
+            CONTENT_VERSION: ROOT.parent / "content" / "batch-a.json",
+            LEGACY_CONTENT_VERSION: ROOT.parent / "content" / "versions" / f"{LEGACY_CONTENT_VERSION}.json",
+        }
+        version = bound["content_version"]
+        path = content_paths.get(version)
+        if path is None or not path.exists():
+            problem("content_version_unavailable", "The session's content version is unavailable.", 503)
         content = json.loads(path.read_text())
-        if content.get("contentVersion") != CONTENT_VERSION:
+        if content.get("contentVersion") != version:
             problem("content_version_unavailable", "The session's content version is unavailable.", 503)
         return content
 
@@ -216,7 +232,8 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                 latest = next((a for a in attempts if a["station_id"] == body.station_id), None)
                 if latest and latest["status"] == "completed":
                     return public_attempt(connection, latest)
-            attempt = new_attempt(identifier(), now())
+            bound = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
+            attempt = new_attempt(identifier(), now(), content_version=bound["content_version"], rule_version=bound["rule_version"])
             connection.execute("INSERT INTO attempts VALUES (?,?,?)", (attempt["id"], sid, encode(attempt)))
             database.event(connection, sid, attempt["id"], identifier(), "attempt_started", {}, now())
             return public_attempt(connection, attempt)
@@ -228,7 +245,9 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     def turn_response(connection, attempt: dict, row) -> dict:
         if row["response"]:
-            return json.loads(row["response"])
+            result = json.loads(row["response"])
+            add_bound_versions(connection, result["attempt"])
+            return result
         return {"request_id": row["request_id"], "status": "pending" if row["status"] in ("processing", "prepared") else row["status"],
                 "attempt": public_attempt(connection, attempt), "interpretation_source": None}
 

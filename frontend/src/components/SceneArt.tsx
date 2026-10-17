@@ -1,8 +1,10 @@
 import { useId } from 'react'
+import '../scene-motion.css'
 
 type ArtProps = { label?: string; className?: string }
 type LandmarkKind = 'restaurant' | 'candy' | 'nanxiang' | 'teahouse'
-type ScenePose = 'welcome' | 'listening' | 'checking' | 'packed'
+export type ScenePose = 'idle' | 'welcome' | 'speaking' | 'listening' | 'thinking' | 'acknowledging' | 'clarifying' | 'checking' | 'packing' | 'packed'
+export const SCENE_PACKING_DURATION_MS = 1800
 
 const palette = {
   ink: '#284c43', roof: '#315d50', roofLight: '#527969', roofDark: '#223e36',
@@ -106,65 +108,113 @@ function Lantern({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) 
   </g>
 }
 
+function CandyJar({ x, y, color = '#ae7149' }: { x: number; y: number; color?: string }) {
+  return <g transform={`translate(${x} ${y})`}>
+    <path d="M-7-21h14v4c9 3 9 21 4 24h-22c-5-3-5-21 4-24Z" fill={color} stroke="#76543b" strokeWidth="1" />
+    <rect x="-8" y="-24" width="16" height="5" rx="1" fill="#725239" />
+    <path d="M-11-3h22v7h-22Z" fill="#e6cf95" /><path d="M-7-15q-4 5-3 9" fill="none" stroke="#f5e4b7" strokeWidth="2" opacity=".6" />
+  </g>
+}
+
+function DiningTable({ x, y, scale = 1, tea = false }: { x: number; y: number; scale?: number; tea?: boolean }) {
+  return <g transform={`translate(${x} ${y}) scale(${scale})`}>
+    <path d="M-17-5-21 20M17-5l4 25M0-3v23" stroke="#78553a" strokeWidth="3" />
+    <ellipse rx="27" ry="9" fill="#b08256" stroke="#795037" strokeWidth="1.5" />
+    <ellipse cy="-3" rx="21" ry="6" fill="#e2d6b4" />
+    {tea ? <><path d="M-6-7q-6-15 7-14 11-1 8 14Z" fill="#607760" /><path d="m8-15 10-3-5 9M-7-17q-9 0-5 10" fill="none" stroke="#607760" strokeWidth="2.5" /><ellipse cx="-15" cy="-4" rx="4" ry="2" fill="#f1e5bd" stroke="#7b8461" /></> : <><ellipse cx="1" cy="-5" rx="12" ry="4" fill="#f6ebcf" /><path d="M-7-6q9-11 18 0" fill="#a65f3f" /><path d="M-19-7-12-3M16-6l6 2" stroke="#795439" strokeWidth="2" /></>}
+    <path d="M-37 6h14M23 6h14M-33 7v10M-27 7v10M27 7v10M33 7v10" stroke="#795439" strokeWidth="3" />
+  </g>
+}
+
+/** Each destination has its own architectural silhouette; shared roof craft keeps one visual family. */
 function Building({ kind, id }: { kind: LandmarkKind; id: string }) {
-  if (kind === 'teahouse') return <g>
-    <ellipse cy="13" rx="120" ry="22" fill="#315c4c" opacity=".12" />
-    <path d="m-101 4 106-9 102 8-8 12H-92Z" fill="#dbcfac" stroke="#a9a78d" />
-    <path d="M-77-80H78V5H-77Z" fill="#b4744f" />
-    <path d="M-68-73H69V-11H-68Z" fill="#eee0ba" />
-    {[-61, -15, 31].map((x) => <Window key={x} x={x} y={-68} width={32} height={48} />)}
-    {[-80, -27, 27, 80].map((x) => <path key={x} d={`M${x}-84V6`} stroke="#7d4834" strokeWidth="6" />)}
-    <Roof id={id} y={-78} width={228} height={43} />
-    <path d="M-51-126H52v-35H-51Z" fill="#e8d7af" />
-    {[-46, -11, 24].map((x) => <Window key={x} x={x} y={-158} width={23} height={26} />)}
-    <Roof id={id} y={-155} width={168} height={43} />
-    <path d="M-12-201c4 6 20 6 24 0M0-205v-12" fill="none" stroke="#365649" strokeWidth="3" strokeLinecap="round" />
-    <path d="M-90-11H90M-90-3H90" stroke="#78553c" strokeWidth="3" />
-    {Array.from({ length: 13 }, (_, i) => <path key={i} d={`M${-87 + i * 14}-12V5`} stroke="#8d6547" strokeWidth="2" />)}
-    <Lantern x={-66} y={-71} scale={.4} /><Lantern x={65} y={-71} scale={.4} />
+  if (kind === 'restaurant') return <g data-landmark="restaurant">
+    <ellipse cy="14" rx="139" ry="18" fill="#5a6249" opacity=".12" />
+    <path d="M-117-1h234l14 15H-131Z" fill="#c9c1a4" /><path d="M-129 14h258l8 7h-274Z" fill="#ded4b6" />
+    <rect x="-116" y="-155" width="232" height="159" fill="#e6d6b6" stroke="#b0936d" />
+    <path d="M99-155h17V4H99Z" fill="#c5ab83" />
+    <Roof id={id} y={-153} width={278} height={43} />
+    {[-101, -64, -27, 10, 47, 84].map((x) => <Window key={x} x={x} y={-139} width={29} height={41} />)}
+    <path d="M-119-92H119M-113-103H113" stroke="#976347" strokeWidth="5" />
+    {Array.from({length: 16}, (_, i) => <path key={i} d={`M${-111 + i * 15}-104v13`} stroke="#ad7a52" strokeWidth="2" />)}
+    <Roof id={id} y={-85} width={282} height={25} />
+    <path d="M-105-68h63V0h-63ZM42-68h63V0H42Z" fill="#d6bc85" />
+    <path d="M-105-68h63V0h-63ZM42-68h63V0H42Z" fill={`url(#${id}-light)`} />
+    <DiningTable x={-74} y={-21} scale={.8} /><DiningTable x={74} y={-21} scale={.8} />
+    <path d="M-32-68H32V3H-32Z" fill="#45513e" />
+    <path d="M-31-68-14-61V3h-17ZM31-68 14-61V3h17Z" fill="#a66e49" stroke="#744f38" />
+    <path d="M-22-54v33m44-33v33" stroke="#ddb47a" strokeWidth="2" />
+    {[-113, -38, 38, 113].map((x) => <path key={x} d={`M${x}-75V6`} stroke="#98583d" strokeWidth="7" />)}
+    <rect x="-45" y="-78" width="90" height="16" rx="2" fill="#72543c" stroke="#d1b178" />
+    <path d="M-33-70H33" stroke="#d2bd87" strokeWidth="1.5" />
+    <Lantern x={-112} y={-66} scale={.52} /><Lantern x={112} y={-66} scale={.52} />
   </g>
 
-  const restaurant = kind === 'restaurant'
-  const candy = kind === 'candy'
-  const width = restaurant ? 236 : candy ? 199 : 239
-  return <g>
-    <ellipse cy="12" rx={width / 2 + 6} ry="18" fill="#5a6249" opacity=".12" />
-    <path d={`M${-width / 2 + 20} 2h${width - 40}l12 12h${-width + 16}Z`} fill="#d4cbb0" stroke="#b8ae91" />
-    <rect x={-width / 2 + 23} y={-95} width={width - 46} height={99} fill={candy ? '#dbc898' : '#e5d5b4'} stroke="#b69a72" />
-    <path d={`M${width / 2 - 45}-94h23V4h-23Z`} fill="#c7ae83" />
-    {restaurant && <g>
-      <path d="M-82-139H82v56H-82Z" fill="#e7dabc" />
-      {[-71, -29, 13, 55].map((x) => <Window key={x} x={x} y={-135} width={26} height={36} />)}
-      <Roof id={id} y={-139} width={207} height={42} />
-      <path d="M-83-97H83" stroke="#9a5b42" strokeWidth="7" />
-    </g>}
-    <Roof id={id} y={-93} width={width} height={candy ? 47 : 39} />
-    <rect x="-27" y="-68" width="54" height="70" fill="#435c49" />
-    <rect x="-23" y="-66" width="46" height="67" fill="#3f4c3c" />
-    <Window x={-78} y={-62} width={36} height={45} />
-    <Window x={43} y={-62} width={34} height={45} />
-    <path d={`M${-width / 2 + 27}-84V4M${width / 2 - 27}-84V4M-33-77V4M33-77V4`} stroke="#965b40" strokeWidth="6" />
-    <rect x="-41" y="-88" width="82" height="18" rx="2" fill="#78543b" stroke="#c9a871" strokeWidth="1.5" />
-    <path d="M-30-79H30" stroke="#d4bf88" strokeWidth="1.5" opacity=".7" />
-    <Lantern x={-89} y={-73} scale={.47} /><Lantern x={88} y={-73} scale={.47} />
-    {candy ? <g>
-      <path d="M-77-20h35v16h-35ZM41-20h37v16H41Z" fill="#9b6546" />
-      {[-68, -54, 48, 62].map((x, i) => <g key={x}><rect x={x} y={-31} width="10" height="12" rx="2" fill={i % 2 ? '#a7583e' : '#b89e56'} /><path d={`M${x}-29h10`} stroke="#e8cd93" strokeWidth="2" /></g>)}
-    </g> : !restaurant && <g>
-      <path d="M-80-16h38v16h-38ZM42-16h35v16H42Z" fill="#a87548" />
-      <ellipse cx="-61" cy="-18" rx="20" ry="5" fill="#d8b97e" stroke="#997345" />
-      <path d="M-77-26v8m32-8v8" stroke="#bc945f" strokeWidth="2" />
-      <ellipse cx="-61" cy="-26" rx="18" ry="5" fill="#e6d09b" stroke="#997345" />
-      <path d="M-67-32q-4-7 0-13m9 12q-4-7 0-13" stroke="#fff9e8" opacity=".8" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M48-35h23l3 20H45Z" fill="#d5b988" /><path d="M53-35v-7q7-8 12 0v7" stroke="#9b744c" fill="none" strokeWidth="2" />
-    </g>}
+  if (kind === 'candy') return <g data-landmark="candy">
+    <ellipse cy="14" rx="95" ry="16" fill="#5a6249" opacity=".12" />
+    <path d="M-69-6H69L83 15H-82Z" fill="#cfc4a2" />
+    <path d="M-66-136H66V6H-66Z" fill="#d9c28f" stroke="#ad9061" />
+    <path d="M53-132h13V6H53Z" fill="#bba272" />
+    <Roof id={id} y={-136} width={173} height={48} />
+    <rect x="-49" y="-127" width="98" height="23" rx="2" fill="#7d5037" stroke="#cfb17a" />
+    <path d="M-34-115h68" stroke="#d6bc83" strokeWidth="2" />
+    <path d="M-61-94H61l10 12H-71Z" fill="#a96142" /><path d="M-71-82H71v9H-71Z" fill="#ba7951" />
+    <path d="M-54-68H54V-9H-54Z" fill="#49624e" />
+    <path d="M-50-64H50V-14H-50Z" fill="#afba8c" />
+    <path d="M-50-64h25v50h-25ZM0-64h25v50H0Z" fill="#d4c893" />
+    {[-36, 0, 36].map((x, i) => <CandyJar key={x} x={x} y={-33} color={['#ac5b3d', '#a59851', '#c18642'][i]} />)}
+    <path d="M-57-9H57M-57-72V-8M57-72V-8M-18-72V-8M18-72V-8" stroke="#895b3a" strokeWidth="4" />
+    <path d="M-64-7H64V5H-64Z" fill="#9c6943" /><path d="M-64-7H64" stroke="#debc7f" strokeWidth="3" />
+    <g transform="translate(74 -11)"><path d="M-3-46h21V12H-3Z" fill="#a97b4c" stroke="#775333" /><path d="M-3-28h21M-3-6h21" stroke="#e0bf83" strokeWidth="2" /><CandyJar x={7} y={-31} color="#71835a" /><CandyJar x={7} y={-10} color="#af623f" /></g>
+    <Lantern x={-70} y={-95} scale={.46} />
+  </g>
+
+  if (kind === 'nanxiang') return <g data-landmark="nanxiang">
+    <ellipse cy="15" rx="132" ry="17" fill="#5a6249" opacity=".12" />
+    <path d="M-118 2H119l13 15H-132Z" fill="#d7caac" />
+    <path d="M-108-103H107V4H-108Z" fill="#e4d3af" stroke="#b8996b" />
+    <Roof id={id} y={-108} width={270} height={42} />
+    <path d="M-98-89H98V-19H-98Z" fill="#435b48" />
+    <path d="M-90-80H91v61H-90Z" fill="#7c8c69" /><path d="M-90-80H91v8H-90Z" fill="#a8af83" />
+    <path d="M-111-91h223l12 22H-123Z" fill="#d5ba82" stroke="#aa8251" />
+    {[-96, -69, -42, -15, 12, 39, 66, 93].map((x) => <path key={x} d={`M${x}-88l-4 15`} stroke="#b28d59" strokeWidth="4" />)}
+    <path d="M-115-69h230v8h-230Z" fill="#b68b55" />
+    <path d="M-101-57V7M102-57V7M27-57V5" stroke="#9e6242" strokeWidth="6" />
+    <path d="M-107-12H107V9H-107Z" fill="#a77347" /><path d="M-113-16h226v7h-226Z" fill="#dab67b" stroke="#92683e" />
+    <Steamer x={-67} y={-21} scale={.29} lid /><Steamer x={-67} y={-33} scale={.29} lid />
+    <Steamer x={-6} y={-22} scale={.31} />
+    <path d="M-76-54q-9-12 0-22m12 22q-8-14 1-26M-9-44q-9-13 0-23" stroke="#fff4d9" strokeWidth="2.7" fill="none" strokeLinecap="round" />
+    <PaperBag x={69} y={-40} scale={.3} />
+    <path d="M38-13h60v7H38Z" fill="#e1c58f" /><path d="M38-5h61v13H38Z" fill="#8b6444" />
+    <Lantern x={-119} y={-59} scale={.48} />
+  </g>
+
+  return <g data-landmark="teahouse">
+    <ellipse cy="20" rx="137" ry="24" fill="#93bca7" opacity=".82" />
+    <path d="M-126 23h36m111 13h48m34-11h26" stroke="#e0e5c8" strokeWidth="2" strokeLinecap="round" />
+    <path d="M-83-9V21M-35-9V26M35-9V26M83-9V21" stroke="#8c7b58" strokeWidth="5" />
+    <path d="M-106-12H106L98 4H-98Z" fill="#d6c8a2" stroke="#9f9370" />
+    <path d="M-63-91H63v77H-63Z" fill="#e4d2a7" /><path d="M-52-78H52v61H-52Z" fill="#50654c" />
+    <DiningTable x={-23} y={-30} scale={.66} tea /><DiningTable x={28} y={-30} scale={.66} tea />
+    <path d="M-82-83v73M-28-83v73M28-83v73M82-83v73" stroke="#9f6241" strokeWidth="6" />
+    <Roof id={id} y={-86} width={228} height={44} />
+    <path d="M-47-127H47v-37H-47Z" fill="#e8d7af" />
+    {[-40, -10, 20].map((x) => <Window key={x} x={x} y={-159} width={20} height={27} />)}
+    <Roof id={id} y={-161} width={156} height={44} />
+    <path d="M-10-207q10 9 20 0M0-210v-10" fill="none" stroke="#365649" strokeWidth="3" strokeLinecap="round" />
+    <path d="M-98-20H98M-98-12H98" stroke="#865f3e" strokeWidth="3" />
+    {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${-98 + i * 14}-22V-3`} stroke="#9a7048" strokeWidth="2" />)}
+    <path d="M-102-4-126 7-111 15-137 28" fill="none" stroke="#efe0be" strokeWidth="13" strokeLinejoin="round" />
+    <path d="M-104-12-134 3-119 11-143 24" fill="none" stroke="#8c7955" strokeWidth="2.5" strokeLinejoin="round" />
+    <path d="M-105-17v14m-28-7V8m15-4v13m-24 0v13" stroke="#8c7955" strokeWidth="2.5" />
+    <Lantern x={-64} y={-74} scale={.39} /><Lantern x={64} y={-74} scale={.39} />
   </g>
 }
 
 /** Decorative, editable landmark artwork. Interactive labels belong to the parent UI. */
 export function Landmark({ kind, label = 'Illustrated garden landmark', className }: ArtProps & { kind: LandmarkKind }) {
   const id = `landmark-${useId().replace(/:/g, '')}`
-  return <svg className={className} viewBox="-145 -225 290 255" role="img" aria-labelledby={`${id}-title`}>
+  return <svg className={className} viewBox="-154 -226 308 280" role="img" aria-labelledby={`${id}-title`}>
     <title id={`${id}-title`}>{label}</title><ArtDefs id={id} /><Building kind={kind} id={id} />
   </svg>
 }
@@ -279,7 +329,9 @@ function PaperBag({ x, y, scale = 1 }: { x: number; y: number; scale?: number })
 }
 
 function Shopkeeper({ pose }: { pose: ScenePose }) {
-  return <g>
+  const isPacking = pose === 'packing' || pose === 'packed'
+  const openPalm = pose === 'speaking' || pose === 'clarifying'
+  return <g className="scene-person">
     <path d="M493 337c-2-72 15-112 43-122 23-10 53-10 78 0 35 16 49 72 53 122Z" fill="#486755" />
     <path d="M537 218 555 207h42l20 13-14 35h-51Z" fill="#f4e5c7" />
     <path d="M556 190v33c5 17 34 18 41-1v-34" fill="#dba77f" />
@@ -288,32 +340,79 @@ function Shopkeeper({ pose }: { pose: ScenePose }) {
     <path d="M550 248h52l15 97h-81Z" fill="#ecd9bb" />
     <path d="M555 285h41v30c-11 7-30 7-41 0Z" fill="#d6bd99" stroke="#c3a783" />
     <path d="M558 289h35" stroke="#f4e4c9" strokeWidth="2" />
-    <path d="M527 227c-17 11-21 37-23 58l-14 55 34 6 19-56" fill="#486755" />
-    <path d="M621 227c18 12 25 36 27 59l21 51-31 9-22-58" fill="#486755" />
-    <path d="m500 315 29 5-8 25-31-6Zm137 4 28-8 8 27-31 9Z" fill="#f2dfbf" />
-    <path d="M519 340c-14-2-23-1-27 9-4 7 3 13 14 11l45-9c10-1 14-7 4-11-10-3-20 4-36 0Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
-    {pose === 'welcome' || pose === 'listening' ? <g>
-      <path d="M647 334c6-10 7-25 3-37l-15-24c-5-11 1-14 6-7l9 12-4-27c-1-10 5-11 7-2l5 23 1-31c0-9 6-8 7 0l1 31 5-24c2-8 7-6 6 3l-3 25 6-15c3-7 8-4 5 4l-10 29c-5 20-2 29-9 42Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
-      <path d="M649 280c7 1 12 8 13 16" stroke="#c88f6b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-    </g> : <path d="M648 339c15-4 24-2 28 7 4 8-2 13-14 12l-45-8c-11-2-12-9-2-11 11-3 18 4 33 0Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />}
-    <ellipse cx="573" cy="144" rx="50" ry="63" fill="#363c31" />
-    <path d="M534 155c-15-14-22 9-8 20l12 4m75-24c15-14 22 9 8 20l-12 4" fill="#dca780" />
-    <path d="M534 124c10-22 63-27 80 2v43c-2 34-20 49-41 49-23 0-40-20-40-49Z" fill="#e9ba92" />
-    <path d="M531 151c-1-21 2-39 13-47 15-11 44-10 59 3 14 11 17 24 11 46-3-17-11-24-18-38-15 17-41 22-65 36Z" fill="#393e32" />
-    <path d="M540 108c16-24 55-18 65 7" fill="none" stroke="#68694e" strokeWidth="3" strokeLinecap="round" />
-    <path d="M543 157q7-5 14-1m31 0q7-4 13 1" stroke="#6d4f3b" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-    <path d="M545 166q5-4 10 0m35 0q5-4 10 0" stroke="#424538" strokeWidth="2.6" fill="none" strokeLinecap="round" />
-    <path d="m573 165-4 15q4 4 9 0" stroke="#c58d6b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-    <path d="M558 190q15 14 30-1" fill="#fff0d5" stroke="#a86b52" strokeWidth="1.6" strokeLinecap="round" />
-    <ellipse cx="546" cy="181" rx="9" ry="5" fill="#d98d76" opacity=".42" /><ellipse cx="599" cy="181" rx="9" ry="5" fill="#d98d76" opacity=".42" />
-    <circle cx="531" cy="178" r="3" fill="#d7b262" /><circle cx="617" cy="178" r="3" fill="#d7b262" />
+    <g className="scene-left-arm">
+      <path d="M527 227c-17 11-21 37-23 58l-14 55 34 6 19-56" fill="#486755" />
+      <path d="m500 315 29 5-8 25-31-6Z" fill="#f2dfbf" />
+      <path d="M519 340c-14-2-23-1-27 9-4 7 3 13 14 11l45-9c10-1 14-7 4-11-10-3-20 4-36 0Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+    </g>
+    <g className="scene-right-arm">
+      {pose === 'listening' ? <>
+        <path d="M619 225c20 4 34 27 38 49l-29 10-28-46Z" fill="#486755" />
+        <path d="M631 280c15 6 30-2 31-15l-17-68-24 6 8 56Z" fill="#486755" />
+        <path d="m619 202 27-7 4 14-27 8Z" fill="#f2dfbf" />
+        <path d="M625 205c-7-9-6-21-9-29l-6-13c-3-8 2-10 6-4l7 10-2-24c-1-8 5-9 7-1l4 21 1-25c0-8 6-8 7 0l1 27 4-17c2-7 7-4 5 3l-4 30c-1 10-3 14-4 20Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+        <path d="M625 174q10 8 7 21" stroke="#c88f6b" strokeWidth="1.4" fill="none" />
+      </> : pose === 'thinking' ? <>
+        <path d="M618 225q28 15 34 60l-26 13-23-58Z" fill="#486755" />
+        <path d="M636 298c13-2 18-14 10-26l-32-47-23 16 33 52Z" fill="#486755" />
+        <path d="m591 240 22-17-8-11-24 15Z" fill="#f2dfbf" />
+        <path d="M583 228c-7-6-10-14-6-21l7-12c4-6 9-3 6 3l-3 8 13-12c7-5 11 1 6 6l-11 13c4 6 9 4 11 2l5 8-18 14Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+      </> : openPalm ? <>
+        <path d="M621 227c20 8 27 34 29 56l-26 7-21-51Z" fill="#486755" />
+        <path d="M629 289c4 11 17 15 28 8l43-21-10-22-48 18Z" fill="#486755" />
+        <path d="m685 254 10 25 14-7-10-25Z" fill="#f2dfbf" />
+        <path d="M699 250c8-6 14-10 19-17 5-6 9-1 5 5l-6 8 23-6c8-2 10 4 2 7l-17 6 23-1c8 0 8 6 0 7l-23 3 17 2c7 1 6 7-1 6l-22-1c-9 0-13 0-18 4Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+      </> : pose === 'checking' ? <>
+        <path d="M621 227c16 13 24 40 27 62l-29 5-18-53Z" fill="#486755" />
+        <path d="M636 296q13-4 6-17l-29-20-16 20 29 16Z" fill="#486755" />
+        <path d="m597 279 17-19-11-8-17 20Z" fill="#f2dfbf" />
+        <path d="M591 272c-11-1-24-5-30-7-9-2-8-8 0-7l19 3-13-10c-5-4-1-8 4-5l19 10 10 2 2 10Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+      </> : <>
+        <path d="M621 227c18 12 25 36 27 59l21 51-31 9-22-58" fill="#486755" />
+        <path d="m637 319 28-8 8 27-31 9Z" fill="#f2dfbf" />
+        {pose === 'welcome' ? <g className="scene-waving-hand">
+          <path d="M647 334c6-10 7-25 3-37l-15-24c-5-11 1-14 6-7l9 12-4-27c-1-10 5-11 7-2l5 23 1-31c0-9 6-8 7 0l1 31 5-24c2-8 7-6 6 3l-3 25 6-15c3-7 8-4 5 4l-10 29c-5 20-2 29-9 42Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />
+          <path d="M649 280c7 1 12 8 13 16" stroke="#c88f6b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+        </g> : <path d="M648 339c15-4 24-2 28 7 4 8-2 13-14 12l-45-8c-11-2-12-9-2-11 11-3 18 4 33 0Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" />}
+      </>}
+    </g>
+    {pose === 'checking' && <g className="scene-check-slip" transform="rotate(-7 558 298)">
+      <path d="M531 272h47l6 63h-49Z" fill="#f6e7c5" stroke="#c9ad7e" strokeWidth="1.2" />
+      <path d="M540 284h26m-25 11h22m-21 11h24m-23 11h19" stroke="#a8996b" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="m567 316 4 4 7-9" fill="none" stroke="#577860" strokeWidth="2" strokeLinecap="round" />
+    </g>}
+    <g className="scene-head">
+      <ellipse cx="573" cy="144" rx="50" ry="63" fill="#363c31" />
+      <path d="M534 155c-15-14-22 9-8 20l12 4m75-24c15-14 22 9 8 20l-12 4" fill="#dca780" />
+      <path d="M534 124c10-22 63-27 80 2v43c-2 34-20 49-41 49-23 0-40-20-40-49Z" fill="#e9ba92" />
+      <path d="M531 151c-1-21 2-39 13-47 15-11 44-10 59 3 14 11 17 24 11 46-3-17-11-24-18-38-15 17-41 22-65 36Z" fill="#393e32" />
+      <path d="M540 108c16-24 55-18 65 7" fill="none" stroke="#68694e" strokeWidth="3" strokeLinecap="round" />
+      <path d={pose === 'clarifying' ? 'M542 157q7-6 15-2m31-3q7-5 14-2' : 'M543 157q7-5 14-1m31 0q7-4 13 1'} stroke="#6d4f3b" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <g className="scene-eyes">
+        {pose === 'thinking' ? <><path d="M544 167q6-6 12-2m34 0q6-6 12-2" stroke="#424538" strokeWidth="2" fill="none" /><circle cx="552" cy="164" r="2" fill="#424538" /><circle cx="598" cy="162" r="2" fill="#424538" /></> : <path d={pose === 'checking' || isPacking ? 'M545 168q5 5 10 0m35 0q5 5 10 0' : 'M545 166q5-4 10 0m35 0q5-4 10 0'} stroke="#424538" strokeWidth="2.6" fill="none" strokeLinecap="round" />}
+      </g>
+      <path d="m573 165-4 15q4 4 9 0" stroke="#c58d6b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      {pose === 'speaking' ? <g className="scene-speaking-mouth"><ellipse cx="573" cy="194" rx="10" ry="7" fill="#87523d" /><path d="M566 190h14" stroke="#fff0d5" strokeWidth="3" strokeLinecap="round" /><path d="M568 199h10" stroke="#d18c70" strokeWidth="2" strokeLinecap="round" /></g> : pose === 'thinking' || pose === 'clarifying' ? <path d={pose === 'thinking' ? 'M563 193q11 3 20-2' : 'M562 194q11-5 21-1'} fill="none" stroke="#a86b52" strokeWidth="1.8" strokeLinecap="round" /> : <path d="M558 190q15 14 30-1" fill="#fff0d5" stroke="#a86b52" strokeWidth="1.6" strokeLinecap="round" />}
+      <ellipse cx="546" cy="181" rx="9" ry="5" fill="#d98d76" opacity=".42" /><ellipse cx="599" cy="181" rx="9" ry="5" fill="#d98d76" opacity=".42" />
+      <circle cx="531" cy="178" r="3" fill="#d7b262" /><circle cx="617" cy="178" r="3" fill="#d7b262" />
+    </g>
   </g>
 }
 
-/** Original teaching interior. `packed` is a presentation pose, never a progress signal. */
+function TakeawayBox({ x, y }: { x: number; y: number }) {
+  return <g transform={`translate(${x} ${y})`}>
+    <path d="M-47-12h94l-6 26h-82Z" fill="#eee1bc" stroke="#b89f6e" strokeWidth="1.5" />
+    <path d="M-48-13h96l5 9h-106Z" fill="#f6eacb" stroke="#b89f6e" strokeWidth="1.5" />
+    <path d="M-43-8H43M-37 8h74" stroke="#d2b984" strokeWidth="1.2" />
+    <ellipse cy="-8" rx="14" ry="3" fill="none" stroke="#a4946b" /><path d="M-9-9q8-8 17 0" fill="none" stroke="#a4946b" strokeWidth="1.5" />
+  </g>
+}
+
+/** Presentation only: the parent may select packing after a successful save, and packed on restore. */
 export function NanxiangScene({ label = 'A welcoming server at a warm wooden dumpling counter', className, pose = 'welcome' }: ArtProps & { pose?: ScenePose }) {
   const id = `nanxiang-${useId().replace(/:/g, '')}`
-  return <svg className={className} viewBox="0 0 1100 580" role="img" aria-labelledby={`${id}-title`} preserveAspectRatio="xMidYMid slice">
+  const completed = pose === 'packing' || pose === 'packed'
+  return <svg className={`nanxiang-scene${className ? ` ${className}` : ''}`} data-pose={pose} viewBox="0 0 1100 580" role="img" aria-labelledby={`${id}-title`} preserveAspectRatio="xMidYMid slice">
     <title id={`${id}-title`}>{label}</title><ArtDefs id={id} />
     <rect width="1100" height="580" fill="#ead9b8" />
     <path d="M0 0h1100v91H0Z" fill="#503f2d" />
@@ -375,14 +474,19 @@ export function NanxiangScene({ label = 'A welcoming server at a warm wooden dum
       <Steamer x={285} y={350} scale={.88} lid />
       <Steamer x={285} y={319} scale={.88} lid />
       <Steamer x={410} y={391} scale={1.12} />
-      <Steamer x={650} y={394} scale={1.04} lid={pose === 'packed'} />
-      <PaperBag x={841} y={302} scale={.91} />
+      {!completed && <><Steamer x={650} y={394} scale={1.04} /><PaperBag x={841} y={302} scale={.91} /></>}
       <g transform="translate(178 386)"><ellipse cy="4" rx="41" ry="12" fill="#69482f" opacity=".15" /><path d="M-35-5q35-9 70 0l-7 14q-29 13-58 0Z" fill="#e2dcc2" stroke="#818d71" strokeWidth="1.5" /><ellipse cy="-5" rx="35" ry="10" fill="#f5edd2" stroke="#818d71" /><ellipse cy="-5" rx="23" ry="6" fill="#7d5234" /><path d="m12-7 11 2m-31-1 12 3" stroke="#c39a5f" strokeWidth="1.4" /></g>
       <path d="m910 376 86 29m-89-22 86 29" stroke="#503e2b" strokeWidth="4" strokeLinecap="round" /><path d="m909 376 22 7m-22 0 20 7" stroke="#c4a26d" strokeWidth="4" strokeLinecap="round" />
     </g>
+    {completed && <g className="scene-completed-order" data-servings="2">
+      <g className="scene-packed-hand"><path d="M638 324c-2-9-13-16-20-12l-24 13c-8 5-6 11 3 8l18-6c9 0 17 8 23-3Z" fill="#e4b48e" stroke="#ce9873" strokeWidth="1.2" /></g>
+      <g className="scene-pack-first"><TakeawayBox x={650} y={321} /></g>
+      <g className="scene-pack-second"><TakeawayBox x={650} y={294} /></g>
+      <g className="scene-takeaway-bag"><PaperBag x={650} y={355} scale={1.03} /></g>
+    </g>}
     <g className="scene-steam" fill="none" stroke="#fff6df" strokeWidth="4" strokeLinecap="round" opacity=".7">
       <path d="M380 317c-18-22 14-25-1-49" /><path d="M417 307c-15-22 16-27 0-51" /><path d="M453 319c-15-21 13-26 0-45" />
-      {pose !== 'packed' && <><path d="M628 323c-14-24 14-27 0-49" /><path d="M665 313c-15-22 13-26 0-49" /></>}
+      {!completed && <><path d="M628 323c-14-24 14-27 0-49" /><path d="M665 313c-15-22 13-26 0-49" /></>}
     </g>
     <rect width="1100" height="580" fill={`url(#${id}-paper)`} pointerEvents="none" />
   </svg>

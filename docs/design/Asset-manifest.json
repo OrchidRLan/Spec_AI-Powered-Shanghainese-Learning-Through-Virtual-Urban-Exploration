@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "batch-a.1",
+  "version": "batch-a-revision-1",
   "createdAt": "2026-10-17",
   "source": "frontend/src/components/SceneArt.tsx",
   "creator": "Codex, original vector artwork created for this repository",
@@ -9,7 +9,7 @@
   "artDirection": "现代旅行手册与中国园林版画：米色纸面、青绿瓦顶、赭红梁柱、玉绿色水面、竹与木的暖色。所有图层为可编辑 SVG。",
   "assets": [
     {
-      "id": "shared-yuyuan-map-v1",
+      "id": "shared-yuyuan-map-v2",
       "component": "GardenMap",
       "viewBox": "0 0 1100 690",
       "purpose": "四站共享教学示意地图。建筑受江南园林风格启发，不是真实店铺复刻或实地导航。",
@@ -56,18 +56,24 @@
         "teahouse",
         "front-planting"
       ],
-      "responsiveUse": "Render complete viewBox on small screens and provide the separate accessible destination list. Do not crop away a required destination or rely on illustration for hit targets.",
-      "textPolicy": "No baked labels or actionable text; parent UI supplies localized destination names and keyboard-operable controls."
+      "responsiveUse": "The map and destination cards share the same Building renderer. Preserve the central architectural silhouettes when cropping; check 320px and 681–900px separately. Destination list remains the keyboard-accessible alternative.",
+      "textPolicy": "No baked labels or actionable text; parent UI supplies localized destination names and keyboard-operable controls.",
+      "landmarkDistinctions": {
+        "restaurant": "Wide two-storey restaurant, six upstairs windows, large double doorway, two visible dining tables and warm interior.",
+        "candy": "Tall narrow shopfront, three continuous display windows with large distinct candy jars and a side display shelf.",
+        "nanxiang": "Low wide takeaway kiosk, lifted bamboo awning, fully open serving hatch, basket stacks, steam and collection counter.",
+        "teahouse": "Tall open pavilion above water, visible deck supports, balcony railings, tea tables and an attached zigzag landing."
+      }
     },
     {
-      "id": "nanxiang-interior-v1",
+      "id": "nanxiang-interior-v2",
       "component": "NanxiangScene",
       "viewBox": "0 0 1100 580",
       "purpose": "原创教学柜台，分层窗格、暖灯、女性店员、木柜台、竹蒸笼、小笼包与包装袋。不是门店实景复刻。",
       "props": {
         "label": "Localized accessible image description",
         "className": "Optional layout class",
-        "pose": "welcome | listening | checking | packed; default welcome"
+        "pose": "idle | welcome | speaking | listening | thinking | acknowledging | clarifying | checking | packing | packed; default welcome; previous pose values remain valid"
       },
       "altText": {
         "zh": "温暖的木柜台后，店员微笑迎接；柜台上摆着小笼包蒸笼与外带纸袋。",
@@ -90,17 +96,45 @@
         "original-character",
         "front-counter",
         "serving-props",
-        "scene-steam"
+        "scene-steam",
+        "scene-person",
+        "scene-head",
+        "scene-left-arm",
+        "scene-right-arm",
+        "scene-speaking-mouth",
+        "scene-completed-order",
+        "scene-pack-first",
+        "scene-pack-second",
+        "scene-takeaway-bag"
       ],
       "responsiveUse": "Use a dedicated close composition or contain the whole SVG for narrow screens; central server and dumplings remain primary. Required bag and basket actions need separate text controls.",
-      "motion": "Static SVG by default. Optional parent CSS may animate scene-steam; honor reduced motion. No automatic camera movement or interaction is embedded.",
-      "poseLimits": "welcome and listening share the raised-hand illustration; checking and packed use hands at the counter. packed closes one foreground basket. These presentation poses do not perform order updates, packing, completion, or saving.",
-      "quantityPolicy": "Basket contents are decorative. Front baskets are environment props, not a current order or a verified real-store dumpling count. Parent UI must explicitly distinguish the saved order and servings."
+      "motion": "CSS/SVG character gestures are driven only by the pose prop. speaking uses a simple cycling mouth and palm gesture, not phoneme-level lip sync. All animation is disabled by prefers-reduced-motion: reduce and html[data-reduced-motion=true], retaining distinct static poses. packed is always static.",
+      "poseLimits": "The component never advances order state, plays audio, starts a timer, saves an order, or infers task completion. Parent selects packing only after successful server save, then packed. Restored completed attempts should select packed immediately. Changes in actual recording/playback/processing select corresponding presentation poses.",
+      "quantityPolicy": "Normal baskets are environment props, not a default saved order. Only packing/packed render the completed-order group, with exactly two separate takeaway boxes and data-servings=2. Parent UI supplies explicit localized two-servings text; illustrations do not assert a real-store dumpling count.",
+      "poseDescriptions": {
+        "idle": "Relaxed hands, subtle breathing.",
+        "welcome": "One brief open-hand greeting.",
+        "speaking": "Open palm and simple opening/closing mouth while actual audio plays.",
+        "listening": "Leans toward the user and cups one hand beside the ear.",
+        "thinking": "Hand at the chin, upward glance, slight thoughtful head tilt.",
+        "acknowledging": "One short nod; no loop.",
+        "clarifying": "Raised eyebrow, head tilt and an open palm clarification gesture.",
+        "checking": "Looks down at a visible order slip and points toward it.",
+        "packing": "One 1800ms sequence moves two separate takeaway boxes into the bag area, closes in on the handoff position and offers the bag.",
+        "packed": "Still handoff with two visible stacked serving boxes and one bag; no replay on mount."
+      },
+      "packingDurationMs": 1800,
+      "completedOrderBounds": {
+        "x": 595,
+        "y": 280,
+        "width": 126,
+        "height": 169
+      }
     },
     {
-      "id": "shared-landmarks-v1",
+      "id": "shared-landmarks-v2",
       "component": "Landmark",
-      "viewBox": "-145 -225 290 255",
+      "viewBox": "-154 -226 308 280",
       "purpose": "地图对应的四个独立建筑小图，供地点卡和回顾复用。",
       "props": {
         "kind": "restaurant | candy | nanxiang | teahouse",
@@ -108,18 +142,24 @@
         "className": "Optional layout class"
       },
       "safeArea": {
-        "x": -130,
-        "y": -217,
-        "width": 260,
-        "height": 245
+        "x": -146,
+        "y": -222,
+        "width": 292,
+        "height": 266
       },
-      "textPolicy": "Signboard ornament is decorative geometry. Actual place names are rendered by the parent UI."
+      "textPolicy": "Signboard ornament is decorative geometry. Actual place names are rendered by the parent UI.",
+      "responsiveUse": "All four silhouettes were reviewed side by side without place-name text. Shared with the map; width, height, open-counter layout and water/bridge setting distinguish the four stops."
     }
   ],
   "accessibility": "SVGs have role=img and a per-instance title ID created with React useId. Pass label in the active UI language. Images do not provide interactive controls; the parent interface supplies focusable alternatives.",
   "fonts": "None in artwork; no font files or embedded typography.",
   "verification": {
-    "sourceInspection": "Original code-native shapes; no foreign assets or external URLs.",
-    "visualReview": "Integrated desktop (1440 viewport) and phone (390 viewport) in Chinese/English inspected in browser on 2026-10-17; English 320px overflow and button-height checked. Screenshots: docs/design/previews. This is engineering visual inspection, not user design approval or complete device/accessibility acceptance."
-  }
+    "sourceInspection": "Original code-native shapes with no external URLs, image/font assets, or baked user-interface text. Per-instance title and paint IDs use React useId.",
+    "typecheck": "npm run typecheck passed after the revision.",
+    "staticRenderReview": "All four landmarks, the complete map and all ten scene poses rendered to PNG offline and visually inspected; corrected transform pivots to preserve hand/head alignment across renderers.",
+    "integrationReview": "Owner agent has visually confirmed desktop map silhouette differentiation. Real-browser state timing, reduced-motion preference and final desktop/mobile screen captures are part of the main integration check.",
+    "temporaryReviewArtifacts": "/private/tmp/scene-art-r1/{landmarks,map,poses}.png; offline renders are inspection artifacts, not runtime app assets."
+  },
+  "updatedAt": "2026-10-17",
+  "motionSource": "frontend/src/scene-motion.css"
 }

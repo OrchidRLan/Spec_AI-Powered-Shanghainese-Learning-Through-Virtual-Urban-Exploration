@@ -275,3 +275,138 @@ def test_generated_unknown_truncated_wav_is_not_repaired():
     from app.providers.audio import finalize_generated_wav
     with pytest.raises(ProviderError, match="unsupported_format"):
         finalize_generated_wav(wav()[:-2])
+
+
+def test_review_draft_can_generate_without_fabricating_approval(tmp_path):
+    from copy import deepcopy
+    from app.providers.production import produce_review_audio, review_input_sha256
+    pack, reviews = reviewed_fixture()
+    entry = pack["expressions"][0]
+    entry.update(audio={"normal": "E08.normal"}, pronunciation="test notation")
+    entry["review"] = {"language": "pending", "status": "draft", "recordIds": []}
+    original = deepcopy(pack)
+    calls = []
+    class PreviewProvider:
+        config = config_for_test = config("tts")
+        async def synthesize(self, request):
+            calls.append(request)
+            return wav(), {"upstreamRequestId": "mock-review-request", "usage": {"characters": len(request.text)},
+                           "targetLanguage": "wuu", "providerLanguageParameter": "Chinese"}
+    provider = PreviewProvider()
+    before = review_input_sha256(pack, ["E08"])
+    result = run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    assert result["status"] == "generated" and result["reviewStatus"] == "pending"
+    assert result["text"] == entry["hanzi"] and result["textVersion"] == entry["version"]
+    assert result["file"].startswith("/audio/review-r1/") and result["reviewIds"] == []
+    assert pack == original
+    with pytest.raises(ProviderError, match="language_review_required"):
+        approved_text(pack, reviews, "E08")
+    # Exact rerun reuses inspected cached audio and never invokes TTS again.
+    repeat = run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    assert repeat["reused"] is True and len(calls) == 1
+    # Notation-only changes change the displayed freeze/version but not speech.
+    entry["pronunciation"] = "revised test notation"
+    entry["version"] = "test-revised"
+    assert review_input_sha256(pack, ["E08"]) != before
+    revised = run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    assert revised["textVersion"] == "test-revised" and revised["reused"] is True and len(calls) == 1
+    # Changed input gets a new file, without overwriting the first sound.
+    entry["hanzi"] = "新版测试文本"
+    changed = run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    assert len(calls) == 2 and changed["file"] != result["file"]
+
+
+def test_review_failed_attempt_does_not_silently_bill_again(tmp_path):
+    from app.providers.production import produce_review_audio
+    pack, _ = reviewed_fixture()
+    pack["expressions"][0]["audio"] = {"normal": "E08.normal"}
+    calls = []
+    class FailingProvider:
+        config = config("tts")
+        async def synthesize(self, request):
+            calls.append(request)
+            raise ProviderError("timeout", True)
+    provider = FailingProvider()
+    with pytest.raises(ProviderError, match="timeout"):
+        run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    with pytest.raises(ProviderError, match="review_generation_needs_attention"):
+        run(produce_review_audio(pack, "E08", provider, tmp_path / "public", tmp_path / "cache"))
+    assert len(calls) == 1 and not (tmp_path / "public").exists()
+
+
+def test_tts_usage_metadata_only_keeps_numeric_metering():
+    def handler(request):
+        if request.method == "POST":
+            return httpx.Response(200, json={"request_id": "mock-metered", "usage": {
+                "characters": 2, "input_tokens": 0, "output_tokens": 0, "secret": "never-copy", "other": 3},
+                "output": {"audio": {"url": "https://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/test.wav"}}})
+        return httpx.Response(200, content=wav())
+    _, metadata = run(QwenTTS(config("tts"), httpx.MockTransport(handler)).synthesize(TTSRequest("test", "v1", "测试")))
+    assert metadata["usage"] == {"characters": 2, "input_tokens": 0, "output_tokens": 0}
+
+
+def test_review_manifest_check_and_subset_resume_without_paid_calls(tmp_path, monkeypatch):
+    import importlib.util
+    from copy import deepcopy
+    from types import SimpleNamespace
+    root = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location("review_cli_test", root / "scripts" / "speech-review.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    folder = tmp_path / "content"
+    folder.mkdir()
+    (folder / "reviews.json").write_text('{"reviewers":[],"records":[],"releaseApprovals":[]}')
+    entries = [{"id": f"T{i}", "version": "test-only", "hanzi": f"测试{i}", "pronunciation": "test-only",
+                "segments": [], "audio": {"normal": f"T{i}.normal"}, "review": {"status": "draft", "language": "pending"}}
+               for i in range(20)]
+    pack = {"status": "draft", "expressions": entries}
+    (folder / "batch-a.json").write_text(json.dumps(pack))
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    monkeypatch.setattr(module, "CACHE", tmp_path / "cache")
+    monkeypatch.setattr(module, "OUTPUT", tmp_path / "public")
+    monkeypatch.setattr(module, "MANIFEST", folder / "audio-review-r1.json")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "mock-only-key")
+    calls = []
+    class MockProvider:
+        def __init__(self, config): self.config = config
+        async def synthesize(self, request):
+            calls.append(request)
+            return wav(), {"upstreamRequestId": "mock-request", "usage": {"characters": len(request.text)},
+                           "targetLanguage": "wuu", "providerLanguageParameter": "Chinese"}
+    monkeypatch.setattr(module, "QwenTTS", MockProvider)
+    all_ids = [entry["id"] for entry in entries]
+    args = SimpleNamespace(command="generate", pack="content/batch-a.json", text_ids=None,
+                           allow_paid_call=True, expect_input_sha256=module.review_input_sha256(pack, all_ids))
+    planned = module.plan(pack, all_ids, MockProvider(module.ProviderConfig.from_env("tts")))
+    assert planned["pendingReservedCharacters"] == sum(len(entry["hanzi"].encode("utf-8")) for entry in entries)
+    assert planned["pendingReservedCharacters"] > planned["pendingCharacters"]
+    result = run(module.generate(args))
+    assert result["newApiRequests"] == 20 and len(calls) == 20
+    assert module.check_manifest(pack)["productionApprovalUnchanged"] is True
+    # A one-line rerun must preserve the other 19 manifest entries and use cache.
+    args.text_ids = ["T0"]
+    args.expect_input_sha256 = module.review_input_sha256(pack, ["T0"])
+    resumed = run(module.generate(args))
+    assert resumed["clips"] == 20 and resumed["newApiRequests"] == 0 and len(calls) == 20
+    assert module.check_manifest(pack)["clips"] == 20
+    assert module.plan(pack, all_ids, MockProvider(module.ProviderConfig.from_env("tts")))["pendingApiRequests"] == 0
+    assert module.reserved_cost() == sum(len(entry["hanzi"]) for entry in entries) * module.RATES_PER_CHARACTER["beijing"]
+    original = json.loads(module.MANIFEST.read_text())
+    for key, value, error in [("text", "旧文本", "review_text_mismatch"),
+                               ("file", "/audio/review-r1/../../private.wav", "review_asset_path_mismatch"),
+                               ("reviewStatus", "approved", "review_status_mismatch"),
+                               ("sha256", "a" * 64, "review_asset_mismatch"),
+                               ("durationMs", 1, "review_audio_metadata_mismatch")]:
+        broken = deepcopy(original)
+        broken["clips"][0][key] = value
+        module.MANIFEST.write_text(json.dumps(broken))
+        with pytest.raises(ProviderError, match=error):
+            module.check_manifest(pack)
+    module.MANIFEST.write_text(json.dumps(original))
+    (folder / "reviews.json").write_text('{"reviewers":[],"records":[{"forged":true}],"releaseApprovals":[]}')
+    with pytest.raises(ProviderError, match="production_approval_state_changed"):
+        module.check_manifest(pack)
+    (module.CACHE / "ambiguous.attempt.json").write_text('{"characters":12500}')
+    with pytest.raises(ProviderError, match="review_budget_exceeded"):
+        module.plan(pack, all_ids, MockProvider(module.ProviderConfig.from_env("tts")))
+    assert len(calls) == 20  # Every invocation used the explicitly mocked provider.

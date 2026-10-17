@@ -224,7 +224,10 @@ class QwenTTS(_QwenHTTP):
                 return finalized_audio, {**metadata, "upstreamRequestId": response.get("request_id"),
                     "elapsedMs": round((time.monotonic() - started) * 1000), "targetLanguage": "wuu",
                     "providerLanguageParameter": "Chinese", "voice": "Jada", "status": "pending",
-                    "listeningReview": "pending", "configId": self.config.config_id}
+                    "listeningReview": "pending", "configId": self.config.config_id,
+                    "usage": {key: value for key, value in (response.get("usage") or {}).items()
+                              if key in ("characters", "input_tokens", "output_tokens")
+                              and type(value) in (int, float) and value >= 0}}
         except (TimeoutError, httpx.TimeoutException):
             raise ProviderError("timeout", True) from None
         except httpx.HTTPError:

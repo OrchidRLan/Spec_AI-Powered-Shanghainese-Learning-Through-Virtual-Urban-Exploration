@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, RotateCcw, Send, Square, X } from 'lucide-react';
 import { chooseRecordingMimeType, MAX_RECORDING_SECONDS, recordingToWav, stopAllAudio } from '../lib/audio';
 
 type Locale = 'zh' | 'en';
 type RecordingStatus = 'idle' | 'requesting' | 'recording' | 'stopping' | 'ready' | 'submitting';
+export type RecorderPhase = 'idle' | 'recording' | 'processing' | 'playback';
 
 interface RecorderProps {
   locale: Locale;
   enabled: boolean;
+  disabled?: boolean;
   onTranscript: (text: string, requestId: string) => void;
   onDraftChange?: (hasDraft: boolean) => void;
+  onPhaseChange?: (phase: RecorderPhase) => void;
   onEvent?: (name: string) => void;
   onError?: (message: string) => void;
   stopSignal?: number;
+  resetSignal?: number;
 }
 
 interface RecordingSession {
@@ -33,20 +37,20 @@ const copy = {
     ready: '录音已保留在本页，可以先回听。', retry: '重新录制', discard: '删除录音',
     submit: '提交录音识别', submitting: '正在识别，可以取消…', cancelRequest: '取消识别',
     playback: '回听我的录音', limit: '最长 20 秒。停止后可回听，点击提交才上传。',
-    unavailable: '语音识别待连接，仍可本地回听、打字或选择。',
+    unavailable: '语音识别待连接，仍可本地回听或选择回应。',
     privacy: '本地录音不长期保存；刷新或离开此页面后需要重录。提交后转写可随回应保存。',
-    original: '原始转写', recognized: '已填入回应框，请核对后再提交回应。编辑稿与原始转写分别保存。',
-    unsupported: '此浏览器无法录音。请使用支持录音的浏览器，或直接打字、选择回应。',
-    permission: '麦克风权限未开启。可在浏览器中允许麦克风，也可以打字或选择回应。',
-    noDevice: '没有找到可用的麦克风。请连接麦克风，或打字、选择回应。',
-    busyDevice: '麦克风暂时无法使用，可能正被其他应用占用。请重试或改用文字、选择。',
-    recordingError: '录音未能完成，请重新录制或改用文字、选择。',
+    recognized: '识别完成。请核对原始转写，再决定是否使用这句话。',
+    unsupported: '此浏览器无法录音。请使用支持录音的浏览器，或选择回应。',
+    permission: '麦克风权限未开启。可在浏览器中允许麦克风，也可以选择回应。',
+    noDevice: '没有找到可用的麦克风。请连接麦克风，或选择回应。',
+    busyDevice: '麦克风暂时无法使用，可能正被其他应用占用。请重试或选择回应。',
+    recordingError: '录音未能完成，请重新录制或选择回应。',
     empty: '没有收到有效录音，请重新录制。',
-    conversion: '此录音暂时无法转换为可识别的格式。仍可本地回听，请重新录制或打字、选择。',
+    conversion: '此录音暂时无法转换为可识别的格式。仍可本地回听，请重新录制或选择回应。',
     session: '体验会话已过期，请刷新页面后重试；刷新会清除本地录音。',
-    recognition: '识别暂时不可用。录音已保留，可以重试或改用文字、选择。',
-    noText: '未识别到清楚的文字。录音已保留，请回听后重试，或打字、选择。',
-    timeout: '识别等待超时。录音已保留，请重试或改用文字、选择。',
+    recognition: '识别暂时不可用。录音已保留，可以重试或选择回应。',
+    noText: '未识别到清楚的文字。录音已保留，请回听后重试，或选择回应。',
+    timeout: '识别等待超时。录音已保留，请重试或选择回应。',
   },
   en: {
     label: 'Try saying it in Shanghainese', start: 'Tap to speak', requesting: 'Waiting for microphone permission…',
@@ -54,20 +58,20 @@ const copy = {
     ready: 'Your recording is on this page. Listen back before sending.', retry: 'Record again', discard: 'Delete recording',
     submit: 'Send for transcription', submitting: 'Transcribing… You can cancel.', cancelRequest: 'Cancel transcription',
     playback: 'Play my recording', limit: 'Up to 20 seconds. Listen back first; upload only when you press Send.',
-    unavailable: 'Speech recognition is not connected yet. You can still record, listen back, type, or choose.',
+    unavailable: 'Speech recognition is not connected yet. You can still record, listen back, or choose a response.',
     privacy: 'Your local recording is not stored long term. Refreshing or leaving this page clears it. Submitted transcripts may be saved with your response.',
-    original: 'Original transcript', recognized: 'Added to your response box. Check it before submitting your response. Edits and the original transcript are saved separately.',
-    unsupported: 'This browser cannot record audio. Use a supported browser, type, or choose a response.',
-    permission: 'Microphone permission is off. Allow it in your browser, or type or choose a response.',
-    noDevice: 'No microphone was found. Connect one, or type or choose a response.',
-    busyDevice: 'The microphone is unavailable or in use by another app. Try again, type, or choose.',
-    recordingError: 'Recording could not finish. Try recording again, type, or choose.',
+    recognized: 'Transcription is ready. Check the original transcript before choosing to use this reply.',
+    unsupported: 'This browser cannot record audio. Use a supported browser or choose a response.',
+    permission: 'Microphone permission is off. Allow it in your browser or choose a response.',
+    noDevice: 'No microphone was found. Connect one or choose a response.',
+    busyDevice: 'The microphone is unavailable or in use by another app. Try again or choose a response.',
+    recordingError: 'Recording could not finish. Try recording again or choose a response.',
     empty: 'No usable audio was recorded. Please record again.',
-    conversion: 'This recording could not be converted for recognition. You can still listen back, record again, type, or choose.',
+    conversion: 'This recording could not be converted for recognition. You can still listen back, record again, or choose a response.',
     session: 'Your session expired. Refresh the page to retry; this will clear your local recording.',
-    recognition: 'Recognition is unavailable. Your recording is still here. Retry, type, or choose.',
-    noText: 'No clear words were recognized. Your recording is still here. Listen back and retry, type, or choose.',
-    timeout: 'Recognition timed out. Your recording is still here. Retry, type, or choose.',
+    recognition: 'Recognition is unavailable. Your recording is still here. Retry or choose a response.',
+    noText: 'No clear words were recognized. Your recording is still here. Listen back and retry, or choose a response.',
+    timeout: 'Recognition timed out. Your recording is still here. Retry or choose a response.',
   },
 };
 
@@ -77,7 +81,7 @@ function closeSession(session: RecordingSession): void {
   session.stream.getTracks().forEach((track) => track.stop());
 }
 
-export default function Recorder({ locale, enabled, onTranscript, onDraftChange, onEvent, onError, stopSignal }: RecorderProps) {
+export default function Recorder({ locale, enabled, disabled = false, onTranscript, onDraftChange, onPhaseChange, onEvent, onError, stopSignal, resetSignal }: RecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>('idle');
   const [seconds, setSeconds] = useState(0);
   const [clipUrl, setClipUrl] = useState<string | null>(null);
@@ -91,14 +95,41 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
   const generationRef = useRef(0);
   const mountedRef = useRef(true);
   const draftRef = useRef(false);
+  const phaseRef = useRef<RecorderPhase>('idle');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const attachAudio = useCallback((element: HTMLAudioElement | null) => {
+    // DOM refs detach before passive effect cleanup; stop the old element here.
+    if (audioRef.current && audioRef.current !== element) audioRef.current.pause();
+    audioRef.current = element;
+  }, []);
+  const resetRef = useRef(resetSignal);
   const statusRef = useRef<RecordingStatus>('idle');
-  const latest = useRef({ locale, onTranscript, onDraftChange, onEvent, onError });
-  latest.current = { locale, onTranscript, onDraftChange, onEvent, onError };
+  const latest = useRef({ locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError });
+  latest.current = { locale, enabled, disabled, stopSignal, resetSignal, onTranscript, onDraftChange, onPhaseChange, onEvent, onError };
   const t = copy[locale];
+
+  function syncPhase() {
+    if (!mountedRef.current) return;
+    const current = statusRef.current;
+    const audio = audioRef.current;
+    const next: RecorderPhase = current === 'recording' ? 'recording'
+      : current === 'stopping' || current === 'submitting' ? 'processing'
+        : current === 'ready' && !latest.current.disabled && audio && !audio.paused && !audio.ended && !audio.error ? 'playback' : 'idle';
+    if (phaseRef.current === next) return;
+    phaseRef.current = next;
+    latest.current.onPhaseChange?.(next);
+  }
 
   function changeStatus(next: RecordingStatus) {
     statusRef.current = next;
     if (mountedRef.current) setStatus(next);
+    syncPhase();
+  }
+
+  function isCurrentOperation(generation: number, controls: Pick<RecorderProps, 'locale' | 'stopSignal' | 'resetSignal'>) {
+    return mountedRef.current && generation === generationRef.current && !latest.current.disabled
+      && controls.locale === latest.current.locale && controls.stopSignal === latest.current.stopSignal
+      && controls.resetSignal === latest.current.resetSignal;
   }
 
   function report(message: string) {
@@ -146,21 +177,41 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
     abortPending();
     stopAllAudio();
     if (sessionRef.current) stopCapture();
-    else if (statusRef.current === 'requesting' || statusRef.current === 'submitting') {
-      changeStatus(clipRef.current ? 'ready' : 'idle');
+    else changeStatus(clipRef.current ? 'ready' : 'idle');
+  }
+
+  function resetRecording() {
+    const hadDraft = draftRef.current;
+    const wasSubmitting = statusRef.current === 'submitting';
+    abortPending();
+    audioRef.current?.pause();
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    if (session) {
+      session.discard = true;
+      if (session.recorder.state !== 'inactive') session.recorder.stop();
+      closeSession(session);
     }
+    replaceClip(null);
+    setSeconds(0);
+    setError(null);
+    changeStatus('idle');
+    if (wasSubmitting) latest.current.onEvent?.('asr_cancelled');
+    if (hadDraft) latest.current.onEvent?.('recording_cancelled');
   }
 
   useEffect(() => {
     mountedRef.current = true;
     latest.current.onDraftChange?.(draftRef.current);
+    latest.current.onPhaseChange?.(phaseRef.current);
     const onVisibility = () => {
       if (document.hidden) stopAndKeep();
     };
     const onPageHide = () => stopAndKeep();
     const onPlay = (event: Event) => {
       if (!(event.target instanceof HTMLMediaElement)) return;
-      if (['requesting', 'recording', 'stopping'].includes(statusRef.current)) event.target.pause();
+      if (['requesting', 'recording', 'stopping', 'submitting'].includes(statusRef.current)
+        || (event.target === audioRef.current && latest.current.disabled)) event.target.pause();
       else stopAllAudio(event.target);
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -169,6 +220,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
     return () => {
       mountedRef.current = false;
       abortPending();
+      audioRef.current?.pause();
       const session = sessionRef.current;
       if (session) {
         session.discard = true;
@@ -180,6 +232,10 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('play', onPlay, true);
       window.removeEventListener('pagehide', onPageHide);
+      if (phaseRef.current !== 'idle') {
+        phaseRef.current = 'idle';
+        latest.current.onPhaseChange?.('idle');
+      }
     };
   }, []);
 
@@ -190,9 +246,17 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
   useEffect(() => {
     if (!enabled && statusRef.current === 'submitting') stopAndKeep();
   }, [enabled]);
+  useEffect(() => {
+    if (disabled) stopAndKeep();
+  }, [disabled]);
+  useEffect(() => {
+    if (resetRef.current === resetSignal) return;
+    resetRef.current = resetSignal;
+    resetRecording();
+  }, [resetSignal]);
 
   async function startRecording() {
-    if (['recording', 'stopping', 'requesting', 'submitting'].includes(statusRef.current)) return;
+    if (latest.current.disabled || ['recording', 'stopping', 'requesting', 'submitting'].includes(statusRef.current)) return;
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       report(t.unsupported);
@@ -200,12 +264,13 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
     }
     abortPending();
     const generation = generationRef.current;
+    const controls = latest.current;
     stopAllAudio();
     changeStatus('requesting');
     let stream: MediaStream | null = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-      if (!mountedRef.current || generation !== generationRef.current) {
+      if (!isCurrentOperation(generation, controls)) {
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
@@ -217,7 +282,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
         if (event.data.size && !session.discard) session.chunks.push(event.data);
       };
       recorder.onerror = () => {
-        if (session.discard || !mountedRef.current) return;
+        if (session.discard || !mountedRef.current || controls.resetSignal !== latest.current.resetSignal) return;
         session.failed = true;
         closeSession(session);
         report(copy[latest.current.locale].recordingError);
@@ -226,7 +291,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       recorder.onstop = () => {
         closeSession(session);
         if (sessionRef.current === session) sessionRef.current = null;
-        if (session.discard || !mountedRef.current) return;
+        if (session.discard || !mountedRef.current || controls.resetSignal !== latest.current.resetSignal) return;
         const blob = new Blob(session.chunks, { type: recorder.mimeType || session.chunks[0]?.type || 'audio/webm' });
         session.chunks = [];
         latest.current.onEvent?.('recording_stopped');
@@ -251,7 +316,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       session.timeout = setTimeout(stopCapture, MAX_RECORDING_SECONDS * 1000);
     } catch (cause) {
       stream?.getTracks().forEach((track) => track.stop());
-      if (!mountedRef.current || generation !== generationRef.current) return;
+      if (!isCurrentOperation(generation, controls)) return;
       sessionRef.current = null;
       changeStatus(clipRef.current ? 'ready' : 'idle');
       const name = cause instanceof DOMException ? cause.name : '';
@@ -285,9 +350,10 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
 
   async function submit() {
     const blob = clipRef.current;
-    if (!enabled || !blob || statusRef.current !== 'ready') return;
+    if (!latest.current.enabled || latest.current.disabled || !blob || statusRef.current !== 'ready') return;
     abortPending();
     const generation = generationRef.current;
+    const controls = latest.current;
     const controller = new AbortController();
     requestRef.current = controller;
     setError(null);
@@ -305,7 +371,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       } catch {
         throw new Error('conversion');
       }
-      if (generation !== generationRef.current) return;
+      if (!isCurrentOperation(generation, controls) || !latest.current.enabled) return;
       if (controller.signal.aborted) {
         if (timedOut) throw new Error('timeout');
         return;
@@ -318,7 +384,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       });
       if (!response.ok) {
         const failure: unknown = await response.json().catch(() => null);
-        if (generation !== generationRef.current || !mountedRef.current) return;
+        if (!isCurrentOperation(generation, controls) || !latest.current.enabled) return;
         if (failure && typeof failure === 'object' && 'detail' in failure) {
           const detail = failure.detail;
           // Only a known, completed failure starts a new attempt. An unknown
@@ -332,7 +398,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
         throw new Error(response.status === 401 ? 'session' : 'recognition');
       }
       const result: unknown = await response.json();
-      if (generation !== generationRef.current || !mountedRef.current || controller.signal.aborted) return;
+      if (!isCurrentOperation(generation, controls) || !latest.current.enabled || controller.signal.aborted) return;
       if (!result || typeof result !== 'object' || !('text' in result) || typeof result.text !== 'string' || !result.text.trim()) {
         throw new Error('noText');
       }
@@ -344,7 +410,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       latest.current.onTranscript(result.text, requestId);
       latest.current.onEvent?.('asr_succeeded');
     } catch (cause) {
-      if (generation !== generationRef.current || !mountedRef.current) return;
+      if (!isCurrentOperation(generation, controls) || !latest.current.enabled) return;
       if (controller.signal.aborted && !timedOut) return;
       const key = cause instanceof Error ? cause.message : 'recognition';
       const messages = copy[latest.current.locale];
@@ -353,7 +419,7 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
       latest.current.onEvent?.('asr_failed');
     } finally {
       clearTimeout(timeout);
-      if (generation === generationRef.current && mountedRef.current) {
+      if (isCurrentOperation(generation, controls) && latest.current.enabled) {
         requestRef.current = null;
         changeStatus(clipRef.current ? 'ready' : 'idle');
       }
@@ -369,19 +435,24 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
           : clipUrl ? t.ready : t.label}</span>
       {isCapturing && <span className="recorder-timer" aria-label={`${seconds} / ${MAX_RECORDING_SECONDS}`}>{String(seconds).padStart(2, '0')} / 20s</span>}
     </div>
-    {clipUrl && <audio className="recorder-audio" controls src={clipUrl} aria-label={t.playback}
-      onPlay={() => latest.current.onEvent?.('recording_played')} />}
+    {clipUrl && <audio ref={attachAudio} className="recorder-audio" controls={!disabled && status !== 'submitting'}
+      aria-disabled={disabled || status === 'submitting'} src={clipUrl} aria-label={t.playback}
+      onPlay={event => {
+        if (latest.current.disabled || statusRef.current !== 'ready') event.currentTarget.pause();
+        else if (!event.currentTarget.paused) latest.current.onEvent?.('recording_played');
+        syncPhase();
+      }} onPause={syncPhase} onEnded={syncPhase} onError={syncPhase} />}
     <div className="recorder-actions">
-      {(status === 'idle' || status === 'ready') && <button type="button" className="button record-button" onClick={startRecording}>
+      {(status === 'idle' || status === 'ready') && <button type="button" className="button record-button" disabled={disabled} onClick={startRecording}>
         {clipUrl ? <RotateCcw size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}{clipUrl ? t.retry : t.start}
       </button>}
       {isCapturing && <button type="button" className="button record-button" disabled={status === 'stopping'} onClick={stopCapture}>
         <Square size={16} aria-hidden="true" />{t.stop}
       </button>}
-      {status === 'ready' && <button type="button" className="button primary" disabled={!enabled} onClick={submit}>
+      {status === 'ready' && <button type="button" className="button primary" disabled={!enabled || disabled} onClick={submit}>
         <Send size={16} aria-hidden="true" />{t.submit}
       </button>}
-      {status !== 'idle' && <button type="button" className="button secondary" onClick={cancel}>
+      {status !== 'idle' && <button type="button" className="button secondary" disabled={disabled && !isCapturing && status !== 'submitting'} onClick={cancel}>
         <X size={16} aria-hidden="true" />{status === 'submitting' ? t.cancelRequest : status === 'ready' ? t.discard : t.cancel}
       </button>}
     </div>
@@ -389,9 +460,6 @@ export default function Recorder({ locale, enabled, onTranscript, onDraftChange,
     {!enabled && <p className="recorder-hint">{t.unavailable}</p>}
     <p className="recorder-hint">{t.limit}</p>
     <p className="recorder-hint recorder-privacy">{t.privacy}</p>
-    {original && <div className="transcript-result" role="status">
-      <p>{t.recognized}</p>
-      <details><summary>{t.original}</summary><p lang="zh">{original}</p></details>
-    </div>}
+    {original && <p className="recorder-hint transcript-result" role="status">{t.recognized}</p>}
   </section>;
 }

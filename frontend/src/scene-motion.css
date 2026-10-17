@@ -1,0 +1,60 @@
+/* Scene states are controlled by the application. No animation changes task progress. */
+.nanxiang-scene .scene-person,
+.nanxiang-scene .scene-head,
+.nanxiang-scene .scene-left-arm,
+.nanxiang-scene .scene-right-arm,
+.nanxiang-scene .scene-waving-hand,
+.nanxiang-scene .scene-speaking-mouth {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* The selected pose remains legible when animation is turned off. */
+.nanxiang-scene[data-pose="listening"] .scene-person { transform: translate(575px, 345px) rotate(2deg) translate(-575px, -345px); }
+.nanxiang-scene[data-pose="listening"] .scene-head { transform: translate(574px, 214px) rotate(5deg) translate(-574px, -214px); }
+.nanxiang-scene[data-pose="thinking"] .scene-head { transform: translate(574px, 214px) rotate(-4deg) translate(-574px, -214px); }
+.nanxiang-scene[data-pose="clarifying"] .scene-head { transform: translate(574px, 214px) rotate(-5deg) translate(-574px, -214px); }
+.nanxiang-scene[data-pose="checking"] .scene-head { transform: translateY(3px) translate(574px, 214px) rotate(5deg) translate(-574px, -214px); }
+.nanxiang-scene[data-pose="acknowledging"] .scene-head { transform: translateY(3px) translate(574px, 214px) rotate(2deg) translate(-574px, -214px); }
+.nanxiang-scene:is([data-pose="packing"], [data-pose="packed"]) .scene-head { transform: translate(574px, 214px) rotate(3deg) translate(-574px, -214px); }
+.nanxiang-scene:is([data-pose="packing"], [data-pose="packed"]) .scene-left-arm { transform: translate(532px, 232px) rotate(-15deg) translate(-532px, -232px); }
+.nanxiang-scene:is([data-pose="packing"], [data-pose="packed"]) .scene-right-arm { transform: translate(618px, 231px) rotate(12deg) translate(-618px, -231px); }
+
+.nanxiang-scene[data-pose="idle"] .scene-person { animation: scene-breathe 4.8s ease-in-out infinite; }
+.nanxiang-scene[data-pose="welcome"] .scene-waving-hand { animation: scene-wave 1.15s ease-in-out 1; }
+.nanxiang-scene[data-pose="speaking"] .scene-speaking-mouth { animation: scene-speak .48s ease-in-out infinite; }
+.nanxiang-scene[data-pose="speaking"] .scene-right-arm { animation: scene-explain 1.8s ease-in-out infinite; }
+.nanxiang-scene[data-pose="listening"] .scene-head { animation: scene-listen 2.8s ease-in-out infinite; }
+.nanxiang-scene[data-pose="thinking"] .scene-head { animation: scene-think 3s ease-in-out infinite; }
+.nanxiang-scene[data-pose="acknowledging"] .scene-head { animation: scene-nod .7s ease-in-out 1; }
+.nanxiang-scene[data-pose="clarifying"] .scene-right-arm { animation: scene-clarify .85s ease-in-out 1; }
+.nanxiang-scene[data-pose="checking"] .scene-head { animation: scene-check .9s ease-in-out 1; }
+.nanxiang-scene[data-pose="packing"] .scene-left-arm { animation: scene-pack-arm-left 1.8s ease-in-out 1 both; }
+.nanxiang-scene[data-pose="packing"] .scene-right-arm { animation: scene-pack-arm-right 1.8s ease-in-out 1 both; }
+.nanxiang-scene[data-pose="packing"] .scene-pack-first { animation: scene-pack-first 1.8s ease-in-out 1 both; }
+.nanxiang-scene[data-pose="packing"] .scene-pack-second { animation: scene-pack-second 1.8s ease-in-out 1 both; }
+.nanxiang-scene[data-pose="packing"] .scene-takeaway-bag { animation: scene-offer-bag 1.8s ease-in-out 1 both; }
+.nanxiang-scene[data-pose="packing"] .scene-packed-hand { animation: scene-offer-hand 1.8s ease-in-out 1 both; }
+
+@keyframes scene-breathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes scene-wave { 0%,100% { transform: translate(655px, 330px) rotate(0) translate(-655px, -330px); } 25%,65% { transform: translate(655px, 330px) rotate(-6deg) translate(-655px, -330px); } 45%,85% { transform: translate(655px, 330px) rotate(4deg) translate(-655px, -330px); } }
+@keyframes scene-speak { 0%,100% { transform: translate(573px, 191px) scaleY(.4) translate(-573px, -191px); } 45% { transform: translate(573px, 191px) scaleY(1) translate(-573px, -191px); } 75% { transform: translate(573px, 191px) scaleY(.7) translate(-573px, -191px); } }
+@keyframes scene-explain { 0%,100% { transform: translate(618px, 231px) rotate(0) translate(-618px, -231px); } 50% { transform: translate(618px, 231px) rotate(-3deg) translate(-618px, -231px); } }
+@keyframes scene-listen { 0%,100% { transform: translate(574px, 214px) rotate(5deg) translate(-574px, -214px); } 50% { transform: translate(574px, 214px) rotate(7deg) translate(-574px, -214px) translateY(1px); } }
+@keyframes scene-think { 0%,100% { transform: translate(574px, 214px) rotate(-4deg) translate(-574px, -214px); } 50% { transform: translate(574px, 214px) rotate(-6deg) translate(-574px, -214px); } }
+@keyframes scene-nod { 0%,100% { transform: translateY(3px) translate(574px, 214px) rotate(2deg) translate(-574px, -214px); } 45% { transform: translateY(8px) translate(574px, 214px) rotate(5deg) translate(-574px, -214px); } }
+@keyframes scene-clarify { 0%,100% { transform: translate(618px, 231px) rotate(0) translate(-618px, -231px); } 50% { transform: translate(618px, 231px) rotate(-7deg) translate(-618px, -231px); } }
+@keyframes scene-check { 0% { transform: translateY(0) translate(574px, 214px) rotate(0) translate(-574px, -214px); } 55%,100% { transform: translateY(3px) translate(574px, 214px) rotate(5deg) translate(-574px, -214px); } }
+@keyframes scene-pack-arm-left { 0% { transform: translate(532px, 232px) rotate(0) translate(-532px, -232px); } 28% { transform: translate(532px, 232px) rotate(-26deg) translate(-532px, -232px); } 58% { transform: translate(532px, 232px) rotate(-7deg) translate(-532px, -232px); } 100% { transform: translate(532px, 232px) rotate(-15deg) translate(-532px, -232px); } }
+@keyframes scene-pack-arm-right { 0% { transform: translate(618px, 231px) rotate(0) translate(-618px, -231px); } 35% { transform: translate(618px, 231px) rotate(24deg) translate(-618px, -231px); } 65% { transform: translate(618px, 231px) rotate(2deg) translate(-618px, -231px); } 100% { transform: translate(618px, 231px) rotate(12deg) translate(-618px, -231px); } }
+@keyframes scene-pack-first { 0% { transform: translate(-206px, 55px); } 35%,100% { transform: translate(0, 0); } }
+@keyframes scene-pack-second { 0%,25% { transform: translate(62px, 75px); } 65%,100% { transform: translate(0, 0); } }
+@keyframes scene-offer-bag { 0% { transform: translate(186px, -53px); } 30% { transform: translate(0, -12px); } 70% { transform: translate(0, -12px); } 100% { transform: translate(0, 0); } }
+@keyframes scene-offer-hand { 0%,65% { opacity: 0; transform: translateY(-10px); } 85%,100% { opacity: 1; transform: translateY(0); } }
+
+/* A finished order is a still image, including on reload. */
+.nanxiang-scene[data-pose="packed"] * { animation: none !important; }
+html[data-reduced-motion="true"] .nanxiang-scene * { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .nanxiang-scene * { animation: none !important; transition: none !important; }
+}

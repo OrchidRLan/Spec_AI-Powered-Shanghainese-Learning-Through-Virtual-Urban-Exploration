@@ -1,5 +1,7 @@
 # 批次 A：地图、南翔与共用界面设计交接
 
+> 本文件保留原批次 A 设计基线。当前界面已按 [批次 A 修订 1](../Batch-A-revision-1.md) 改为独立四站建筑、动态角色、逐轮问题、语音/选择两入口和内嵌注音/音频；本页旧截图、三输入、无注音/声音及四姿态等描述不再代表当前实现。最新实拍与限制见 [修订 1 验收](../Batch-A-revision-1-acceptance.md)。修订样式位于 `styles-revision1.css` 和 `scene-motion.css`，仍复用原有设计系统。
+
 版本：batch-a.1 · 2026-10-17。依据 [十步路线](../Product-development-roadmap.md) 第 3–6、13 节、[共同约定](../Route-drafts-index.md) 和 [南翔草案](../Nanxiang-experience-draft.md)。
 
 本稿记录本仓库当前可运行的设计初稿、组件与待验收目标。它对应批次 A 的地图/南翔设计及应用基础，**不表示步骤 1–4 整步完成，不表示视觉已获用户审阅通过，也不表示语言或声音已审核**。浏览器实测和截图统一记入 [批次 A 验收](../Batch-A-acceptance.md)，本稿中的源码观察不能代替那些检查。

@@ -69,6 +69,46 @@ const validate = (candidate = pack, reviews = ledger) => validateContent(candida
 const clone = () => structuredClone(pack);
 
 test('draft development accepts explicit pending', () => assert.equal(validateContent(draft, empty).ok, true));
+test('revision 1 supplies all 20 reviewable texts without manufacturing approval', () => {
+  const version = 'batch-a-r1.2026-10-17.v1';
+  const expectedIds = [
+    'E08', 'E09', 'E05',
+    ...Array.from({ length: 12 }, (_, i) => `NX-N${String(i + 1).padStart(2, '0')}`),
+    'NX-Q1', 'NX-Q2', 'NX-Q3', 'NX-MODE-HERE', 'NX-ITEM-XLB',
+  ];
+  const texts = teachingTexts(draft);
+  assert.equal(draft.contentVersion, version);
+  assert.deepEqual(texts.map((text) => text.id).sort(), expectedIds.sort());
+  for (const text of texts) {
+    assert.equal(text.version, version, text.id);
+    assert.equal(text.textKind, 'shanghainese-candidate', text.id);
+    assert.equal(typeof text.hanzi, 'string', text.id);
+    assert.ok(text.hanzi.trim(), text.id);
+    assert.equal(typeof text.pronunciation, 'string', text.id);
+    assert.match(text.pronunciation, /[a-z]/i, text.id);
+    assert.ok(text.segments.length > 0, text.id);
+    assert.equal(text.segments.map((segment) => segment.hanzi).join(''), text.hanzi, text.id);
+    for (const segment of text.segments) {
+      assert.equal(typeof segment.pronunciation, 'string', segment.id);
+      assert.match(segment.pronunciation, /[a-z]/i, segment.id);
+      assert.ok(segment.meaning.zh.trim() && segment.meaning.en.trim(), segment.id);
+    }
+    assert.equal(text.review.status, 'draft', text.id);
+    for (const stage of ['language', 'pronunciation', 'approximation', 'audio']) {
+      assert.equal(text.review[stage], 'pending', `${text.id}:${stage}`);
+    }
+    assert.deepEqual(text.review.recordIds, [], text.id);
+  }
+  assert.equal(draft.release.approved, false);
+  assert.deepEqual(empty, { schemaVersion: 1, reviewers: [], records: [], releaseApprovals: [] });
+  assert.equal(draft.audioClips.length, 28);
+  for (const clip of draft.audioClips) {
+    assert.equal(clip.textVersion, version, clip.id);
+    assert.equal(clip.status, 'pending', clip.id);
+    assert.equal(clip.file, null, clip.id);
+    assert.deepEqual(clip.reviewIds, [], clip.id);
+  }
+});
 test('draft production blocks', () => assert.equal(validateContent(draft, empty, { mode: 'production' }).ok, false));
 test('flags alone cannot approve language', () => {
   const candidate = structuredClone(draft); candidate.expressions[0].review.language = 'approved';

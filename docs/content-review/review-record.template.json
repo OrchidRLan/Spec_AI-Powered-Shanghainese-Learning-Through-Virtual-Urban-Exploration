@@ -10,7 +10,7 @@
   "record": {
     "id": null,
     "contentId": "E08",
-    "contentVersion": "1.0.0-draft.1",
+    "contentVersion": "batch-a-r1.2026-10-17.v1",
     "stage": "language",
     "subjectSha256": null,
     "reviewerId": null,
@@ -26,7 +26,7 @@
   },
   "releaseApproval": {
     "id": null,
-    "contentVersion": "batch-a.2026-10-17.v1",
+    "contentVersion": "batch-a-r1.2026-10-17.v1",
     "packageSha256": null,
     "reviewerId": null,
     "decision": null,
