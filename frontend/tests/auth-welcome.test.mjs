@@ -80,8 +80,8 @@ test('switching between login and registration clears and hides the password whi
   assert.equal(h.input('password').value, '');
   assert.equal(h.input('password').type, 'password');
   assert.equal(h.input('password').autoComplete, 'new-password');
-  assert.match(h.text, /15–128 characters/);
-  assert.match(h.text, /Password recovery is not available/);
+  assert.match(h.text, /8–128 characters/);
+  assert.doesNotMatch(h.text, /Password recovery is not available/);
 });
 
 test('guest choice, return, and language switch remain separate from account submission', () => {
@@ -102,7 +102,8 @@ test('registration exposes field errors and temporary guest wording in both lang
     assert.match(h.input('username')['aria-describedby'], /auth-error/);
     assert.equal(h.find(node => node.props?.role === 'alert').props.id, 'auth-error');
     assert.match(h.text, locale === 'zh' ? /游客进度仅在当前标签页内保留，关闭后不会保留/ : /Guest progress stays in this tab and is not kept after you close it/);
-    assert.match(h.text, locale === 'zh' ? /暂不支持找回密码/ : /Password recovery is not available/);
+    assert.match(h.text, locale === 'zh' ? /8–128 个字符/ : /8–128 characters/);
+    assert.doesNotMatch(h.text, /暂不支持找回密码|Password recovery is not available/);
     h.set({ fieldError: 'password' });
     assert.equal(h.input('password')['aria-invalid'], true);
     assert.match(h.input('password')['aria-describedby'], /auth-error/);

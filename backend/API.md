@@ -15,7 +15,7 @@ python3.11 -m venv .venv
 
 ## 认证与临时进度
 
-本轮身份独立于已有学习 session。账号使用 `shanghai_account` HttpOnly / SameSite=Strict Cookie，服务器令牌与浏览器均最长 30 天；退出撤销当前令牌，不清空账号进度。游客使用 `X-Guest-Token` 请求头，前端只存标签页 `sessionStorage`，最长 24 小时。数据库只存两类随机令牌的 SHA-256 摘要。用户名按 trim + casefold 唯一，显示保留大小写；3–24 位 ASCII 字母、数字、下划线。密码 15–128 字符，空格不裁剪，随机盐 scrypt `N=32768,r=8,p=3`，不存明文。第一版无密码找回。
+本轮身份独立于已有学习 session。账号使用 `shanghai_account` HttpOnly / SameSite=Strict Cookie，服务器令牌与浏览器均最长 30 天；退出撤销当前令牌，不清空账号进度。游客使用 `X-Guest-Token` 请求头，前端只存标签页 `sessionStorage`，最长 24 小时。数据库只存两类随机令牌的 SHA-256 摘要。用户名按 trim + casefold 唯一，显示保留大小写；3–24 位 ASCII 字母、数字、下划线。规范化的 `users.username_key` 是数据库 `NOT NULL PRIMARY KEY`，并使用 `NOCASE` 排序规则约束大小写重复；原 `users.id` 保留为 `NOT NULL UNIQUE`，继续承接令牌和学习会话的外键。已有数据库启动时事务迁移主键，保留账号 ID、密码摘要、令牌与进度；迁移失败回滚，不重置数据。密码 8–128 字符，不要求字符种类，空格不裁剪，随机盐 scrypt `N=32768,r=8,p=3`，不存明文。
 
 ```ts
 type AuthState = {

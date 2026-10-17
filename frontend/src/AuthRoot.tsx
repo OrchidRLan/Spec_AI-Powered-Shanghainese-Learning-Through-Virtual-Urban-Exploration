@@ -12,7 +12,7 @@ const errors: Record<string, { zh: string; en: string }> = {
   invalid_credentials: { zh: '用户名或密码不正确，请再试一次。', en: 'The username or password is incorrect. Please try again.' },
   username_taken: { zh: '这个用户名已有人使用，请换一个。', en: 'This username is already taken. Please choose another.' },
   invalid_username: { zh: '用户名需为 3–24 位英文字母、数字或下划线。', en: 'Use 3–24 letters, numbers, or underscores for your username.' },
-  invalid_password: { zh: '密码需为 15–128 个字符，可以包含空格。', en: 'Use a password with 15–128 characters. Spaces are welcome.' },
+  invalid_password: { zh: '密码需为 8–128 个字符，可以包含空格。', en: 'Use a password with 8–128 characters. Spaces are welcome.' },
   auth_rate_limited: { zh: '尝试次数较多，请稍等片刻再试。', en: 'Too many attempts. Please wait a little before trying again.' },
   merge_in_progress: { zh: '这段练习还在保存，请稍等后重试。', en: 'Your practice is still being saved. Please wait and try again.' },
   merge_conflict: { zh: '这两段进度使用不同的课程版本，暂时不能合并。原记录仍在，可返回本次体验，或取消导入旧进度后登录。', en: 'These journeys use different lesson versions and cannot be combined. Your records are kept. Return to this visit, or uncheck importing earlier progress to sign in.' },

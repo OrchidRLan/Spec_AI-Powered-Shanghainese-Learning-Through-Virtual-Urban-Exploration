@@ -152,8 +152,8 @@ class Authentication:
         username = body.username.strip()
         if not re.fullmatch(r"[A-Za-z0-9_]{3,24}", username):
             self.problem("invalid_username", "Use 3–24 letters, numbers, or underscores.", 422)
-        if not 15 <= len(body.password) <= 128:
-            self.problem("invalid_password", "Use a password of 15–128 characters.", 422)
+        if not 8 <= len(body.password) <= 128:
+            self.problem("invalid_password", "Use a password of 8–128 characters.", 422)
         return username, username.casefold()
 
     def sources(self, request, connection, import_legacy):
@@ -274,7 +274,7 @@ class Authentication:
                     data["locale"] = body.locale
                     connection.execute("UPDATE sessions SET data=? WHERE id=?", (encode(data), sid))
                 user_id = self.identifier()
-                connection.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (user_id, username, key, hashed, sid, self.now()))
+                connection.execute("INSERT INTO users (id,username,username_key,password_hash,session_id,created_at) VALUES (?,?,?,?,?,?)", (user_id, username, key, hashed, sid, self.now()))
                 for linked in set([sid, *sources]):
                     connection.execute("INSERT INTO account_sessions VALUES (?,?)", (user_id, linked))
                 user = connection.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()

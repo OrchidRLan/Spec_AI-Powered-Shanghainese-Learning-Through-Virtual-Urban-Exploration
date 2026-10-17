@@ -17,7 +17,7 @@ class Database:
         self.path = path
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with self.transaction() as connection:
-            connection.executescript("""
+            schema = """
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, data TEXT NOT NULL
                 );
@@ -61,7 +61,8 @@ class Database:
                     PRIMARY KEY(attempt_id, request_id)
                 );
                 CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY, username TEXT NOT NULL, username_key TEXT NOT NULL UNIQUE,
+                    id TEXT NOT NULL UNIQUE, username TEXT NOT NULL,
+                    username_key TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
                     password_hash TEXT NOT NULL, session_id TEXT NOT NULL REFERENCES sessions(id),
                     created_at TEXT NOT NULL
                 );
@@ -83,7 +84,56 @@ class Database:
                 CREATE TABLE IF NOT EXISTS auth_rate_limits (
                     bucket TEXT PRIMARY KEY, window_started REAL NOT NULL, count INTEGER NOT NULL
                 );
+            """
+            # executescript commits an existing transaction implicitly; keep
+            # schema initialization inside the same write lock instead.
+            for statement in schema.split(";"):
+                if statement.strip():
+                    connection.execute(statement)
+        self._migrate_username_primary_key()
+
+    def _migrate_username_primary_key(self):
+        """Upgrade account keys without changing IDs referenced by credentials.
+
+        SQLite requires rebuilding a table to change its primary key. Foreign
+        keys are disabled only on this private migration connection, before
+        its transaction starts; all data and foreign keys are checked before
+        committing the replacement. Normal application connections keep them on.
+        """
+        connection = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys=OFF")
+        connection.execute("PRAGMA busy_timeout=10000")
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            columns = {row["name"]: row for row in connection.execute("PRAGMA table_info(users)")}
+            # Check under the write lock so concurrent application startups
+            # cannot both attempt to rebuild the same table.
+            if columns["username_key"]["pk"] == 1 and columns["username_key"]["notnull"] == 1:
+                connection.commit()
+                return
+            connection.execute("""
+                CREATE TABLE users_username_pk (
+                    id TEXT NOT NULL UNIQUE, username TEXT NOT NULL,
+                    username_key TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
+                    password_hash TEXT NOT NULL, session_id TEXT NOT NULL REFERENCES sessions(id),
+                    created_at TEXT NOT NULL
+                )
             """)
+            connection.execute("""
+                INSERT INTO users_username_pk (id,username,username_key,password_hash,session_id,created_at)
+                SELECT id,username,username_key,password_hash,session_id,created_at FROM users
+            """)
+            connection.execute("DROP TABLE users")
+            connection.execute("ALTER TABLE users_username_pk RENAME TO users")
+            if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise sqlite3.IntegrityError("Account key migration failed foreign-key validation")
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:

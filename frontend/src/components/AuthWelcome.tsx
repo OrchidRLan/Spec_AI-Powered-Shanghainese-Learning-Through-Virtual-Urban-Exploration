@@ -30,9 +30,8 @@ const copy = {
     loginTitle: '欢迎回来', registerTitle: '留住这段漫游',
     loginDescription: '登录账号，接着上次的练习。', registerDescription: '只需一个用户名和密码，保存你的练习进度。',
     username: '用户名', usernameHint: '3–24 位英文字母、数字或下划线，不区分大小写。',
-    password: '密码', passwordHint: '15–128 个字符，可以使用容易记住的长口令。',
+    password: '密码', passwordHint: '8–128 个字符，可包含空格。',
     showPassword: '显示密码', hidePassword: '隐藏密码',
-    recovery: '暂不支持找回密码，请妥善保管。',
     submitLogin: '登录并继续', submitRegister: '创建账号', waiting: '请稍候…',
     legacyTitle: '保存此浏览器原有的进度',
     legacyDescription: '将之前的匿名练习记录一并关联到本次登录的账号。',
@@ -49,9 +48,8 @@ const copy = {
     loginTitle: 'Welcome back', registerTitle: 'Save your journey',
     loginDescription: 'Sign in to continue your saved practice.', registerDescription: 'A username and password are all you need to save your progress.',
     username: 'Username', usernameHint: '3–24 letters, numbers, or underscores. Not case-sensitive.',
-    password: 'Password', passwordHint: '15–128 characters. A memorable passphrase works well.',
+    password: 'Password', passwordHint: '8–128 characters. Spaces are welcome.',
     showPassword: 'Show password', hidePassword: 'Hide password',
-    recovery: 'Password recovery is not available yet. Keep your password safe.',
     submitLogin: 'Sign in and continue', submitRegister: 'Create account', waiting: 'Please wait…',
     legacyTitle: 'Keep earlier progress from this browser',
     legacyDescription: 'Add your previous anonymous practice records to the account you sign in to.',
@@ -127,7 +125,6 @@ export default function AuthWelcome({ locale, mode, onModeChange, onLocaleChange
           {legacyAvailable && <label className="auth-legacy"><input type="checkbox" checked={importLegacy} onChange={event => setImportLegacy(event.target.checked)} disabled={busy}/><span><strong>{text.legacyTitle}</strong><small>{text.legacyDescription}</small></span></label>}
           {error && <p id="auth-error" className="auth-error" role="alert">{error}</p>}
           <button type="submit" className="primary auth-submit" disabled={busy}>{busy ? <><LoaderCircle size={18}/>{text.waiting}</> : <>{registering ? text.submitRegister : text.submitLogin}<ArrowRight size={18}/></>}</button>
-          {registering && <p className="auth-recovery-note">{text.recovery}</p>}
         </form>
         <div className="auth-divider"><span>{text.divider}</span></div>
         <button type="button" className="secondary auth-guest" onClick={onGuest} disabled={busy} aria-describedby="auth-guest-note">{text.guest}<ArrowRight size={17}/></button>

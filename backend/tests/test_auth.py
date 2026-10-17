@@ -204,11 +204,22 @@ def test_registration_rejects_invalid_usernames_without_creating_account(client,
     assert rows(app, "SELECT * FROM users") == []
 
 
-@pytest.mark.parametrize("password", ["short password", "x" * 129])
+@pytest.mark.parametrize("password", ["x" * 7, "x" * 129])
 def test_registration_rejects_password_outside_length_limits(client, app, password):
     response = client.post("/api/auth/register", json={"username": "Walker", "password": password})
     assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "invalid_password"
+    assert "8–128" in response.json()["detail"]["message"]
     assert rows(app, "SELECT * FROM users") == []
+
+
+@pytest.mark.parametrize("password", ["12345678", "x" * 128, PASSWORD])
+def test_registration_and_login_accept_current_password_boundaries(client, app, password):
+    state = register(client, password=password)
+    with TestClient(app) as returning:
+        response = returning.post("/api/auth/login", json={"username": "walker", "password": password})
+        assert response.status_code == 200
+        assert response.json()["session"]["id"] == state["session"]["id"]
 
 
 def test_username_case_insensitive_and_password_whitespace_is_significant(client, app):
