@@ -1,8 +1,16 @@
 # 批次 A：语音服务边界与内容制作
 
-当前覆盖性决定（2026-10-17）：[批次 A 修订 3](Batch-A-revision-3.md) 要求只保留商品、数量、方式、订单核对四道既定问题，取消所有临时追问。先选目标再 Speak，识别后始终显示原转写和是否符合本题，点击继续才推进；失败可重试或明确使用所选答案继续，辅助继续不计语音正确。未覆盖部分沿用 [修订 2](Batch-A-revision-2.md)；下方旧的自由追问、识别后自动切题规定由本修订覆盖，实际完成状态见 [开发进度](Development-status.md)。
+当前覆盖性决定（2026-10-17）：[批次 A 修订 4](Batch-A-revision-4.md) 精简中英常驻提示、将实际订单带入最后确认及配套声音、统一完成按钮并重排地点卡。流程沿用 [修订 3](Batch-A-revision-3.md)：只保留商品、数量、方式、订单核对四道既定问题，取消临时追问；识别后显示原转写与正误，明确点击继续才推进，失败可重试或辅助继续。未覆盖部分沿用 [修订 2](Batch-A-revision-2.md)；下方历史冲突规定由最新修订覆盖，实际完成状态见 [开发进度](Development-status.md)。
 
 核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+
+## 修订 4：完整订单确认声音
+
+[独立确认内容](../content/nanxiang-confirmations-r4.json) 包含一/二/三份 × 堂吃/外带六种完整句，沿用既有候选词句与注音，均保留待审。播放从当前规范化保存订单匹配，显示、自动播放与手动播放一致；修改订单后不会复用旧句。原 R3 基础内容与规则不变，新增资源单独版本化，无需重置已有 R3 进度。
+
+真实调用北京 `qwen3-tts-flash` + Jada 六次、无重试，输入文本合计 84 字符，供应商计量 150 字符，按已有目录费率估算 ¥0.012；未查询账单。执行上限六次、估算预算 ¥1，无 ASR/LLM/用户录音调用。六个整句 WAV 总长 15.6 秒，位于 `frontend/public/audio/review-r4/`；[清单](../content/audio-review-r4.json) 全部 pending。慢速为同文件保音高 0.75×，未制作独立慢读。
+
+`scripts/speech-review-r4.py plan/check` 只做离线检查，生成后计划为零待调用；`generate` 要求冻结输入摘要及显式调用标记，严格限制预算、次数，不自动重试。`npm run check` 已包含 R4 音频审计，开发/正式内容校验均覆盖独立补充包，避免未来基础教材批准后漏放未审确认句。完整操作和浏览器证据见 [修订 4 验收](Batch-A-revision-4-acceptance.md)。
 
 ## 修订 2：自由点单改稿与慢速播放
 

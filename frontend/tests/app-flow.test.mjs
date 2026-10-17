@@ -8,8 +8,10 @@ import { transformWithOxc } from 'vite';
 // Recorder's capture/ASR internals are separately covered by recorder.test.mjs.
 const content = JSON.parse(await readFile(new URL('../../content/batch-a.json', import.meta.url), 'utf8'));
 const manifest = JSON.parse(await readFile(new URL('../../content/audio-review-r2.json', import.meta.url), 'utf8'));
+const confirmationContent = JSON.parse(await readFile(new URL('../../content/nanxiang-confirmations-r4.json', import.meta.url), 'utf8'));
+const confirmationManifest = JSON.parse(await readFile(new URL('../../content/audio-review-r4.json', import.meta.url), 'utf8'));
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
-const files = ['lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'App.tsx'];
+const files = ['lib/i18n.ts', 'lib/conversation.ts', 'lib/reviewAudio.ts', 'lib/orderConfirmation.ts', 'App.tsx'];
 const executable = (await Promise.all(files.map(async file => {
   const source = await readFile(new URL(`../src/${file}`, import.meta.url), 'utf8');
   const transformed = await transformWithOxc(source, file, { jsx: { runtime: 'classic' } });
@@ -51,7 +53,7 @@ function harness(options = {}) {
   const localStorage = options.localStorage ?? storage({ 'shanghai-review-autovoice': 'off' });
   const attempt = options.attempt ?? makeAttempt();
   const serverSession = {
-    id: 'session-r2', locale: 'en', show_romanization: true, reduced_motion: false,
+    id: 'session-r2', locale: options.locale ?? 'en', show_romanization: true, reduced_motion: false,
     content_version: content.contentVersion, rule_version: 'test', attempts: [attempt],
     completed_station_ids: options.completed ? ['nanxiang'] : [], services: {},
   };
@@ -90,7 +92,7 @@ function harness(options = {}) {
     }
   }
   const context = {
-    content, manifest, ...components, useState, useRef, useEffect,
+    content, manifest, confirmationContent, confirmationManifest, ...components, useState, useRef, useEffect,
     React: { createElement: (type, attributes, ...children) => {
       if (type === 'audio' && attributes.ref) attributes.ref.current = audio;
       return { type, props: { ...attributes, children } };
@@ -514,4 +516,102 @@ test('R3 plays the next fixed prompt only after the explicit continuation callba
   assert.equal(h.guided.attempt.practice.step, 'mode');
   assert.equal(h.audio.playCalls, 1);
   assert.ok(h.find(node => node.props?.entry?.id === 'NX-N03'));
+});
+
+test('R4 renders every complete saved order as the matching full confirmation sentence', async t => {
+  for (const locale of ['zh', 'en']) {
+    for (const candidate of confirmationContent.dialogues) {
+      const order = { item: 'xiaolongbao', quantity: candidate.order.normalized_servings, unit: 'serving', normalized_servings: candidate.order.normalized_servings, takeaway: candidate.order.takeaway };
+      const attempt = makeAttempt({ status: 'confirming', prompt_id: 'NX-N09', order, practice: guidedPractice({ step: 'confirm', step_id: 'confirm', target: { type: 'confirm' } }) });
+      const h = harness({ attempt, locale }); t.after(() => h.dispose()); await h.settle();
+      const visible = h.find(node => node.props?.entry?.id === candidate.id);
+      assert.ok(visible, `${locale}: ${candidate.id} is shown after restore`);
+      assert.equal(visible.props.entry.hanzi, candidate.hanzi);
+      assert.equal(visible.props.locale, locale);
+      assert.equal(h.find(node => node.props?.entry?.id === 'NX-N09'), undefined, 'the isolated short question is replaced');
+      assert.equal(h.find(node => node.props?.className === 'r1-confirm-summary r2-confirm-summary'), undefined, 'a normal confirmation does not repeat its order below');
+      assert.equal(h.guided.attempt.status, 'confirming');
+      assert.equal(h.requests.length, 0, 'restoring a confirmation cannot submit or complete it');
+    }
+  }
+});
+
+test('R4 manual and automatic confirmation playback follow the current saved order after edits', async t => {
+  const initial = makeAttempt({ prompt_id: 'NX-N03', practice: guidedPractice({ step: 'mode', step_id: 'mode', target: null }) });
+  const h = harness({ attempt: initial, localStorage: storage({ 'shanghai-review-autovoice': 'on' }) });
+  t.after(() => h.dispose()); await h.settle();
+  let revision = 2;
+  for (const candidate of confirmationContent.dialogues) {
+    const order = { item: 'xiaolongbao', quantity: candidate.order.normalized_servings, unit: 'serving', normalized_servings: candidate.order.normalized_servings, takeaway: candidate.order.takeaway };
+    const next = makeAttempt({ revision: revision++, status: 'confirming', prompt_id: 'NX-N09', order, practice: guidedPractice({ step: 'confirm', step_id: `confirm-${revision}`, target: null }) });
+    h.guided.onAttempt(next); h.guided.onAdvanced(next); await h.settle(); h.runTimers(); await h.settle();
+    const clip = confirmationManifest.clips.find(value => value.textId === candidate.id && value.textVersion === candidate.version);
+    assert.ok(clip, 'each displayed confirmation has matching local audio');
+    assert.equal(h.audio.src, clip.file, 'explicit advancement plays the complete current order');
+    h.click(node => node.props?.['aria-label'] === `Listen to ${candidate.hanzi}`); await h.settle();
+    assert.equal(h.audio.src, clip.file, 'manual replay uses that same sentence');
+    assert.ok(h.find(node => node.props?.entry?.id === candidate.id));
+  }
+  assert.equal(h.audio.playCalls, confirmationContent.dialogues.length * 2);
+  assert.equal(h.requests.length, 0, 'review recordings do not call speech APIs');
+});
+
+test('R4 incomplete and unsupported orders never borrow a confirmation for another quantity', async t => {
+  for (const order of [
+    { item: null, quantity: 2, unit: 'serving', normalized_servings: 2, takeaway: true },
+    { item: 'xiaolongbao', quantity: 2, unit: 'serving', normalized_servings: null, takeaway: true },
+    { item: 'xiaolongbao', quantity: 4, unit: 'serving', normalized_servings: 4, takeaway: false },
+    { item: 'xiaolongbao', quantity: 2, unit: 'serving', normalized_servings: 2, takeaway: null },
+  ]) {
+    const h = harness({ attempt: makeAttempt({ status: 'confirming', prompt_id: 'NX-N09', order, practice: guidedPractice({ step: 'confirm' }) }) });
+    t.after(() => h.dispose()); await h.settle();
+    assert.ok(h.find(node => node.props?.entry?.id === 'NX-N09'));
+    const summary = h.find(node => node.props?.className === 'r1-confirm-summary r4-confirm-fallback');
+    assert.ok(summary);
+    if (order.item === null) assert.match(h.textOf(summary), /^Not yet specified · 2 servings · To go$/);
+    assert.equal(h.find(node => confirmationContent.dialogues.some(entry => entry.id === node.props?.entry?.id)), undefined);
+    h.click(node => node.props?.['aria-label'] === `Listen to ${entry('NX-N09').hanzi}`); await h.settle();
+    assert.equal(h.audio.src, manifest.clips.find(clip => clip.textId === 'NX-N09').file);
+  }
+});
+
+test('R4 map cards have one full-width content order and honest closed-stop status in both languages', async t => {
+  for (const locale of ['zh', 'en']) {
+    const h = harness({ hash: '#map', locale }); t.after(() => h.dispose()); await h.settle();
+    const card = h.find(node => node.type === 'aside' && node.props.className.includes('r4-station-detail'));
+    const parts = card.props.children.flat(Infinity).filter(Boolean);
+    assert.deepEqual(parts.map(node => node.props.className.split(' ')[0]), ['r4-station-topline', 'r4-station-art', 'r4-station-copy', 'r4-station-action']);
+    assert.match(h.textOf(parts[0]), locale === 'zh' ? /第 03 站/ : /STOP 03/);
+    const copy = parts[2].props.children.flat(Infinity).filter(Boolean);
+    assert.deepEqual(copy.map(node => node.type), ['h2', 'span', 'p'], 'title, duration, then one task description');
+    assert.doesNotMatch(h.text, /A conversation awaits|Nanxiang first|Work in progress|About this preview|这一站，聊什么|南翔先行|关于本次预览/);
+    assert.equal(h.find(node => node.props?.className === 'phrase-tags'), undefined);
+    h.click(node => node.type === 'button' && node.props.className?.includes('marker-candy'));
+    assert.match(h.text, locale === 'zh' ? /尚未开放/ : /Not open yet/);
+    assert.doesNotMatch(h.text, /development batch|后续批次/);
+    h.click(locale === 'zh' ? '去南翔看看' : 'Explore Nanxiang');
+    assert.ok(h.find(node => node.type === 'aside' && node.props.className.includes('station-nanxiang')));
+  }
+});
+
+test('R4 completion actions keep every icon before its label and remove repeated guidance', async t => {
+  for (const locale of ['zh', 'en']) {
+    const attempt = makeAttempt({ status: 'completed', prompt_id: 'NX-N10', practice: guidedPractice({ step: 'confirm' }) });
+    const h = harness({ attempt, completed: true, locale }); t.after(() => h.dispose()); await h.settle();
+    const actions = h.find(node => node.props?.className === 'r1-completed-actions r4-completed-actions');
+    const buttons = actions.props.children.flat(Infinity).filter(Boolean);
+    assert.equal(buttons.length, 3);
+    assert.deepEqual(buttons.map(node => node.props.className), ['primary', 'secondary', 'text-button']);
+    for (const button of buttons) {
+      const children = button.props.children.flat(Infinity).filter(Boolean);
+      assert.equal(typeof children[0].type, 'function', 'the icon comes first');
+      assert.equal(children[0].props.size, 18);
+      assert.equal(children[1].type, 'span', 'the action label follows the icon');
+    }
+    assert.doesNotMatch(h.text, /You completed your order|Task completion is not a pronunciation score|你完成了这次点单|任务完成记录不代表/);
+    assert.ok(h.find(node => node.props?.entry?.id === 'NX-N10'), 'completed turns keep the completion sentence');
+    h.click(locale === 'zh' ? '复习' : 'Review');
+    assert.equal(h.hash, 'review');
+    assert.doesNotMatch(h.text, /This records conversations and practice|这里记录交流与练习/);
+  }
 });

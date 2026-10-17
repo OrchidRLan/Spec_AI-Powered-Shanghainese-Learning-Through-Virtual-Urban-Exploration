@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "nanxiang-confirmations-r4.2026-10-17.v1",
+  "purpose": "review-draft",
+  "status": "draft",
+  "reviewStatus": "pending",
+  "appliesToContentVersions": [
+    "batch-a-r3.2026-10-17.v1"
+  ],
+  "sourceContentPath": "content/versions/batch-a-r2.2026-10-17.v1.json",
+  "sourceContentVersion": "batch-a-r2.2026-10-17.v1",
+  "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+  "notes": {
+    "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+    "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+  },
+  "dialogues": [
+    {
+      "id": "NX-CONFIRM-1-HERE",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 1,
+        "takeaway": false
+      },
+      "hanzi": "一份小笼馒头，堂吃，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "一份小笼包，堂吃，对吗？",
+        "en": "One serving of xiaolongbao for here. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-1-HERE-S01",
+          "hanzi": "一份",
+          "meaning": {
+            "zh": "一份",
+            "en": "one serving"
+          },
+          "pronunciation": "iq7 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-HERE-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-HERE-S03",
+          "hanzi": "堂吃，",
+          "meaning": {
+            "zh": "堂吃",
+            "en": "for here"
+          },
+          "pronunciation": "daon6 chiq7",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-HERE-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iq7 ven6 / shiau5 lon6 moe6 deu6 / daon6 chiq7 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q1",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-MODE-HERE",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-1-HERE.normal",
+        "slowPlaybackRate": 0.75
+      }
+    },
+    {
+      "id": "NX-CONFIRM-1-GO",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 1,
+        "takeaway": true
+      },
+      "hanzi": "一份小笼馒头，打包带走，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "一份小笼包，打包带走，对吗？",
+        "en": "One serving of xiaolongbao to go. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-1-GO-S01",
+          "hanzi": "一份",
+          "meaning": {
+            "zh": "一份",
+            "en": "one serving"
+          },
+          "pronunciation": "iq7 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-GO-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-GO-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack it up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-GO-S04",
+          "hanzi": "带走，",
+          "meaning": {
+            "zh": "带走",
+            "en": "to take away"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-1-GO-S05",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "iq7 ven6 / shiau5 lon6 moe6 deu6 / tan5 pau1 / ta5 tseu5 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q1",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "E09",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-1-GO.normal",
+        "slowPlaybackRate": 0.75
+      }
+    },
+    {
+      "id": "NX-CONFIRM-2-HERE",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 2,
+        "takeaway": false
+      },
+      "hanzi": "两份小笼馒头，堂吃，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两份小笼包，堂吃，对吗？",
+        "en": "Two servings of xiaolongbao for here. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-2-HERE-S01",
+          "hanzi": "两份",
+          "meaning": {
+            "zh": "两份",
+            "en": "two servings"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-HERE-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-HERE-S03",
+          "hanzi": "堂吃，",
+          "meaning": {
+            "zh": "堂吃",
+            "en": "for here"
+          },
+          "pronunciation": "daon6 chiq7",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-HERE-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian6 ven6 / shiau5 lon6 moe6 deu6 / daon6 chiq7 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q2",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-MODE-HERE",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-2-HERE.normal",
+        "slowPlaybackRate": 0.75
+      }
+    },
+    {
+      "id": "NX-CONFIRM-2-GO",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 2,
+        "takeaway": true
+      },
+      "hanzi": "两份小笼馒头，打包带走，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "两份小笼包，打包带走，对吗？",
+        "en": "Two servings of xiaolongbao to go. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-2-GO-S01",
+          "hanzi": "两份",
+          "meaning": {
+            "zh": "两份",
+            "en": "two servings"
+          },
+          "pronunciation": "lian6 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-GO-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-GO-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack it up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-GO-S04",
+          "hanzi": "带走，",
+          "meaning": {
+            "zh": "带走",
+            "en": "to take away"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-2-GO-S05",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "lian6 ven6 / shiau5 lon6 moe6 deu6 / tan5 pau1 / ta5 tseu5 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q2",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "E09",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-2-GO.normal",
+        "slowPlaybackRate": 0.75
+      }
+    },
+    {
+      "id": "NX-CONFIRM-3-HERE",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 3,
+        "takeaway": false
+      },
+      "hanzi": "三份小笼馒头，堂吃，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "三份小笼包，堂吃，对吗？",
+        "en": "Three servings of xiaolongbao for here. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-3-HERE-S01",
+          "hanzi": "三份",
+          "meaning": {
+            "zh": "三份",
+            "en": "three servings"
+          },
+          "pronunciation": "se1 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-HERE-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-HERE-S03",
+          "hanzi": "堂吃，",
+          "meaning": {
+            "zh": "堂吃",
+            "en": "for here"
+          },
+          "pronunciation": "daon6 chiq7",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-HERE-S04",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "se1 ven6 / shiau5 lon6 moe6 deu6 / daon6 chiq7 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q3",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-MODE-HERE",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-3-HERE.normal",
+        "slowPlaybackRate": 0.75
+      }
+    },
+    {
+      "id": "NX-CONFIRM-3-GO",
+      "version": "nanxiang-confirmations-r4.2026-10-17.v1",
+      "stationIds": [
+        "nanxiang"
+      ],
+      "kind": "dialogue",
+      "role": "server",
+      "trigger": "valid_summary",
+      "order": {
+        "item": "xiaolongbao",
+        "normalized_servings": 3,
+        "takeaway": true
+      },
+      "hanzi": "三份小笼馒头，打包带走，对伐？",
+      "textKind": "shanghainese-candidate",
+      "meaning": {
+        "zh": "三份小笼包，打包带走，对吗？",
+        "en": "Three servings of xiaolongbao to go. Is that right?"
+      },
+      "segments": [
+        {
+          "id": "NX-CONFIRM-3-GO-S01",
+          "hanzi": "三份",
+          "meaning": {
+            "zh": "三份",
+            "en": "three servings"
+          },
+          "pronunciation": "se1 ven6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-GO-S02",
+          "hanzi": "小笼馒头，",
+          "meaning": {
+            "zh": "小笼包",
+            "en": "xiaolongbao"
+          },
+          "pronunciation": "shiau5 lon6 moe6 deu6",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-GO-S03",
+          "hanzi": "打包",
+          "meaning": {
+            "zh": "打包",
+            "en": "pack it up"
+          },
+          "pronunciation": "tan5 pau1",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-GO-S04",
+          "hanzi": "带走，",
+          "meaning": {
+            "zh": "带走",
+            "en": "to take away"
+          },
+          "pronunciation": "ta5 tseu5",
+          "approximateZh": null
+        },
+        {
+          "id": "NX-CONFIRM-3-GO-S05",
+          "hanzi": "对伐？",
+          "meaning": {
+            "zh": "对吗？",
+            "en": "is that right?"
+          },
+          "pronunciation": "te5 va6",
+          "approximateZh": null
+        }
+      ],
+      "pronunciation": "se1 ven6 / shiau5 lon6 moe6 deu6 / tan5 pau1 / ta5 tseu5 / te5 va6",
+      "approximateZh": null,
+      "acceptableVariants": [],
+      "sourceEntries": [
+        {
+          "id": "NX-Q3",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-ITEM-XLB",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "E09",
+          "version": "batch-a-r1.2026-10-17.v1"
+        },
+        {
+          "id": "NX-N09",
+          "version": "batch-a-r2.2026-10-17.v1"
+        }
+      ],
+      "pronunciationSchemeId": "wugniu-shanghai-citation-draft-v1",
+      "review": {
+        "status": "draft",
+        "language": "pending",
+        "pronunciation": "pending",
+        "approximation": "pending",
+        "audio": "pending",
+        "recordIds": []
+      },
+      "reviewFocus": {
+        "zh": "六种完整订单核对候选。只组合既有待审词句与字音，不代表整句连读或声音已审校。",
+        "en": "Six complete order-confirmation drafts assembled from existing draft wording and citation readings. Connected speech and audio remain unreviewed."
+      },
+      "audio": {
+        "normal": "NX-CONFIRM-3-GO.normal",
+        "slowPlaybackRate": 0.75
+      }
+    }
+  ]
+}

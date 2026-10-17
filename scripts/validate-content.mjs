@@ -317,6 +317,86 @@ export function validateContent(pack, ledger, { mode = 'development', root = ROO
     summary: { stations: array(pack.stations).length, expressions: array(pack.expressions).length, dialogues: array(pack.dialogues).length, supportTerms: array(pack.supportTerms).length, audioClips: clips.length, approvedAudioClips: clips.filter((clip) => clip.status === 'approved').length } };
 }
 
+/** The R4 supplement is explicitly a review-only artifact, never a production approval shortcut. */
+export function validateConfirmationSupplement(pack, manifest, { mode = 'development', root = ROOT } = {}) {
+  const errors = [];
+  const check = (condition, message) => { if (!condition) errors.push(`R4: ${message}`); };
+  const version = 'nanxiang-confirmations-r4.2026-10-17.v1';
+  const sourcePath = 'content/versions/batch-a-r2.2026-10-17.v1.json';
+  const sourceSha = 'ac3f1985e6c8aa784cd08d85b96b9c27a604eb7a55661830d64d55650a9c7240';
+  if (!pack || !manifest || !['development', 'production'].includes(mode)) {
+    return { ok: false, errors: ['R4: valid supplement, audio manifest and validation mode are required.'] };
+  }
+  const texts = array(pack.dialogues), clips = array(manifest.clips);
+  const expectedIds = [1, 2, 3].flatMap(quantity => ['HERE', 'GO'].map(dining => `NX-CONFIRM-${quantity}-${dining}`));
+  check(pack.schemaVersion === 1 && pack.contentVersion === version && pack.purpose === 'review-draft', 'supplement version/purpose mismatch.');
+  check(pack.status === 'draft' && pack.reviewStatus === 'pending', 'this version must retain its honest draft status.');
+  check(JSON.stringify(pack.appliesToContentVersions) === JSON.stringify(['batch-a-r3.2026-10-17.v1']), 'supplement must bind to the current guided content.');
+  check(pack.sourceContentPath === sourcePath && pack.sourceContentVersion === 'batch-a-r2.2026-10-17.v1', 'source snapshot mismatch.');
+  check(texts.length === 6 && new Set(texts.map(entry => entry?.id)).size === 6
+    && texts.every(entry => expectedIds.includes(entry?.id)), 'exactly the six supported confirmation variants are required.');
+  check(manifest.schemaVersion === 1 && manifest.version === version && manifest.purpose === 'review-draft'
+    && manifest.reviewStatus === 'pending', 'audio manifest must remain bound to this draft supplement.');
+  check(clips.length === 6 && new Set(clips.map(clip => clip?.textId)).size === 6
+    && new Set(clips.map(clip => clip?.file)).size === 6
+    && clips.every(clip => expectedIds.includes(clip?.textId)), 'six distinct whole-sentence audio files are required.');
+  let sources = new Map();
+  try {
+    const bytes = readFileSync(resolve(root, sourcePath));
+    check(digest(bytes) === sourceSha, 'immutable source snapshot has changed.');
+    sources = new Map(teachingTexts(JSON.parse(bytes)).map(entry => [entry.id, entry]));
+  } catch { errors.push('R4: source snapshot is missing or unreadable.'); }
+  for (const text of texts.filter(entry => entry && expectedIds.includes(entry.id))) {
+    const quantity = Number(text.id.split('-')[2]), takeaway = text.id.endsWith('-GO');
+    const sourceIds = [`NX-Q${quantity}`, 'NX-ITEM-XLB', takeaway ? 'E09' : 'NX-MODE-HERE', 'NX-N09'];
+    const expectedSegments = [];
+    for (const sourceId of sourceIds) {
+      const original = sources.get(sourceId);
+      array(original?.segments).forEach((segment, index, segments) => {
+        const next = { ...segment, id: `${text.id}-S${String(expectedSegments.length + 1).padStart(2, '0')}` };
+        if (['NX-ITEM-XLB', 'E09', 'NX-MODE-HERE'].includes(sourceId) && index === segments.length - 1) next.hanzi += '，';
+        expectedSegments.push(next);
+      });
+    }
+    check(text.version === version && text.kind === 'dialogue' && text.textKind === 'shanghainese-candidate', `${text.id}: text identity or draft kind mismatch.`);
+    check(text.order?.item === 'xiaolongbao' && text.order?.normalized_servings === quantity && text.order?.takeaway === takeaway, `${text.id}: order mapping mismatch.`);
+    check(bilingual(text.meaning), `${text.id}: zh/en meanings required.`);
+    check(expectedSegments.length > 0 && text.hanzi === expectedSegments.map(segment => segment.hanzi).join('')
+      && canonicalJson(text.segments) === canonicalJson(expectedSegments)
+      && text.pronunciation === expectedSegments.map(segment => segment.pronunciation).join(' / '), `${text.id}: wording or aligned readings differ from the draft sources.`);
+    check(canonicalJson(text.sourceEntries) === canonicalJson(sourceIds.map(id => ({ id, version: sources.get(id)?.version }))), `${text.id}: source entry versions mismatch.`);
+    check(text.review?.status === 'draft' && STAGES.every(stage => text.review?.[stage] === 'pending')
+      && array(text.review?.recordIds).length === 0, `${text.id}: a review draft cannot claim human approval.`);
+    check(text.audio?.normal === `${text.id}.normal` && text.audio?.slowPlaybackRate === 0.75, `${text.id}: normal/slow audio binding mismatch.`);
+    const clip = clips.find(candidate => candidate?.textId === text.id);
+    check(clip?.id === text.audio?.normal && clip?.textVersion === version && clip?.text === text.hanzi
+      && clip?.pronunciation === text.pronunciation && clip?.pronunciationVersion === version
+      && clip?.textSha256 === digest(text.hanzi || ''), `${text.id}: audio sentence/version/reading mismatch.`);
+    check(clip?.purpose === 'review-draft' && clip?.status === 'generated' && clip?.reviewStatus === 'pending'
+      && clip?.listeningReview === 'pending' && clip?.speed === 'normal' && array(clip?.reviewIds).length === 0,
+    `${text.id}: audio must retain its pending listening-review status.`);
+    const pathValid = hex(clip?.generationId) && clip?.file === `/audio/review-r4/${clip.generationId}.wav`;
+    check(pathValid, `${text.id}: invalid whole-sentence audio path.`);
+    if (pathValid) {
+      try {
+        const path = resolve(root, `frontend/public${clip.file}`);
+        check(!relative(realpathSync(root), realpathSync(path)).startsWith('..'), `${text.id}: audio path escapes the repository.`);
+        const bytes = readFileSync(path);
+        check(hex(clip.sha256) && digest(bytes) === clip.sha256, `${text.id}: audio checksum mismatch.`);
+        const duration = audioDurationMs(bytes, path);
+        check(typeof clip.durationMs === 'number' && Math.abs(duration - clip.durationMs) <= 1, `${text.id}: audio duration mismatch.`);
+      } catch { errors.push(`R4: ${text.id}: whole-sentence audio is missing or unreadable.`); }
+    }
+    if (mode === 'production') {
+      for (const stage of ['language', 'pronunciation', 'audio']) {
+        errors.push(`R4: ${text.id}/${stage}: review-only supplement has no production approval.`);
+      }
+    }
+  }
+  if (mode === 'production') errors.push('R4: this review-only supplement requires a separately audited production release; changing approved flags is insufficient.');
+  return { ok: errors.length === 0, errors, summary: { confirmationDrafts: texts.length, confirmationAudioClips: clips.length, approvedConfirmationAudioClips: 0 } };
+}
+
 function main() {
   const args = process.argv.slice(2).flatMap((value) => value === '--production' ? ['--mode', 'production'] : value === '--development' ? ['--mode', 'development'] : [value]);
   const option = (name, fallback) => { const index = args.indexOf(name); return index < 0 ? fallback : args[index + 1]; };
@@ -335,6 +415,14 @@ function main() {
     return;
   }
   const result = validateContent(pack, ledger, { mode: option('--mode', 'development') });
+  // These assets are shipped independently of batch-a.json, so a future approval
+  // of the base pack must never silently approve the six new confirmation drafts.
+  const confirmations = JSON.parse(readFileSync(resolve(ROOT, 'content/nanxiang-confirmations-r4.json'), 'utf8'));
+  const confirmationAudio = JSON.parse(readFileSync(resolve(ROOT, 'content/audio-review-r4.json'), 'utf8'));
+  const supplement = validateConfirmationSupplement(confirmations, confirmationAudio, { mode: result.mode });
+  result.errors.push(...supplement.errors);
+  result.ok = result.ok && supplement.ok;
+  Object.assign(result.summary, supplement.summary);
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exitCode = 1;
 }

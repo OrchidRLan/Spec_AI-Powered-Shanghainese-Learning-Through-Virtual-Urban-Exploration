@@ -38,7 +38,7 @@ const copy = {
     recording: '正在录音', stopping: '正在准备识别…', stop: '停止录音', cancel: '取消',
     ready: '可以回听本次录音。', retry: '重新录制', discard: '删除录音',
     submitting: '正在识别，可以取消…', cancelRequest: '取消识别',
-    playback: '回听我的录音', limit: '最长 20 秒，停止后自动识别，查看结果后再继续。',
+    playback: '回听我的录音',
     unavailable: '语音识别待连接，仍可本地回听或选择回应。',
     unsupported: '此浏览器无法录音。请使用支持录音的浏览器，或选择回应。',
     permission: '麦克风权限未开启。可在浏览器中允许麦克风，也可以选择回应。',
@@ -57,7 +57,7 @@ const copy = {
     recording: 'Recording', stopping: 'Preparing transcription…', stop: 'Stop recording', cancel: 'Cancel',
     ready: 'You can listen back to your recording.', retry: 'Record again', discard: 'Delete recording',
     submitting: 'Transcribing… You can cancel.', cancelRequest: 'Cancel transcription',
-    playback: 'Play my recording', limit: 'Up to 20 seconds. Stopping automatically transcribes. Review your result before continuing.',
+    playback: 'Play my recording',
     unavailable: 'Speech recognition is not connected yet. You can still record, listen back, or choose a response.',
     unsupported: 'This browser cannot record audio. Use a supported browser or choose a response.',
     permission: 'Microphone permission is off. Allow it in your browser or choose a response.',
@@ -297,7 +297,7 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
         if (blob.size && !session.failed) {
           replaceClip(blob);
           changeStatus('ready');
-          // Only a user stop (or the announced time limit) submits. Navigation,
+          // Only a user stop (or the recording time limit) submits. Navigation,
           // language changes and backgrounding invalidate the capture generation.
           if (session.autoSubmit && isCurrentOperation(generation, controls)) void submit();
         } else {
@@ -461,6 +461,5 @@ export default function Recorder({ locale, enabled, disabled = false, onTranscri
     </div>
     {error && <p className="recorder-error" role="alert">{error}</p>}
     {!enabled && <p className="recorder-hint">{t.unavailable}</p>}
-    <p className="recorder-hint">{t.limit}</p>
   </section>;
 }

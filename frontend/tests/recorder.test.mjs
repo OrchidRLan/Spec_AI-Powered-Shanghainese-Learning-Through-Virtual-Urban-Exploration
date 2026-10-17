@@ -157,6 +157,7 @@ function harness(options = {}) {
 
 async function recordAndStop(h) {
   h.click('Tap to speak'); await h.settle();
+  assert.match(h.text, /00 \/ 20s/, 'recording still shows its time limit');
   h.click('Stop recording'); await h.settle();
 }
 
@@ -168,7 +169,7 @@ test('a user stop automatically transcribes once and sends the original transcri
   assert.deepEqual(h.transcripts, [{ text: '  我要两份。 ', id: 'asr-test-id' }]);
   assert.deepEqual(h.failures, []);
   assert.ok(h.stoppedTracks > 0);
-  assert.match(h.text, /Review your result before continuing/);
+  assert.doesNotMatch(h.text, /Up to 20 seconds|Review your result before continuing/);
   assert.doesNotMatch(h.text, /Send for transcription|not stored long term|use this reply|sends your answer/);
 });
 
@@ -233,7 +234,7 @@ test('unavailable service reports a localized reason without a stale request ID 
   assert.deepEqual(h.failureDetails, [{
     message: '语音识别待连接，仍可本地回听或选择回应。', requestId: undefined,
   }]);
-  assert.match(h.text, /停止后自动识别，查看结果后再继续/);
+  assert.doesNotMatch(h.text, /最长 20 秒|停止后自动识别，查看结果后再继续/);
   assert.doesNotMatch(h.text, /自动识别并回答/);
   const laterCalls = [];
   h.update({ onFailure: (...args) => laterCalls.push(args) });

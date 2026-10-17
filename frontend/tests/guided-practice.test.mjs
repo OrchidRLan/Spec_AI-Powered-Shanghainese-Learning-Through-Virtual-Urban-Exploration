@@ -196,6 +196,7 @@ test('both correct and incorrect results show the original transcript without ad
     assert.equal(h.operations('evaluate')[0].body.text, transcript);
     assert.equal(h.operations('evaluate')[0].body.asr_request_id, `asr-original-${status}`);
     assert.equal(h.result.props['data-result-status'], status);
+    assert.doesNotMatch(h.text, /This checks the expression|Choosing alone does not change|We understood the expression/);
     assert.equal(h.textOf(h.transcript), transcript, 'displayed transcript is never normalized or substituted');
     assert.equal(h.attempt.practice.step, 'quantity');
     assert.equal(h.attempt.order.quantity, null);
@@ -340,6 +341,7 @@ test('saved target, transcript and result are visible on refresh without another
     const transcript = ['correct', 'incorrect'].includes(status) ? '  原始文字。 ' : null;
     const h = harness({ attempt: resultAttempt(status, transcript) }); t.after(() => h.dispose());
     assert.equal(h.result.props['data-result-status'], status);
+    assert.doesNotMatch(h.text, /This checks the expression|Choosing alone does not change|We understood the expression/);
     if (transcript !== null) assert.equal(h.textOf(h.transcript), transcript);
     assert.ok(h.find(node => node.props?.entry?.id === 'NX-Q2'), 'selected target is restored');
     assert.equal(h.requests.length, 0);
@@ -356,6 +358,7 @@ test('recording failures persist an honest unrecognized or technical result with
     const body = h.operations('evaluate')[0].body;
     assert.equal(body.failure_kind, failure); assert.equal(body.text, undefined);
     assert.equal(h.result.props['data-result-status'], status);
+    assert.doesNotMatch(h.text, /This checks the expression|Choosing alone does not change|We understood the expression/);
     assert.ok(h.action('assisted')); assert.equal(h.advances.length, 0);
   }
 });
@@ -436,6 +439,7 @@ test('switching language keeps the same original transcript and updates result l
   assert.match(h.text, /Incorrect · Does not match your target/);
   h.update({ locale: 'zh' }); await h.settle();
   assert.match(h.text, /不正确 · 与本题目标不符/);
+  assert.doesNotMatch(h.text, /不是逐字发音评分|选择不会立即写入订单/);
   assert.doesNotMatch(h.text, /Incorrect · Does not match your target/);
   assert.equal(h.textOf(h.transcript), 'seven.');
   assert.equal(h.requests.length, 0);

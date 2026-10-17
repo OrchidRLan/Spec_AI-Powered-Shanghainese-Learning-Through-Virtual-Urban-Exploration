@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { validateContent, teachingTexts, reviewSubjectSha256, packageSha256 } from '../scripts/validate-content.mjs';
+import { spawnSync } from 'node:child_process';
+import { validateContent, validateConfirmationSupplement, teachingTexts, reviewSubjectSha256, packageSha256 } from '../scripts/validate-content.mjs';
 import { checkReviewReuse } from '../scripts/check-audio-r3.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -277,4 +278,71 @@ test('a truncated WAV is rejected even when checksum matches', () => {
   writeFileSync(join(root, 'broken.wav'), broken);
   const candidate = clone(); candidate.audioClips[0].file = 'broken.wav'; candidate.audioClips[0].sha256 = createHash('sha256').update(broken).digest('hex');
   assert(validate(candidate).errors.some((error) => error.includes('truncated WAV chunk')));
+});
+
+const confirmationsR4 = JSON.parse(readFileSync(join(repo, 'content/nanxiang-confirmations-r4.json')));
+const audioR4 = JSON.parse(readFileSync(join(repo, 'content/audio-review-r4.json')));
+const validateR4 = (content = confirmationsR4, audio = audioR4, mode = 'development') =>
+  validateConfirmationSupplement(content, audio, { mode, root: repo });
+
+test('R4 development gate verifies all six draft confirmations and their whole-sentence assets', () => {
+  const result = validateR4();
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.equal(result.summary.confirmationDrafts, 6);
+  assert.equal(result.summary.approvedConfirmationAudioClips, 0);
+});
+
+test('R4 rejects missing variants, changed order mappings and invented source readings', () => {
+  for (const change of [
+    content => content.dialogues.pop(),
+    content => { content.dialogues[0].order.normalized_servings = 3; },
+    content => { content.dialogues[0].segments[0].pronunciation = 'invented'; },
+    content => { content.dialogues[0].hanzi = '对伐？'; },
+  ]) {
+    const changed = structuredClone(confirmationsR4); change(changed);
+    assert.equal(validateR4(changed).ok, false);
+  }
+});
+
+test('R4 cannot substitute another quantity, a bare confirmation clip or altered WAV metadata', () => {
+  for (const change of [
+    audio => { audio.clips[0] = { ...audio.clips[1] }; },
+    audio => { audio.clips[0].text = '对伐？'; },
+    audio => { audio.clips[0].durationMs = 1; },
+    audio => { audio.clips[0].sha256 = 'a'.repeat(64); },
+    audio => { audio.clips[0].file = '/audio/review-r4/../../secret.wav'; },
+  ]) {
+    const changed = structuredClone(audioR4); change(changed);
+    assert.equal(validateR4(confirmationsR4, changed).ok, false);
+  }
+});
+
+test('R4 still blocks production when the base package has independent synthetic approvals', () => {
+  assert.equal(validate().ok, true);
+  const result = validateR4(confirmationsR4, audioR4, 'production');
+  assert.equal(result.ok, false);
+  for (const entry of confirmationsR4.dialogues) for (const stage of ['language', 'pronunciation', 'audio']) {
+    assert(result.errors.some(error => error.includes(`${entry.id}/${stage}`)));
+  }
+});
+
+test('R4 draft release cannot be approved by merely flipping metadata flags', () => {
+  const changed = structuredClone(confirmationsR4), audio = structuredClone(audioR4);
+  changed.status = 'approved'; changed.reviewStatus = 'approved';
+  for (const entry of changed.dialogues) {
+    entry.review = { status: 'approved', language: 'approved', pronunciation: 'approved', approximation: 'approved', audio: 'approved', recordIds: [] };
+  }
+  for (const clip of audio.clips) Object.assign(clip, { reviewStatus: 'approved', listeningReview: 'approved' });
+  assert.equal(validateR4(changed, audio).ok, false);
+  assert.equal(validateR4(changed, audio, 'production').ok, false);
+});
+
+test('production CLI includes the independent R4 gate alongside base content validation', () => {
+  const processResult = spawnSync(process.execPath, ['scripts/validate-content.mjs', '--production'], { cwd: repo, encoding: 'utf8' });
+  assert.equal(processResult.status, 1);
+  const result = JSON.parse(processResult.stdout);
+  assert.equal(result.summary.confirmationDrafts, 6);
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.startsWith('R4: NX-CONFIRM-1-HERE/language')));
+  assert(result.errors.some(error => error.startsWith('E08/language')));
 });
