@@ -22,7 +22,8 @@
     "test:content": "node --test content/*.test.mjs",
     "check": "npm run typecheck && npm run test:content && npm run test:ui && npm run test:api && npm run audio:check",
     "test:ui": "node --experimental-strip-types --test frontend/tests/*.test.mjs",
-    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && node scripts/check-audio-r3.mjs && backend/.venv/bin/python scripts/speech-review-r4.py check && backend/.venv/bin/python scripts/speech-review-bc.py check"
+    "audio:check": "backend/.venv/bin/python scripts/speech-review.py check && node scripts/check-audio-r3.mjs && backend/.venv/bin/python scripts/speech-review-r4.py check && backend/.venv/bin/python scripts/speech-review-bc.py check",
+    "test:automation": "node --test scripts/resolve-release.test.mjs scripts/sync-and-dispatch.test.mjs scripts/release-production.test.mjs"
   },
   "engines": {
     "node": ">=22.12"

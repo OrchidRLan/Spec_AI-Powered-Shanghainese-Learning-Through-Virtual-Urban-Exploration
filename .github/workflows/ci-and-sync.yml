@@ -1,0 +1,42 @@
+name: Check and sync to deployment fork
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-and-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.repository == 'OrchidRLan/Spec_AI-Powered-Shanghainese-Learning-Through-Virtual-Urban-Exploration'
+    uses: ./.github/workflows/checks.yml
+    with:
+      repository: ${{ github.repository }}
+      sha: ${{ github.sha }}
+  sync:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Synchronize the exact checked commit and request deployment
+        env:
+          SYNC_SHA: ${{ github.sha }}
+          FORK_SYNC_TOKEN: ${{ secrets.FORK_SYNC_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/sync-and-dispatch.mjs

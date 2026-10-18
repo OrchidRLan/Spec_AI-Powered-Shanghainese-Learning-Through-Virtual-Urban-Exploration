@@ -2,7 +2,9 @@
 
 This is the Batch D version awaiting full acceptance. Teaching language, romanization, and audio remain review drafts; deployment is not language approval. Current delivery and online verification are recorded in [development status](../Development-status.md).
 
-Production: [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app), with the backend at `https://a-little-shanghai-api.onrender.com`. Both application deployments use commit `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`; later documentation-only commits do not require an application rebuild. Minimum checks and their limits are in [Batch D checks](Batch-D-checks.md).
+Production: [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app), with the backend at `https://a-little-shanghai-api.onrender.com`. The last verified Batch D application deployments use commit `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`. Minimum checks and their limits are in [Batch D checks](Batch-D-checks.md).
+
+On 2026-10-18, the user requested automatic checks, fork synchronization, and sequential backend/frontend deployment for collaboration `main` updates, with no per-release approval. The workflows and local checks are prepared; credential setup and the first live workflow run are still in progress. This is not yet a verified active release path. Configuration and failure handling are documented in [Automatic deployment](Automatic-deployment.md).
 
 ## Architecture and source
 
@@ -23,6 +25,7 @@ npm run test:ui
 npm run test:api
 npm run test:deployment-proxy
 npm run test:database-maintenance
+npm run test:automation
 ```
 
 `build:deployment` validates the current content packages, review evidence, all audio bindings, WAV structure, duration and hashes; runs type/content checks; builds Vite; then verifies output audio. `dist/deployment.json` records the code commit, review status, content versions, and audio hashes. It contains no environment secrets. Cloud builds use the provider's source commit and record `source.provider` as `vercel` or `render`, with `source.dirty: null`: cloud build files cannot establish source cleanliness, so null is not a deployment error or a claim of a clean checkout. Local builds record actual Git status.
@@ -63,7 +66,7 @@ Configure production-only Vercel secrets; unapproved preview domains must not wr
 5. Record the actual Render service URL; set it as Vercel `BACKEND_URL`, ensure the proxy secrets match, and redeploy the frontend. Ensure Render `ALLOWED_ORIGINS` matches the stable frontend URL. An incomplete frontend/backend pair is not a finished deployment.
 6. Execute the minimum checks below. Record deployed frontend/backend commits separately and confirm they use compatible content. Hand over a URL only with an accurate description of what has passed.
 
-Render and Vercel automatic Git deployments are initially disabled. Repository synchronization and deploying a release are separate operations. Use an explicit deployment of the checked commit to coordinate the two platforms. Vercel's [Git configuration](https://vercel.com/docs/project-configuration/git-configuration) does not prevent an explicit manual deployment.
+The first Batch D deployment used explicit checked commits. Render and Vercel's independent Git auto-deploy switches remain disabled: the new GitHub workflow will coordinate the exact commit and deployment order instead. Vercel's [Git configuration](https://vercel.com/docs/project-configuration/git-configuration) permits explicit deployments through the API as well as the dashboard. See [Automatic deployment](Automatic-deployment.md) for credential setup and the first-run verification required before relying on this flow.
 
 ## Minimum online checks
 
@@ -84,6 +87,10 @@ Vercel rewrite routing, real browser registration/login and refresh persistence 
 
 Before a backend update, take a consistent backup and record its hash and application version. See [database maintenance](Database-maintenance.md) for verified backup, restore and guest-cleanup commands. Startup retains three automatic pre-start backups on the same disk. The production API also runs same-instance maintenance every 15 minutes: expired-guest cleanup and a verified snapshot on the first cycle of each UTC day, retaining seven daily copies. Confirm these events on the deployed instance. Private off-disk transfer remains separate; same-disk snapshots do not protect against loss of that disk.
 
-Publish checked commits with `npm run git:publish`, verify both main branches, then manually deploy the intended fork commit on Render and Vercel. Check health, cookies, saved progress and affected teaching content. With an attached disk, Render updates briefly interrupt service; no horizontal scaling or zero-downtime guarantee applies.
+After the automatic flow has been configured and verified, a push or merge to the collaboration repository's `main` runs checks, synchronizes the exact checked commit to the fork, and requests its release. The fork checks that the commit is still current in both repositories, runs validation, deploys Render, verifies backend health, then deploys Vercel and verifies the production version and API. No per-release approval is required. PRs run checks only, and a direct fork push does not trigger publication. The local `npm run git:publish` command remains the agent publishing entry point; its immediate fork synchronization is compatible with the workflow.
+
+Until the first live workflow succeeds, the automatic path remains unverified; the existing explicit platform deployment method remains available. Routine releases should use one coordinated path. Do not start separate manual deployments while an automatic release is running. The workflow stops on failed checks or platform errors, skips stale queued commits, and does not cancel an in-progress release. A deliberate retry of an already successful SHA can deploy both services again. Details and recovery steps are in [Automatic deployment](Automatic-deployment.md).
+
+The automated online checks cover the deployment version, backend/proxy health and signed-out authentication; they do not re-run the complete Batch D account/progress baseline or call speech services. Check affected cookies, saved progress and teaching behavior when a change requires it. With an attached disk, Render updates briefly interrupt service; no horizontal scaling or zero-downtime guarantee applies.
 
 For a failed code update, redeploy the recorded compatible code version on both platforms. Roll back the database only if necessary and after stopping all writers, using a verified snapshot restored to a new path. Keep the original file until recovery is accepted. Do not assume an older application can read a newer schema, and do not use a frontend rollback to overwrite learning progress.
