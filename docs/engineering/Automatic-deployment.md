@@ -1,6 +1,6 @@
 # Automatic deployment
 
-Requested on 2026-10-18: updates to the collaboration repository's `main` should automatically run checks, synchronize the deployment fork, and release the same commit to Render and Vercel. There is no manual approval step for each release. Credential setup and the first live workflow run must be verified before this is described as enabled.
+Enabled and first verified on 2026-10-18: updates to the collaboration repository's `main` automatically run checks, synchronize the deployment fork, and release the same commit to Render and Vercel. There is no manual approval step for each release. The first live execution evidence is recorded below; the latest published frontend commit is available in the [production version manifest](https://spec-virtual-shanghainese-learning.vercel.app/deployment.json).
 
 ## Release path
 
@@ -27,7 +27,7 @@ The source of truth remains the collaboration repository. The local `npm run git
 
 The GitHub and Vercel tokens created on 2026-10-18 expire on **2027-01-16** (90 days). Rotate their GitHub secret values before expiry. Render API keys have no selected expiry in the creation UI and remain valid until revoked. Do not place any token in repository files, logs, client environment variables or screenshots. Production speech and proxy secrets remain in their current hosting-platform configuration and are not copied into CI.
 
-Enable Actions in the deployment fork if GitHub disables inherited workflows. The `production` environment should permit the `main` branch and have no required reviewers or wait timer, so authorized main releases can run automatically. Keep the repository's default workflow permissions read-only; these workflows do not need to broaden that default.
+Actions are enabled in the deployment fork. Its configured `production` environment permits only `main` and has no required reviewers or wait timer. Both platform secrets and the actual project/workspace ID variables are installed. Keep the repository's default workflow permissions read-only; these workflows do not need to broaden that default.
 
 All third-party Actions are pinned to full commit SHAs. The source workflow has no deployment credentials. The fork's validation jobs do not inherit the `production` environment's secrets. Collaborators who can modify trusted main workflows can affect their behavior; protect and review workflow changes as part of normal collaboration.
 
@@ -48,5 +48,14 @@ For a deliberate retry, rerun the failed source workflow or run **Deploy product
 ## Verification
 
 Local automation tests use simulated GitHub, Render and Vercel responses and no credentials. `npm run test:automation` covers exact commits, ancestry, stale jobs, mismatched identities, deployment order, failures, timeouts and redacted errors. A workflow linter checks YAML syntax and expressions. These do not establish that credentials are installed or a real deployment succeeded; actual execution evidence belongs in [Development status](../Development-status.md).
+
+The first live acceptance used commit `bb68e962d0cfc85bdf815a77980ee16f0507d0b0`:
+
+- Collaboration push run [39139814837](https://github.com/OrchidRLan/Spec_AI-Powered-Shanghainese-Learning-Through-Virtual-Urban-Exploration/actions/runs/39139814837) passed checks and synchronization, then automatically sent `repository_dispatch` to fork run [39139916112](https://github.com/hollis-yang/Spec-Virtual-Shanghainese-Learning/actions/runs/39139916112).
+- The fork's first attempt stopped at Render credential preflight with HTTP 401, before any deployment. The stored value had been copied from a shortened UI key display. After correcting that same secret, only the deploy job was rerun; attempt 2 finished with `Production release verified`.
+- Render deployment `dep-dbae85dg1s2s73bp94jg` reached Live, followed by Vercel deployment `dpl_A9QYsBbzurHQ84D4DmqbNDKXesTN` reaching Ready, both at the acceptance SHA. The script verified the production alias, manifest, proxy health and signed-out authentication.
+- A separate post-deployment persistence check passed all five checks with zero model calls and no microphone use. Its private report is `private/deployment/online-smoke-verify_persistence-20261018T152414-0069.json`; it is excluded from Git.
+
+This is a fixed acceptance record, not a claim that the same SHA remains latest. Later collaboration `main` pushes, including documentation commits, trigger the same automatic flow; use the live version manifest and Actions runs for the latest release.
 
 Deployment checks do not call ASR/TTS, use the microphone, or grant teaching approval. Batch E's voice, device and content evaluation remains separate.
