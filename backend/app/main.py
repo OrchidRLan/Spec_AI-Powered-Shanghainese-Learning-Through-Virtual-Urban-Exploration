@@ -148,10 +148,10 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     def services() -> dict:
         try:
-            from .providers import ProviderConfig
-            config = ProviderConfig.from_env("asr")
+            from .providers import asr_from_env
+            _, config = asr_from_env()
             public = config.public_dict()
-            enabled = bool(config.live_enabled and config.api_key)
+            enabled = config.ready
             return {"asr": {**public, "enabled": enabled, "formats": ["audio/wav"]},
                     "text": {"mode": text_mode, "config_id": interpreter_config_id,
                              "label": "Limited development parser; not an LLM" if text_mode == "development_parser" else "Configured Qwen interpretation provider"}}
@@ -628,11 +628,11 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
 
     @app.post("/api/asr")
     async def asr(request: Request):
-        from .providers import ASRRequest, ProviderConfig, ProviderError, QwenASR
+        from .providers import ASRRequest, ProviderError, asr_from_env
         with database.transaction() as connection:
             sid = session_id(request, connection)
             bound_session = json.loads(connection.execute("SELECT data FROM sessions WHERE id=?", (sid,)).fetchone()["data"])
-        config = ProviderConfig.from_env("asr")
+        provider, config = asr_from_env()
         if bound_session.get("asr_config_id") not in (None, config.config_id):
             problem("configuration_changed", "This session uses another ASR configuration. Start a fresh session or use text.", 409)
         audio = bytearray()
@@ -670,7 +670,7 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                 problem("rate_limited", "Please wait a moment before transcribing again.", 429, retryable=True)
             connection.execute("INSERT INTO asr_requests VALUES (?,?,?,?,?)", (sid, request_id, fingerprint, None, now()))
         try:
-            result = await QwenASR(config).transcribe(ASRRequest(audio=bytes(audio), request_id=request_id, mime_type=content_type))
+            result = await provider.transcribe(ASRRequest(audio=bytes(audio), request_id=request_id, mime_type=content_type))
             result = asdict(result) if is_dataclass(result) else result.model_dump()
             result["text"] = result["transcript"]
             result["request_id"] = request_id

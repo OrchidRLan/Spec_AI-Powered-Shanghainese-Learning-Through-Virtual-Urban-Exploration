@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5a9e98">
 <title>AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec</title>
 <style>
   :root{
@@ -257,6 +258,73 @@
   .seg.lang button[aria-selected="true"]{background:var(--accent);color:#fff}
   .node-source .glyph{border-radius:12px}
   .topbar{background:var(--surface);border-bottom-color:var(--line)}
+
+  /* ---------- 产品入口 ---------- */
+  .topbar-actions{display:flex;align-items:center;gap:10px;flex:none}
+  .app-link{
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    padding:7px 14px;border-radius:999px;border:1px solid var(--accent);
+    color:var(--accent-ink);font-size:13px;font-weight:600;background:var(--surface);
+  }
+  .app-link:hover{background:var(--accent-soft);text-decoration:none}
+
+  .back-to-card{display:none}
+  @media (max-width:1080px){
+    .back-to-card{display:inline-flex;align-items:center;gap:6px;margin:0 0 14px;padding:6px 12px;min-height:36px;
+      border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink-2);font-size:12.5px}
+  }
+  .card{scroll-margin-top:12px}
+
+  /* ---------- 手机与窄屏 ---------- */
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  button,a{-webkit-tap-highlight-color:rgba(90,158,152,.15);touch-action:manipulation}
+  .stages{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .stage{scroll-snap-align:center}
+  @media (max-width:1080px){
+    .inspector{scroll-margin-top:8px}
+  }
+  @media (max-width:720px){
+    body{font-size:15px}
+    .topbar{flex-wrap:wrap;padding:12px 16px;gap:10px;padding-top:max(12px, env(safe-area-inset-top))}
+    .topbar-left{flex:1 1 100%}
+    .topbar h1{font-size:15px}
+    .topbar-members{white-space:normal}
+    .topbar-actions{flex:1 1 100%;justify-content:space-between}
+    .app-link{min-height:40px;padding:8px 16px}
+    .seg.lang button{min-height:36px}
+
+    .stages{margin:12px 16px 0;border-radius:12px;scrollbar-width:none}
+    .stages::-webkit-scrollbar,.flows::-webkit-scrollbar{display:none}
+    .stage{min-width:150px;flex:none;padding:10px 12px;border-radius:12px}
+    .stage-desc{display:none}
+    .stage-sep{display:none}
+
+    .flows{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    .flows-label,.flow-arrow{display:none}
+    .flow-tab{flex:none;white-space:nowrap;min-height:38px;border:1px solid var(--line)}
+
+    .canvas{padding:16px}
+    .inspector{padding:18px 16px calc(32px + env(safe-area-inset-bottom))}
+    .node-source{flex-wrap:wrap;padding:14px}
+    .node-source > span:not(.glyph):not(.side){flex:1;min-width:0}
+    .node-source .side{margin-left:0;flex-basis:100%}
+    .node-step,.node-result,.node-decision{max-width:100%;flex-wrap:wrap;text-align:center;justify-content:center}
+    .node-decision .hint{border-left:none;padding-left:0}
+
+    /* 分支纵向堆叠，卡片竖排，用 ↓ 代替 → */
+    .fork{display:none}
+    .paths{flex-direction:column;gap:14px;margin-top:6px}
+    .path{flex:none !important;padding:14px}
+    .card-row{flex-direction:column;align-items:stretch}
+    .card-row .seq{align-self:center;transform:rotate(90deg);line-height:1}
+    .footnote{margin:10px 0 0}
+    .card{padding:14px}
+    .card h4{font-size:15.5px}
+
+    select.trace{font-size:16px} /* < 16px makes iOS Safari zoom the page */
+    .seg button{min-height:36px}
+    .insp h2{font-size:18px}
+  }
 </style>
 </head>
 <body>
@@ -266,9 +334,12 @@
     <h1 id="pageTitle">AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec</h1>
     <p class="topbar-members">Haoyang Song (hs2289) &nbsp;·&nbsp; Ruolan Chen (rc975)</p>
   </div>
+  <div class="topbar-actions">
+  <a class="app-link" id="appLink" href="https://spec-virtual-shanghainese-learning.vercel.app" target="_blank" rel="noopener"><span id="appLinkText">Open the app</span> <span aria-hidden="true">↗</span></a>
   <div class="seg lang" id="langSwitch" role="tablist" aria-label="Language / 语言">
     <button role="tab" data-lang="zh" aria-selected="false">中文</button>
     <button role="tab" data-lang="en" aria-selected="true">English</button>
+  </div>
   </div>
 </header>
 
@@ -1922,6 +1993,7 @@ const UI = {
   zh:{
     docTitle:"上海话虚拟豫园学习应用 · 系统拆解",
     pageTitle:"上海话虚拟豫园学习应用 · 系统拆解",
+    appLink:"打开产品", appLinkTitle:"打开线上产品 A little Shanghai（新标签页）", backToCard:"返回流程图",
     stagesLabel:"分析阶段", flowsLabel:"流程导航",
     outLabel:"输出", whyLabel:"为什么：", whyHead:"为什么需要这一步",
     moreSummary:"背景、例子与省略风险",
@@ -1935,6 +2007,7 @@ const UI = {
   en:{
     docTitle:"AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec",
     pageTitle:"AI-Powered Shanghainese Learning Through Virtual Urban Exploration · Spec",
+    appLink:"Open the app", appLinkTitle:"Open the live product, A little Shanghai (new tab)", backToCard:"Back to the diagram",
     stagesLabel:"Stages", flowsLabel:"Flows",
     outLabel:"Output", whyLabel:"Why: ", whyHead:"Why this step exists",
     moreSummary:"Background, examples, and what breaks without it",
@@ -1982,6 +2055,8 @@ function setLang(next){
   document.title = T.docTitle;
   $('#pageTitle').textContent = T.pageTitle;
   $('#flowsLabel').textContent = T.flowsLabel;
+  $('#appLinkText').textContent = T.appLink;
+  $('#appLink').title = T.appLinkTitle;
   $('#stages').setAttribute('aria-label', T.stagesLabel);
   renderLang();
   renderAll();
@@ -2091,7 +2166,10 @@ function renderCanvas(){
     (flow.hint?`<p class="canvas-hint">▸ ${esc(flow.hint)}</p>`:'') +
     flow.blocks.map(blockHTML).join('');
   $('#canvas').querySelectorAll('[data-card]').forEach(btn=>{
-    btn.onclick = () => { state.card = btn.dataset.card; state.trace = 0; state.tab = 'preview'; renderAll(); };
+    btn.onclick = () => {
+      state.card = btn.dataset.card; state.trace = 0; state.tab = 'preview'; renderAll();
+      if(narrow.matches) $('#inspector').scrollIntoView({behavior: motion.matches ? 'auto' : 'smooth', block:'start'});
+    };
   });
 }
 
@@ -2117,6 +2195,7 @@ function renderInspector(){
   const emptyText = c.emptyText || T.emptyTrace;
 
   box.innerHTML = `
+    <button class="back-to-card" id="backToCard" type="button">↑ ${esc(T.backToCard)}</button>
     <div class="insp-crumb"><span class="idx">${esc(c.idx)}</span>${esc(c.kind)}</div>
     <h2>${esc(c.title)}</h2>
 
@@ -2148,6 +2227,10 @@ function renderInspector(){
       ` : `<p class="empty">${esc(emptyText)}</p>`}
   `;
 
+  $('#backToCard').onclick = () => {
+    const card = $(`#canvas [data-card="${CSS.escape(state.card)}"]`);
+    if(card){ card.scrollIntoView({behavior: motion.matches ? 'auto' : 'smooth', block:'start'}); card.focus({preventScroll:true}); }
+  };
   const sel = $('#traceSel');
   if(sel) sel.onchange = e => { state.trace = +e.target.value; renderInspector(); };
   box.querySelectorAll('[data-tab]').forEach(b=>{
@@ -2163,7 +2246,17 @@ function selectFirstCard(){
   state.trace = 0; state.tab = 'preview';
 }
 
-function renderAll(){ renderStages(); renderFlows(); renderCanvas(); renderInspector(); }
+const narrow = matchMedia('(max-width:1080px)');
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+function revealActive(){
+  // Horizontal strips on small screens: keep the current stage / flow in view.
+  ['#stages [aria-current="step"]', '#flows [aria-selected="true"]'].forEach(sel=>{
+    const el = $(sel), strip = el && el.parentElement;
+    if(el && strip.scrollWidth > strip.clientWidth)
+      strip.scrollLeft = el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2;
+  });
+}
+function renderAll(){ renderStages(); renderFlows(); renderCanvas(); renderInspector(); revealActive(); }
 
 $('#langSwitch').querySelectorAll('[data-lang]').forEach(b=>{
   b.onclick = () => setLang(b.dataset.lang);

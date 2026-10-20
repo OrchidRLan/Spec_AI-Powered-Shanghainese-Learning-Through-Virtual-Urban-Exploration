@@ -1,50 +1,50 @@
-# 语音服务边界与内容制作
+# Speech service boundaries and content production
 
-本文保留语音适配、制作和真实调用记录；分批计数描述对应历史执行，不代表完整质量验收。现行产品行为见 [产品规格](../Product-spec.md)，待完成验证见 [D/E 计划](../Batch-DE-plan.md)。
+This document keeps the speech adaptation, production and live-call records; batch-by-batch counts describe historical runs and do not represent full quality acceptance. For current product behavior see the [product spec](../Product-spec.md); for pending verification see the [D/E plan](../Batch-DE-plan.md).
 
-最新接通检查（2026-10-17）：批次 D 已通过实际 Vercel／Render 部署执行获准的额外 **1 次 E08 合成音频 ASR**，无重试、无麦克风，详见下节；不构成真人语音或语言质量验收。此前 [批次 B+C](../archive/batches/Batch-BC-plan.md) 沿用南翔的语音适配与明确继续交互，新增三站固定目标核对及 36 条待审声音。B+C 当轮仅有下述 35 次 TTS，没有新增 ASR、LLM 或真人录音，完整证据见 [B+C 验收](../archive/batches/Batch-BC-acceptance.md)。
+Latest connectivity check (2026-10-17): Batch D ran the separately approved **1 E08 synthetic-audio ASR call** through the actual Vercel/Render deployment, with no retry and no microphone; see the next section. It does not constitute acceptance of real human speech or language quality. Before that, [Batch B+C](../archive/batches/Batch-BC-plan.md) kept Nanxiang's speech adaptation and explicit-continue interaction, and added fixed-target checks for three stations plus 36 pending audio clips. That B+C round had only the 35 TTS calls described below, with no new ASR, LLM or real human recordings; full evidence is in [B+C acceptance](../archive/batches/Batch-BC-acceptance.md).
 
-当前覆盖性决定（2026-10-17）：[批次 A 修订 4](../archive/batches/Batch-A-revision-4.md) 精简中英常驻提示、将实际订单带入最后确认及配套声音、统一完成按钮并重排地点卡。流程沿用 [修订 3](../archive/batches/Batch-A-revision-3.md)：只保留商品、数量、方式、订单核对四道既定问题，取消临时追问；识别后显示原转写与正误，明确点击继续才推进，失败可重试或辅助继续。未覆盖部分沿用 [修订 2](../archive/batches/Batch-A-revision-2.md)；下方历史冲突规定由最新修订覆盖，实际完成状态见 [开发进度](../Development-status.md)。
+Current overriding decisions (2026-10-17): [Batch A revision 4](../archive/batches/Batch-A-revision-4.md) trims the persistent Chinese/English hints, carries the actual order into the final confirmation with matching audio, unifies the completion button and reorders the location cards. The flow follows [revision 3](../archive/batches/Batch-A-revision-3.md): only the four fixed questions (item, quantity, dine-in/takeaway, order check) remain, and ad-hoc follow-up questions are removed; after recognition the raw transcript and correct/incorrect result are shown, the flow advances only on an explicit continue click, and on failure the user can retry or continue with assistance. Parts not covered follow [revision 2](../archive/batches/Batch-A-revision-2.md); the conflicting historical rules below are overridden by the latest revision, and actual completion status is in [development status](../Development-status.md).
 
-核对日期：2026-10-17。实现位于 `backend/app/providers/`，正式制作入口为 `scripts/speech.py`；R1 待审稿入口为 `scripts/speech-review.py`，R2 为 `scripts/speech-review-r2.py`。当前 [R2 清单](../../content/audio-review-r2.json) 包含 **20 条常速 Jada 沪语待审记录，18 个唯一文件，按条目计共 24.56 秒**；前端播放本地静态资源，支持 1× / 0.75× 保音高播放。历史 [R1 逐句审阅表](../content-review/Pronunciation-draft-r1.md) 保留原版。**真实上海话识别质量、Jada 上海话教学发音与常/慢速听审仍为 pending**；真实请求成功、文件校验及 mocked transport 都不能代替语言审核。
+Verified on: 2026-10-17. The implementation is in `backend/app/providers/`, and the official production entry point is `scripts/speech.py`; the R1 pending-draft entry point is `scripts/speech-review.py`, and R2 is `scripts/speech-review-r2.py`. The current [R2 manifest](../../content/audio-review-r2.json) contains **20 normal-speed Jada Shanghainese pending records, 18 unique files, 24.56 seconds total counted per entry**; the frontend plays local static assets and supports 1× / 0.75× pitch-preserving playback. The original [R1 sentence-by-sentence review sheet](../content-review/Pronunciation-draft-r1.md) is kept as historical. **Real Shanghainese recognition quality, Jada's Shanghainese teaching pronunciation, and normal/slow-speed listening review remain pending**; successful live requests, file checks and mocked transport cannot substitute for language review.
 
-## 批次 D：线上 E08 合成音频接通检查
+## Batch D: online E08 synthetic-audio connectivity check
 
-2026-10-17，按用户额外授权，通过 [实际前端](https://spec-virtual-shanghainese-learning.vercel.app) 的同源代理与 [Render 后端](https://a-little-shanghai-api.onrender.com) 执行 **1 次 ASR，0 次 LLM、0 次 TTS，无重试**。两端源码均为 `e3beb7dc6c2feb8f630a1d11ee13b2d80a879e59`；Vercel 部署 `G2g4NfWeERH5BhWPaqJX4kxjh8bt` 已 Ready。输入为已有 E08「我要两份小笼馒头」的合成 PCM16 WAV，1,600 ms、24 kHz、单声道，不使用麦克风或用户真人录音。
+On 2026-10-17, under the user's additional authorization, **1 ASR call, 0 LLM, 0 TTS, no retry** was made through the same-origin proxy of the [actual frontend](https://spec-virtual-shanghainese-learning.vercel.app) and the [Render backend](https://a-little-shanghai-api.onrender.com). Both ends were built from source `e3beb7dc6c2feb8f630a1d11ee13b2d80a879e59`; Vercel deployment `G2g4NfWeERH5BhWPaqJX4kxjh8bt` was Ready. The input was the existing E08 「我要两份小笼馒头」 ("I want two servings of xiaolongbao") synthetic PCM16 WAV, 1,600 ms, 24 kHz, mono; no microphone or real user recording was used.
 
-北京 `qwen3-asr-flash` 返回原转写 **「我要两份小笼馒头。」**，`elapsed_ms:1962`，配置 ID 为 `asr-4c784f1651e2840a`。所选目标核对为正确，原转写保留，仍停留在南翔商品题，没有自动推进。首次脚本执行因本地音频路径错误在发送前退出，发出 **0 次**请求；修正路径后才发出唯一一次请求，不能记为两次或收费重试。
+Beijing `qwen3-asr-flash` returned the raw transcript **「我要两份小笼馒头。」**, `elapsed_ms:1962`, config ID `asr-4c784f1651e2840a`. The selected-target check was correct, the raw transcript was kept, and the flow stayed on the Nanxiang item question without auto-advancing. The first script run exited before sending because of a wrong local audio path, sending **0** requests; only after the path was fixed was the single request sent, so this must not be recorded as two calls or a paid retry.
 
-本次授权费用上限为 **¥1**，未核对实际账单，不编造实际扣费；单次调用授权已用完。另有 36 项线上 API 基线检查，其中四站均明确模拟客户端技术回退后辅助完成，没有模型调用或语音正确结论。浏览器检查了常／慢速按钮与店员说话状态，未做硬件声音听审。以上只确认部署接通、原转写与固定目标核对，不替代 E 的真人语音、实体设备、ASR 效果评估或教材审核；完整边界见 [D 检查记录](Batch-D-checks.md)。
+The cost cap for this authorization was **¥1**; actual billing was not checked and no actual charge is fabricated; the single-call authorization is used up. There were also 36 online API baseline checks, in which all four stations completed via assistance after an explicitly simulated client technical fallback, with no model calls and no speech-correctness conclusion. The browser check covered the normal/slow-speed buttons and the clerk-speaking state; no hardware audio listening review was done. The above only confirms deployment connectivity, the raw transcript and the fixed-target check; it does not replace E's real human speech, physical devices, ASR effectiveness evaluation or teaching-material review. Full boundaries are in the [D check record](Batch-D-checks.md).
 
-## 批次 B+C：三站待审声音与核对
+## Batch B+C: pending audio and checks for three stations
 
-[三站内容包](../../content/batch-bc.json) 版本为 `batch-bc.2026-10-17.v1`，共 36 条候选，包含店员问题、学习表达、口味介绍、完整订单确认及收尾。对应规则 `station-lessons.v1`、表达核对来源 `station-target-check.v1`；仍在原 ASR 转写上核对所选目标，保留原文，不调用自由对话 LLM，不自动推进。
+The [three-station content pack](../../content/batch-bc.json) is version `batch-bc.2026-10-17.v1`, with 36 candidates in total, covering clerk questions, learning expressions, flavor introductions, full order confirmations and closings. The corresponding rules are `station-lessons.v1` and the expression-check source is `station-target-check.v1`; the selected target is still checked against the raw ASR transcript, the original text is kept, no free-conversation LLM is called, and there is no auto-advance.
 
-本批对冻结清单执行 **35 次阿里云北京 `qwen3-tts-flash` + Jada TTS，无自动重试**。供应商 `usage.characters` 合计 **516**，按已核验的 [北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **¥0.04128**；没有查询账户账单、免费额度或优惠，不能将该估算写作实际扣费。调用上限 35 次、预算 ¥2。生成配置为 `tts-7f9e533827ac529c`；目标语种 `wuu` 与提供商参数 `Chinese` 分开记录，后者不构成沪语发音质量认证。
+This batch ran **35 Alibaba Cloud Beijing `qwen3-tts-flash` + Jada TTS calls on the frozen list, with no automatic retry**. The provider's `usage.characters` totaled **516**; at the verified [Beijing list price](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) of 0.8 yuan per 10,000 characters, the estimate is **¥0.04128**; account billing, free quota and discounts were not queried, so this estimate must not be written up as the actual charge. The call cap was 35 and the budget ¥2. The generation config is `tts-7f9e533827ac529c`; the target language `wuu` and the provider parameter `Chinese` are recorded separately, and the latter does not certify Shanghainese pronunciation quality.
 
-新增 **35 个 PCM16 WAV**，均为 24 kHz、单声道，保存在 `frontend/public/audio/review-bc/`；“对个”复用原 R1 E05 的完整录音，没有重新计费。合计 [36 条声音记录](../../content/audio-review-bc.json)、36 个唯一文件，按条目共 **55.92 秒**。清单保存原文/注音版本、冻结哈希、配置、请求标识、时长、SHA256、用量与复用出处；所有条目维持 `reviewStatus:pending`、`listeningReview:pending`、空批准记录。慢速沿用同文件 0.75× 保音高播放，未生成独立慢读或伪造听审。
+**35 new PCM16 WAVs** were added, all 24 kHz mono, saved in `frontend/public/audio/review-bc/`; "对个" ("right") reuses the full original R1 E05 recording, with no new charge. In total there are [36 audio records](../../content/audio-review-bc.json) and 36 unique files, **55.92 seconds** counted per entry. The manifest stores the text/romanization versions, frozen hash, config, request identifiers, duration, SHA256, usage and reuse provenance; all entries remain `reviewStatus:pending`, `listeningReview:pending`, with empty approval records. Slow speed reuses the same file with 0.75× pitch-preserving playback; no separate slow reading was generated and no listening review was faked.
 
-[制作与离线核验工具](../../scripts/speech-review-bc.py) 按文本、版本和配置核对缓存；在独占锁内重新核算清单与费用，不自动重试失败或不明结果。现有文件和历史复用来源均通过离线检查，检查不调用网络。正式内容校验包含 B+C 独立门槛，不能只改候选状态字段绕过审阅。
+The [production and offline verification tool](../../scripts/speech-review-bc.py) checks the cache by text, version and config; it recomputes the manifest and costs inside an exclusive lock and does not automatically retry failed or unknown results. Existing files and historical reuse sources all pass the offline check, which makes no network calls. Formal content validation includes a separate B+C gate, so review cannot be bypassed just by changing candidate status fields.
 
-糖店介绍通过会话归属校验后的 `/api/attempts/{attempt_id}/introduction/audio` 提供完整本地录音；文件与文本/注音/版本/SHA256 不匹配时拒绝播放。返回状态不暴露隐藏口味；播放成功提供音频与真正播放完成分开处理，前端播放失败不标为已听，显式文字帮助才揭示介绍并记录帮助事实。
+The candy-shop introduction is served as a full local recording through `/api/attempts/{attempt_id}/introduction/audio` after session-ownership validation; playback is refused when the file does not match the text/romanization/version/SHA256. The returned status does not expose the hidden flavor; successful playback handling (providing the audio) is kept separate from actual playback completion; a frontend playback failure is not marked as listened, and only explicit text help reveals the introduction and records the help event.
 
-工程检查覆盖原 ASR 取回、单次消费、取消/重复/迟到请求、12 秒前端恢复、同题目标变更与旧转写隔离。真实桌面 Chrome 在关闭实时语音服务的隔离环境中通过技术不可用辅助走完四站，并播放本地 1×/0.75× 声音；识别正误的合成记录仅用于自动化测试，浏览器没有注入合成 ASR。上述结果不等同于真人麦克风、真实 ASR、实体手机、Safari 或教学发音听审通过。
+Engineering checks cover raw ASR retrieval, single consumption, cancelled/duplicate/late requests, 12-second frontend recovery, same-question target changes and isolation of stale transcripts. Real desktop Chrome, in an isolated environment with the live speech service turned off, completed all four stations via technical-unavailable assistance and played local 1×/0.75× audio; synthetic records of recognition correct/incorrect are used only for automated tests, and no synthetic ASR was injected into the browser. These results are not equivalent to passing real human microphone, real ASR, physical phone, Safari or teaching-pronunciation listening review.
 
-## 修订 4：完整订单确认声音
+## Revision 4: full order confirmation audio
 
-[独立确认内容](../../content/nanxiang-confirmations-r4.json) 包含一/二/三份 × 堂吃/外带六种完整句，沿用既有候选词句与注音，均保留待审。播放从当前规范化保存订单匹配，显示、自动播放与手动播放一致；修改订单后不会复用旧句。原 R3 基础内容与规则不变，新增资源单独版本化，无需重置已有 R3 进度。
+The [separate confirmation content](../../content/nanxiang-confirmations-r4.json) contains six full sentences for one/two/three servings × dine-in/takeaway, reusing existing candidate wording and romanization, all kept pending. Playback is matched from the current normalized saved order, and display, autoplay and manual playback are consistent; after the order is changed, the old sentence is not reused. The original R3 base content and rules are unchanged, the new assets are versioned separately, and existing R3 progress does not need to be reset.
 
-真实调用北京 `qwen3-tts-flash` + Jada 六次、无重试，输入文本合计 84 字符，供应商计量 150 字符，按已有目录费率估算 ¥0.012；未查询账单。执行上限六次、估算预算 ¥1，无 ASR/LLM/用户录音调用。六个整句 WAV 总长 15.6 秒，位于 `frontend/public/audio/review-r4/`；[清单](../../content/audio-review-r4.json) 全部 pending。慢速为同文件保音高 0.75×，未制作独立慢读。
+Six live Beijing `qwen3-tts-flash` + Jada calls were made with no retry; input text totaled 84 characters, provider-metered 150 characters, estimated at ¥0.012 using the existing list rate; billing was not queried. The execution cap was six calls with an estimated budget of ¥1, and there were no ASR/LLM/user recording calls. The six full-sentence WAVs total 15.6 seconds and are located in `frontend/public/audio/review-r4/`; the [manifest](../../content/audio-review-r4.json) is entirely pending. Slow speed is the same file at pitch-preserving 0.75×; no separate slow reading was produced.
 
-`scripts/speech-review-r4.py plan/check` 只做离线检查，生成后计划为零待调用；`generate` 要求冻结输入摘要及显式调用标记，严格限制预算、次数，不自动重试。`npm run check` 已包含 R4 音频审计，开发/正式内容校验均覆盖独立补充包，避免未来基础教材批准后漏放未审确认句。完整操作和浏览器证据见 [修订 4 验收](../archive/batches/Batch-A-revision-4-acceptance.md)。
+`scripts/speech-review-r4.py plan/check` performs offline checks only; after generation the plan shows zero pending calls; `generate` requires the frozen input digest and an explicit call flag, strictly limits budget and count, and does not retry automatically. `npm run check` already includes the R4 audio audit, and both development and formal content validation cover the separate supplementary pack, so unreviewed confirmation sentences are not missed once the base teaching material is approved in the future. Full operations and browser evidence are in [revision 4 acceptance](../archive/batches/Batch-A-revision-4-acceptance.md).
 
-## 修订 2：自由点单改稿与慢速播放
+## Revision 2: free-ordering rewrite and slow playback
 
-先冻结内容 `batch-a-r2.2026-10-17.v1`，再按用户已授权的修订制作必要样音。20 条中 17 条复用 R1 原音频；NX-N05 与旧 N02 同文、NX-N06 与旧 N03 同文，清单记录来源和当前版本，不复制旧文件。新增 NX-N04「侬讲个是只，还是份？」、NX-N09「对伐？」、NX-N10「好个。」三条，避免旧台词仍要求固定两份外带。
+Content `batch-a-r2.2026-10-17.v1` was frozen first, then the necessary sample audio was produced per the user-authorized revision. Of the 20 entries, 17 reuse R1 original audio; NX-N05 has the same text as the old N02 and NX-N06 the same as the old N03, and the manifest records the source and current version without copying the old files. Three new entries were added, NX-N04 「侬讲个是只，还是份？」 ("Do you mean pieces or servings?"), NX-N09 「对伐？」 ("Right?") and NX-N10 「好个。」 ("OK."), so that old lines no longer require a fixed two servings to take away.
 
-实际 **3 次北京 `qwen3-tts-flash` + Jada TTS，无重试**；API 返回 `usage.characters` 合计 **28**。按 [官方北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **¥0.00224**，未查询账单或免费额度。没有新增 ASR/LLM 请求，没有使用麦克风。新文件在 `frontend/public/audio/review-r2/`，全部维持待审；R1 清单与源内容快照保留用于旧会话及历史核验。
+Actually **3 Beijing `qwen3-tts-flash` + Jada TTS calls, no retry**; the API returned `usage.characters` totaling **28**. At the [official Beijing list price](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) of 0.8 yuan per 10,000 characters, the estimate is **¥0.00224**; billing and free quota were not queried. No new ASR/LLM requests were made and no microphone was used. New files are in `frontend/public/audio/review-r2/` and all remain pending; the R1 manifest and source content snapshot are kept for old sessions and historical verification.
 
-制作工具固定三条新句、最多三次请求、¥1 上限，并核对冻结哈希；复用前验证 WAV/哈希/原文来源，不对不明结果自动重试。14 项工具测试使用模拟提供商。生成后的离线 `check` 通过 20 条，`plan` 为零新请求、零新增费用：
+The production tool fixes the three new sentences, at most three requests and a ¥1 cap, and checks the frozen hash; before reuse it verifies WAV/hash/source text, and does not automatically retry unknown results. 14 tool tests use a mocked provider. After generation the offline `check` passed for 20 entries, and `plan` shows zero new requests and zero new cost:
 
 ```sh
 backend/.venv/bin/python scripts/speech-review-r2.py check
@@ -52,55 +52,55 @@ backend/.venv/bin/python scripts/speech-review-r2.py plan
 npm run audio:check
 ```
 
-`audio:check` 同时核验历史 R1 与当前 R2。前端慢速只改变已有文件的播放速度至 0.75×，并设置保音高；不重复调用 TTS、不生成伪造的独立慢速文件，也不将慢放听感标为已审核。标准与慢速偏好本地保存。自动录音结束→ASR→提交原转写、取消/迟到隔离由媒体与事件处理模拟回归覆盖，本轮未声称真人浏览器录音成功；具体证据见 [修订 2 验收](../archive/batches/Batch-A-revision-2-acceptance.md)。
+`audio:check` verifies both historical R1 and current R2. Frontend slow speed only changes the playback rate of the existing file to 0.75× with pitch preservation; it does not call TTS again, does not generate fake separate slow files, and does not mark the slowed playback as reviewed. The normal/slow preference is saved locally. Auto end-of-recording → ASR → submitting the raw transcript, and cancel/late isolation, are covered by media and event-handling mock regressions; this round does not claim successful real human browser recording; specific evidence is in [revision 2 acceptance](../archive/batches/Batch-A-revision-2-acceptance.md).
 
-## 官方合约与初选配置
+## Official contracts and initial configuration
 
-修订 3 当前练习采用固定目标核对 `guided-target-check.v1`，只在原 ASR 转写上核对本题所选表达，不调用自由语义 LLM，不修改原文。评估结果保存后停留，显式继续才应用订单；错误结果、无转写和技术错误分别保存。既有 R1/R2 自由输入的提供商合约保留用于历史版本。R3 没有新增真实 ASR/TTS/LLM 请求；声音复用通过原文、条目版本及字节校验。
+Revision 3's current practice uses the fixed target check `guided-target-check.v1`, which only checks the expression selected for this question against the raw ASR transcript, does not call a free-semantics LLM, and does not modify the original text. After the evaluation result is saved, the flow stays put, and the order is applied only on explicit continue; incorrect results, no transcript and technical errors are saved separately. The provider contracts for the earlier R1/R2 free input are kept for historical versions. R3 made no new live ASR/TTS/LLM requests; audio reuse is validated by source text, entry version and bytes.
 
-| 服务 | 初选配置 | 请求与结果 |
+| Service | Initial configuration | Request and result |
 | --- | --- | --- |
-| ASR | `qwen3-asr-flash` | OpenAI compatible `POST /compatible-mode/v1/chat/completions`；`messages` 携带 `input_audio.data` Data URL，`stream:false`、`asr_options.enable_itn:false`；读取 `choices[0].message.content` 原转写 |
-| 理解 | `qwen-plus`，非思考模式 | 同一路径，`response_format` 明确为 `json_object`；返回 JSON 后由服务端校验，最多一次结构修复重试，共享 8 秒总预算 |
-| TTS | `qwen3-tts-flash` + `Jada` | `POST /api/v1/services/aigc/multimodal-generation/generation`；`input.text/voice/language_type`；读取 `output.audio.url`，立即下载到本地资产，不在清单留下临时链接 |
+| ASR | `qwen3-asr-flash` | OpenAI compatible `POST /compatible-mode/v1/chat/completions`; `messages` carries an `input_audio.data` Data URL, `stream:false`, `asr_options.enable_itn:false`; reads the raw transcript from `choices[0].message.content` |
+| Understanding | `qwen-plus`, non-thinking mode | Same path, `response_format` explicitly `json_object`; the returned JSON is validated server-side, with at most one structural-repair retry, sharing an 8-second total budget |
+| TTS | `qwen3-tts-flash` + `Jada` | `POST /api/v1/services/aigc/multimodal-generation/generation`; `input.text/voice/language_type`; reads `output.audio.url`, immediately downloads it to a local asset, and leaves no temporary link in the manifest |
 
-ASR 官方说明及示例见 [Qwen-ASR API](https://help.aliyun.com/en/model-studio/qwen-asr-api-reference)。`zh` 是 API 的中文语种参数，不能当作已判断上海话；界面语言不会自动传作识别提示。置信度未提供时保留 `null`。
+Official ASR documentation and examples are in [Qwen-ASR API](https://help.aliyun.com/en/model-studio/qwen-asr-api-reference). `zh` is the API's Chinese language parameter and must not be taken as having identified Shanghainese; the UI language is not automatically passed as a recognition hint. When confidence is not provided, it is kept as `null`.
 
-TTS 使用 [Qwen-TTS HTTP 合约](https://help.aliyun.com/zh/model-studio/qwen-tts-api) 和 [Jada 官方非实时音色列表](https://help.aliyun.com/en/model-studio/qwen-tts-voice-list)。内部目标语言记为 `wuu`，提供商参数为 `Chinese`、音色必须为 `Jada`；这项参数映射不构成上海话质量证明。下载后必须双人听审；错误或不自然读法不能以普通话替代。返回临时 URL 的有效期有限，不能成为 App 的长期素材地址。
+TTS uses the [Qwen-TTS HTTP contract](https://help.aliyun.com/zh/model-studio/qwen-tts-api) and the [official Jada non-realtime voice list](https://help.aliyun.com/en/model-studio/qwen-tts-voice-list). The internal target language is recorded as `wuu`, the provider parameter is `Chinese`, and the voice must be `Jada`; this parameter mapping does not prove Shanghainese quality. After download, two-person listening review is required; wrong or unnatural readings must not be replaced with Mandarin. The returned temporary URL has a limited validity period and must not become the app's long-term asset address.
 
-[官方结构化输出文档](https://www.alibabacloud.com/help/en/model-studio/qwen-structured-output) 区分 JSON Object 与 JSON Schema；2026-10-17 查阅的支持表只为指定系列列出严格 Schema。当前 `qwen-plus` 默认走 JSON Object，并如实记录模式。实际账户选择受支持的 Plus 部署后可显式设 `QWEN_LLM_JSON_MODE=json_schema`，仍做服务端校验；不静默更换模型或降级输出模式。两种模式都不能决定任务完成。
+The [official structured output documentation](https://www.alibabacloud.com/help/en/model-studio/qwen-structured-output) distinguishes JSON Object from JSON Schema; the support table consulted on 2026-10-17 lists strict Schema only for specified model families. The current `qwen-plus` defaults to JSON Object, and the mode is recorded truthfully. Once the actual account selects a supported Plus deployment, `QWEN_LLM_JSON_MODE=json_schema` can be set explicitly, still with server-side validation; the model is not silently switched and the output mode is not silently downgraded. Neither mode can decide task completion.
 
-## 仅服务端配置
+## Server-only configuration
 
-以下变量不进入浏览器；只读配置输出只有是否已配置凭据，不返回密钥或端点。默认没有调用权限，单独放入密钥不会开启 API。
+The following variables never reach the browser; the read-only config output only shows whether credentials are configured, and never returns keys or endpoints. By default there is no call permission; adding a key alone does not enable the API.
 
-| 变量 | 默认值/作用 |
+| Variable | Default/purpose |
 | --- | --- |
-| `SPEECH_ENABLE_LIVE` | `false`；显式 `true` 才允许真实服务调用 |
-| `QWEN_ASR_ENABLE_LIVE` / `QWEN_TTS_ENABLE_LIVE` / `QWEN_LLM_ENABLE_LIVE` | 可分别覆盖总开关 |
-| `DASHSCOPE_API_KEY` | 服务端共享凭据；没有默认值 |
-| `QWEN_ASR_API_KEY` / `QWEN_TTS_API_KEY` / `QWEN_LLM_API_KEY` | 可分别覆盖共享凭据，适用于不同地区账户 |
-| `QWEN_ASR_REGION` / `QWEN_TTS_REGION` / `QWEN_LLM_REGION` | `beijing`；也支持 `singapore`，需匹配该地区密钥与可用模型 |
-| `QWEN_ASR_ENDPOINT` / `QWEN_TTS_ENDPOINT` / `QWEN_LLM_ENDPOINT` | 默认对应地区的官方域名 origin；可改官方 workspace 专属域名，不含 API 路径、查询参数或认证信息 |
-| `QWEN_ASR_MODEL` / `QWEN_TTS_MODEL` / `QWEN_LLM_MODEL` | 上表初选模型；切换必须新配置、重新验证 |
-| `QWEN_LLM_JSON_MODE` | `json_object` 或显式 `json_schema` |
+| `SPEECH_ENABLE_LIVE` | `false`; only an explicit `true` allows live service calls |
+| `QWEN_ASR_ENABLE_LIVE` / `QWEN_TTS_ENABLE_LIVE` / `QWEN_LLM_ENABLE_LIVE` | Can individually override the master switch |
+| `DASHSCOPE_API_KEY` | Server-side shared credential; no default |
+| `QWEN_ASR_API_KEY` / `QWEN_TTS_API_KEY` / `QWEN_LLM_API_KEY` | Can individually override the shared credential, for accounts in different regions |
+| `QWEN_ASR_REGION` / `QWEN_TTS_REGION` / `QWEN_LLM_REGION` | `beijing`; `singapore` is also supported, and must match that region's key and available models |
+| `QWEN_ASR_ENDPOINT` / `QWEN_TTS_ENDPOINT` / `QWEN_LLM_ENDPOINT` | Defaults to the official domain origin for the region; can be changed to an official workspace-specific domain, without API path, query parameters or auth info |
+| `QWEN_ASR_MODEL` / `QWEN_TTS_MODEL` / `QWEN_LLM_MODEL` | The initial models in the table above; switching requires a new config and re-verification |
+| `QWEN_LLM_JSON_MODE` | `json_object` or explicit `json_schema` |
 
-ASR、TTS、LLM 独立保留模型、地区、部署方式、适配器版本、配置 ID 与耗时预算。配置 ID 随模型/端点/参数变化，不随密钥变化。提供商未公开的底层版本为 `null`。托管名称不冒充 Qwen3-ASR-1.7B 或 CosyVoice 开放 checkpoint。
+ASR, TTS and LLM each keep their own model, region, deployment method, adapter version, config ID and latency budget. The config ID changes with model/endpoint/parameters, not with the key. Underlying versions not disclosed by the provider are `null`. Hosted names do not pose as Qwen3-ASR-1.7B or CosyVoice open checkpoints.
 
-## 后端使用约定
+## Backend usage conventions
 
-- `ASRProvider.transcribe(ASRRequest)` 返回 `ASRResult`：原转写、状态、耗时、配置 ID、上游请求 ID、返回模型以及可空的语言/置信度。输入 bytes 必须来自后端已授权的会话上传，不接受任意远程 URL；私有上传与会话权限由 API 层执行。
-- `SemanticProvider.interpret(text, context)` 返回 `Interpretation`：意图、字段变更、逐字段证据、不确定点和帮助信号。批次 A 只接受本轮原文中真实存在的证据片段；仅凭上下文推测的字段不得填入。模型结果必须再经过任务引擎业务校验。
-- `TTSProvider.synthesize(TTSRequest)` 返回已下载的音频 bytes 与来源元数据；`produce_audio` 将其保存为项目资产并生成清单。TTS 只用于离线制作，App 运行时不调用合成接口。
-- 稳定错误使用 `ProviderError.code/retryable`；API 层按中英文给出重试、改文字或按钮的提示。原始服务错误体、密钥、带签名 URL 不进入错误消息。
-- ASR 总预算 12 秒、理解总预算 8 秒、TTS 制作含下载总预算 30 秒。HTTP 超时/限流/服务不可用映射稳定类别；ASR/TTS 不自动重试、不切换供应商。理解仅对不合格 JSON 做一次有限重试，不对鉴权/网络失败重复计费请求。
-- 前端取消及迟到结果不可改变状态由会话/请求层控制；适配器保持异步取消语义，不将取消异常转换成成功。
+- `ASRProvider.transcribe(ASRRequest)` returns `ASRResult`: raw transcript, status, latency, config ID, upstream request ID, returned model, and nullable language/confidence. Input bytes must come from a session upload authorized by the backend; arbitrary remote URLs are not accepted; private uploads and session permissions are enforced by the API layer.
+- `SemanticProvider.interpret(text, context)` returns `Interpretation`: intent, field changes, per-field evidence, uncertainties and help signals. Batch A only accepts evidence spans that actually exist in this turn's original text; fields inferred only from context must not be filled. Model results must still pass the task engine's business validation.
+- `TTSProvider.synthesize(TTSRequest)` returns the downloaded audio bytes and source metadata; `produce_audio` saves them as a project asset and generates a manifest. TTS is used only for offline production; the app never calls the synthesis API at runtime.
+- Stable errors use `ProviderError.code/retryable`; the API layer gives Chinese/English hints to retry, switch to text, or use buttons. Raw service error bodies, keys and signed URLs never enter error messages.
+- ASR total budget 12 seconds, understanding total budget 8 seconds, TTS production including download total budget 30 seconds. HTTP timeout/rate-limit/service-unavailable map to stable categories; ASR/TTS do not retry automatically and do not switch providers. Understanding makes only one limited retry for non-conforming JSON, and does not repeat billable requests on auth/network failures.
+- Frontend cancellation and late results that must not change state are controlled by the session/request layer; adapters keep async cancellation semantics and do not convert cancellation exceptions into success.
 
-当前音频验证实际解码 **PCM16 WAV**（单/双声道、8–48 kHz），最大 3 MiB、20 秒；空文件、伪后缀、截断数据、超长文件拒绝。WebM、AAC 等格式返回 `unsupported_format`，不能只相信 MIME 或用户传入的时长。前端已将浏览器录制结果在本机解码、转换为单声道 16 kHz PCM16 WAV 后再上传；服务端只接收转换后的严格格式。浏览器的格式支持、解码及录音全链路仍需实际设备验证，本批次不宣称跨浏览器真实录音链路完成。
+Current audio validation actually decodes **PCM16 WAV** (mono/stereo, 8–48 kHz), max 3 MiB, 20 seconds; empty files, fake extensions, truncated data and overlong files are rejected. WebM, AAC and other formats return `unsupported_format`; MIME types or user-supplied durations are not trusted on their own. The frontend already decodes the browser recording locally and converts it to mono 16 kHz PCM16 WAV before upload; the server only accepts the converted strict format. Browser format support, decoding and the full recording pipeline still require real-device verification; this batch does not claim a complete cross-browser real recording pipeline.
 
-## 可执行检查与手动真实 smoke
+## Executable checks and manual live smoke
 
-在仓库根目录，使用已安装后端依赖的环境运行：
+From the repository root, in an environment with backend dependencies installed, run:
 
 ```sh
 backend/.venv/bin/python scripts/speech.py config
@@ -108,9 +108,9 @@ backend/.venv/bin/python scripts/speech.py tts-check --text-id E08
 PYTHONPATH=backend backend/.venv/bin/python -m pytest backend/tests/test_providers.py -q
 ```
 
-`config` 仅本地读取；`tts-check` 只检查内容包和审核记录。当前 E08 尚未语言批准，预期返回 `language_review_required`、退出码 2；不发送网络请求，不生成音频。
+`config` only reads locally; `tts-check` only checks the content pack and review records. E08 is not yet language-approved, so the expected result is `language_review_required` with exit code 2; no network request is sent and no audio is generated.
 
-以下为后续手动复核入口。真实小额诊断的执行方式与结果另记于文末；运行这些入口仍需在服务端设置对应凭据与 enable 开关，命令还要求 `--allow-paid-call`，防止误把配置检查变成付费试跑。
+The following are entry points for later manual re-verification. The method and results of the real small-amount diagnostics are recorded separately at the end of this document; running these entry points still requires the corresponding credentials and enable switches on the server, and the commands also require `--allow-paid-call` to prevent a config check from accidentally turning into a paid trial run.
 
 ```sh
 backend/.venv/bin/python scripts/speech.py asr-smoke --audio /absolute/path/to/private-sample.wav --allow-paid-call
@@ -118,83 +118,83 @@ backend/.venv/bin/python scripts/speech.py llm-smoke --allow-paid-call
 backend/.venv/bin/python scripts/speech.py tts-generate --text-id E08 --speed normal --allow-paid-call
 ```
 
-ASR smoke 默认仅输出转写字符数、请求标识和耗时，原文需显式 `--show-transcript` 才显示；不会复制原录音到 Git。真实结果应人工核对数量、否定、修改等关键语义，记录实际地区/模型/费用与异常，再进入后续批次验收。
+ASR smoke by default only outputs the transcript character count, request identifier and latency; the original text is shown only with explicit `--show-transcript`; the original recording is not copied into Git. Real results should be manually checked for key semantics such as quantity, negation and modification, with the actual region/model/cost and anomalies recorded, before moving on to later batch acceptance.
 
-## 语言审核与生成资产
+## Language review and generated assets
 
-CLI 只从仓库 `content/` 内的内容包取 `hanzi`，没有任意文本参数。表达、店员台词及支持词均按 ID/版本查找；来源为 `content/batch-a.json`，审校账本为 `content/reviews.json`。
+The CLI takes `hanzi` only from content packs in the repository's `content/`, and has no arbitrary-text parameter. Expressions, clerk lines and support words are all looked up by ID/version; the source is `content/batch-a.json`, and the review ledger is `content/reviews.json`.
 
-正式制作入口 `tts-generate` 必须满足：语言状态已批准、至少两个不同且标记为流利使用者的真实 reviewer、批准记录与同一内容 ID/版本绑定、引用批准记录、`subjectSha256` 与当前原文/释义/分段/变体一致、没有后续未解决修改意见。即使版本号未升级，改动文字也会使旧批准失效。该入口拒绝候选或空原文；独立待审稿入口遵循下节的新授权。审核身份及结论必须由真实审校补入；测试中的 mock reviewer 只存在于单元测试内。
+The official production entry point `tts-generate` requires: approved language status; at least two different real reviewers marked as fluent speakers; approval records bound to the same content ID/version; citing the approval records; `subjectSha256` matching the current original text/gloss/segmentation/variants; and no later unresolved change requests. Even if the version number is not bumped, changing the text invalidates the old approval. This entry point rejects candidates or empty original text; the separate pending-draft entry point follows the new authorization in the next section. Reviewer identities and conclusions must be filled in by real reviewers; mock reviewers in tests exist only inside unit tests.
 
-生成结果保存 `artifacts/audio/<generationId>.wav` 和同名 JSON，目录/文件限制为本地访问。生成 ID 由文字、版本、模型配置、声音配置和速度共同计算；同一任务已存在时不覆盖、不重复调用；同一生成任务用独占 lock 防止并发重复计费。进程意外退出可能留下 lock，需核对实际资产后人工清理，不能自动重试计费。清单记录 SHA256、实测时长/采样率、目标语种、实际提供商参数、模型/声音、原文校验、生成时间与语言审校引用；新音频始终 `status:pending`、`listeningReview:pending`、`reviewIds:[]`。
+Generated results are saved as `artifacts/audio/<generationId>.wav` plus a JSON file of the same name, with directory/file access restricted to local. The generation ID is computed from the text, version, model config, voice config and speed together; when the same task already exists, it is not overwritten and not called again; the same generation task uses an exclusive lock to prevent concurrent duplicate billing. An unexpected process exit may leave a lock behind; it must be cleaned up manually after checking the actual assets, and billing must not be retried automatically. The manifest records SHA256, measured duration/sample rate, target language, actual provider parameters, model/voice, source-text check, generation time and language-review references; new audio is always `status:pending`, `listeningReview:pending`, `reviewIds:[]`.
 
-批次 A 的 `qwen3-tts-flash` 适配器不宣称支持慢速指令，`--speed slow` 返回 `unsupported_speed`。后续可增加明确记录参数的保音高处理或经验证的模型能力，并对慢速独立听审。不能重复保存常速文件来伪造慢速资产。
+Batch A's `qwen3-tts-flash` adapter does not claim to support a slow-speed instruction; `--speed slow` returns `unsupported_speed`. Later, pitch-preserving processing with explicitly recorded parameters, or a verified model capability, can be added, with separate listening review for slow speed. Normal-speed files must not be saved again to fake slow-speed assets.
 
-听审通过后再将对应资产导入正式内容包，维护文件路径、SHA256、听审记录及发布审核；制作 CLI 不自动更改教材批准状态。修订 1 的公开静态待审音频另有独立清单，不进入正式 `audioClips` 批准链。
+Only after listening review passes are the corresponding assets imported into the formal content pack, maintaining file paths, SHA256, listening-review records and release review; the production CLI does not automatically change teaching-material approval status. Revision 1's public static pending audio has its own separate manifest and does not enter the formal `audioClips` approval chain.
 
-## 修订 1：已生成的常速待审音频
+## Revision 1: generated normal-speed pending audio
 
-2026-10-17 18:33–18:34 UTC，按用户已授权的修订 1，对冻结版本 `batch-a-r1.2026-10-17.v1` 的 20 条原文各生成一次：三条学习表达、十二条逐轮台词、五条数量/堂食/物品支持词。模型为北京地区 `qwen3-tts-flash`，音色 `Jada`，参数 `language_type=Chinese`，内部目标语种 `wuu`；每次发送完整一句，未发送拉丁注音或拼接词组音频。官方列出 [Jada 的上海话能力](https://help.aliyun.com/en/model-studio/qwen-tts-voice-list)，具体读法仍需听审。
+On 2026-10-17 18:33–18:34 UTC, under the user-authorized revision 1, one generation was run for each of the 20 original texts in frozen version `batch-a-r1.2026-10-17.v1`: three learning expressions, twelve turn-by-turn lines, and five quantity/dine-in/item support words. The model was Beijing-region `qwen3-tts-flash`, voice `Jada`, parameter `language_type=Chinese`, internal target language `wuu`; each call sent one full sentence, with no Latin romanization sent and no concatenated phrase audio. The official docs list [Jada's Shanghainese capability](https://help.aliyun.com/en/model-studio/qwen-tts-voice-list), but the specific readings still require listening review.
 
-实际共 **20 次 TTS 请求，无重试**；API 返回 `usage.characters` 合计 **260**。按 [官方北京目录价](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) 0.8 元/万字符估算 **0.0208 元**，低于本轮 1 元预算。未查询账户账单、免费额度或优惠，此数为估算。原文 Python 字符串长度合计 141，并不等于 API 返回计量；后续预留费用采用更保守的 UTF-8 字节数，完成请求按 API usage 累计，含不明结果的失败请求也预留预算。
+In total **20 TTS requests, no retry**; the API returned `usage.characters` totaling **260**. At the [official Beijing list price](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash) of 0.8 yuan per 10,000 characters, the estimate is **0.0208 yuan**, below this round's 1-yuan budget. Account billing, free quota and discounts were not queried; this figure is an estimate. The original texts' Python string lengths total 141, which does not equal the API-returned metering; later cost reservations use the more conservative UTF-8 byte count, completed requests are accumulated by API usage, and failed requests with unknown results also reserve budget.
 
-实际保存 20 个 PCM16 WAV，均为 24 kHz、单声道，总长 **29,840 ms**。资源位于 `frontend/public/audio/review-r1/<generationId>.wav`，[独立清单](../../content/audio-review-r1.json) 保存每句的原文、版本、配置、SHA256、时长、时间、请求 ID、用量与成本估算。供应商 WAV 占位长度头按已验证规则收尾，PCM 样本不变；没有做变速、普通话替代或额外收费重试。下载只用于保存用户授权的应用资产；提供商的 [临时 URL 有效期为 24 小时](https://help.aliyun.com/zh/model-studio/qwen-tts-api)，清单和前端不依赖这些地址。
+20 PCM16 WAVs were actually saved, all 24 kHz mono, total length **29,840 ms**. The assets are in `frontend/public/audio/review-r1/<generationId>.wav`, and the [separate manifest](../../content/audio-review-r1.json) stores each sentence's original text, version, config, SHA256, duration, time, request ID, usage and cost estimate. The provider's WAV placeholder length header is finalized according to a verified rule, with PCM samples unchanged; no speed change, Mandarin substitution or extra paid retry was done. Downloads are only used to save user-authorized app assets; the provider's [temporary URL is valid for 24 hours](https://help.aliyun.com/zh/model-studio/qwen-tts-api), and neither the manifest nor the frontend depends on these addresses.
 
-所有条目仍为 `status:generated`、`reviewStatus:pending`、`reviewIds:[]`。正式内容包 28 条音频和审核账本保持原有待审状态；前端只有在 `text`、`textVersion` 与当前内容精确匹配时才允许播放，不能把旧声音绑定到新文字。首次生成后的离线检查已核对 20 条完整性、原文/注音版本、生成配置、路径、WAV、SHA256、时长及生产审批状态未变。
+All entries remain `status:generated`, `reviewStatus:pending`, `reviewIds:[]`. The 28 audio entries in the formal content pack and the review ledger keep their original pending status; the frontend allows playback only when `text` and `textVersion` exactly match the current content, so old audio cannot be bound to new text. The offline check after the first generation verified the completeness of the 20 entries, original-text/romanization versions, generation config, paths, WAV, SHA256, duration, and that production approval status was unchanged.
 
 ```sh
-# 只读，均不调用网络：检查已有交付和下一轮是否需要请求。
+# Read-only, no network calls: check existing deliverables and whether the next round needs requests.
 backend/.venv/bin/python scripts/speech-review.py check
 backend/.venv/bin/python scripts/speech-review.py plan
 
-# 仅在新的原文冻结且用户授权制作时运行，哈希取自当次 plan。
-backend/.venv/bin/python scripts/speech-review.py generate --expect-input-sha256 <plan中的哈希> --allow-paid-call
+# Run only after new source text is frozen and the user authorizes production; take the hash from that plan run.
+backend/.venv/bin/python scripts/speech-review.py generate --expect-input-sha256 <hash-from-plan> --allow-paid-call
 ```
 
-当前 `plan` 为 **0 新请求、0 新费用**；缓存通过文本和生成配置识别，注音或版本单独修订时也可复用相同原文音频。已存在资产必须通过 SHA/WAV 核验，损坏、失败或结果不明的请求会停止并要求检查，绝不静默再次收费。批次锁内重新核对冻结哈希与预算，单条重跑保留其他仍匹配的清单条目。此入口只在当前进程打开 TTS 权限，不改变 `.env` 或应用实时调用开关；私有缓存及英文诊断仍在 Git 忽略目录。
+The current `plan` is **0 new requests, 0 new cost**; the cache is identified by text and generation config, so audio for the same original text can be reused when romanization or version is revised separately. Existing assets must pass SHA/WAV verification; damaged, failed or unknown-result requests stop and require inspection, and are never silently charged again. The batch lock re-checks the frozen hash and budget, and rerunning a single entry keeps other still-matching manifest entries. This entry point only opens TTS permission within the current process and does not change `.env` or the app's live-call switches; the private cache and English diagnostics remain in a Git-ignored directory.
 
-待用户审阅常速原文、注音与声音后再处理修改及慢速版本；目前没有生成慢速文件，也没有将常速播放率变化冒充已审慢速。正式双人语言/听审及发布门槛继续保留。新增测试使用明确 mock provider/transport，覆盖待审稿与正式门槛隔离、断点复用、失败不重复计费、20 条与子集清单保存、篡改拒绝和费用预约；提供商测试 **35 项通过**，测试无付费请求。
+Changes and slow-speed versions will be handled after the user reviews the normal-speed original text, romanization and audio; currently no slow-speed files have been generated, and no normal-speed playback-rate change is passed off as reviewed slow speed. The formal two-person language/listening review and release gates remain in place. New tests use explicit mock provider/transport, covering isolation between the pending-draft and formal gates, checkpoint reuse, no duplicate billing on failure, saving 20-entry and subset manifests, tamper rejection, and cost reservation; **35 provider tests pass**, and tests make no paid requests.
 
-### E08 合成样音的识别与语音回合回归
+### E08 synthetic sample recognition and voice-turn regression
 
-用户随后明确授权“允许这 1 次合成音频测试”，对应范围为 E08「我要两份小笼馒头」→ 已配置的阿里云北京 Qwen ASR → 隔离测试会话，费用上限 1 元，不用麦克风。先前自动审批阻塞没有产生调用；获准后于 **2026-10-17 18:40:39–18:40:40 UTC** 实际执行 **1 次 ASR，0 次 LLM、0 次 TTS，无重试**。
+The user then explicitly authorized "允许这 1 次合成音频测试" ("allow this 1 synthetic audio test"), with the scope E08 「我要两份小笼馒头」 → the configured Alibaba Cloud Beijing Qwen ASR → an isolated test session, cost cap 1 yuan, no microphone. An earlier automatic-approval block produced no call; after approval, **1 ASR call, 0 LLM, 0 TTS, no retry** was actually executed at **2026-10-17 18:40:39–18:40:40 UTC**.
 
-输入为上述 `E08.normal` 的 1,600 ms 合成 WAV，SHA256 为 `a3df57475feadfd7dc19689358ebe596da926b2abe19a2ed720986697e109846`。通过隔离后端 `127.0.0.1:8001` 的独立 Cookie 会话提交 `/api/asr`，返回 HTTP 200、`qwen3-asr-flash`、原转写 **「我要两份小笼馒头。」**、服务耗时 **1,699 ms**、`language:zh`、`confidence:null`；上游请求 ID 为 `chatcmpl-9d684e92-a49f-92d7-9f1c-3c5c2aaa929b`，配置 ID 为 `asr-4c784f1651e2840a`。`zh` 不构成上海话鉴定。当前 ASR 返回结构不保留提供商 usage，因此这里只记录请求次数与输入实测时长，不编造计费秒数、Token 用量或实际扣费；账户账单未查询。
+The input was the 1,600 ms synthetic WAV of the above `E08.normal`, SHA256 `a3df57475feadfd7dc19689358ebe596da926b2abe19a2ed720986697e109846`. It was submitted to `/api/asr` via a separate cookie session on the isolated backend `127.0.0.1:8001`, returning HTTP 200, `qwen3-asr-flash`, raw transcript **「我要两份小笼馒头。」**, service latency **1,699 ms**, `language:zh`, `confidence:null`; the upstream request ID is `chatcmpl-9d684e92-a49f-92d7-9f1c-3c5c2aaa929b` and the config ID is `asr-4c784f1651e2840a`. `zh` does not constitute identification of Shanghainese. The current ASR response structure does not keep provider usage, so only the request count and measured input duration are recorded here; billed seconds, token usage or actual charges are not fabricated; account billing was not queried.
 
-识别本身没有创建尝试或推进订单。随后新建南翔尝试，将原转写通过 `channel:voice`、同一 `asr_request_id` 原样提交；`development-parser.v2` 返回 `item:xiaolongbao`、`quantity:2`、`unit:serving`、`normalized_servings:2`、**`takeaway:null`**。订单保持 `collecting` 并追问 `NX-N03`，未自动补外带、未确认或完成；保存的 `asr_transcript` 与 `text` 均保留原句。这次没有浏览器录音或 `recording_started` 事件，`voice_attempts:0` 是预期值，不伪造真人语音尝试。脱敏结果位于 Git 忽略的 `artifacts/local/r1-synthetic-asr/`，Cookie 仅存在请求进程内存。
+Recognition itself did not create an attempt or advance the order. A new Nanxiang attempt was then created, and the raw transcript was submitted unchanged via `channel:voice` with the same `asr_request_id`; `development-parser.v2` returned `item:xiaolongbao`, `quantity:2`, `unit:serving`, `normalized_servings:2`, **`takeaway:null`**. The order stayed `collecting` and followed up with `NX-N03`, without auto-filling takeaway, confirming or completing; the saved `asr_transcript` and `text` both keep the original sentence. This had no browser recording or `recording_started` event, so `voice_attempts:0` is expected, and no real human voice attempt is faked. Redacted results are in the Git-ignored `artifacts/local/r1-synthetic-asr/`, and the cookie existed only in the requesting process's memory.
 
-此项只证明一条 **TTS 合成样音** 的真实 ASR 与开发解析器回合衔接成功，不能代替真人/初学者录音、浏览器麦克风链路、上海话读音质量或完整站点验收。
+This item only proves that one **TTS synthetic sample** successfully linked live ASR with a development-parser turn; it cannot replace real human/beginner recordings, the browser microphone pipeline, Shanghainese pronunciation quality, or full station acceptance.
 
-## 本批次核验记录
+## Verification record for this batch
 
-- 初始实现阶段仅检查是否配置凭据，当时均未设置，故只执行 mock 测试。用户随后填写共享 key 并授权真实诊断；当前状态与调用记录见下节，密钥值未输出。
-- 所有提供商测试明确使用 `httpx.MockTransport`：请求合约、原转写保留、秘密不回传、限流/鉴权/超时、坏 JSON 的有限重试、音频解码约束、双人审校拒绝、临时 URL 下载与 SHA256、默认待听审和重复生成保护。
-- 正式制作资格检查仍正确拒绝未批准的候选；修订 1 已另行生成上述 20 条待审音频，等待真实审阅。
-- 尚待验证：Jada 上海话自然度、真实上海话/初学者录音关键字段可靠性、更多场景与设备下的费用/延迟、常/慢速双人听审及真语音南翔全链路。
+- In the initial implementation phase, only whether credentials were configured was checked; none were set at the time, so only mock tests were run. The user then filled in a shared key and authorized live diagnostics; current status and call records are in the next section, and key values were not output.
+- All provider tests explicitly use `httpx.MockTransport`: request contract, raw transcript preservation, no secrets echoed back, rate-limit/auth/timeout, limited retry on bad JSON, audio decoding constraints, two-person review rejection, temporary URL download and SHA256, default pending listening review, and duplicate-generation protection.
+- The formal production eligibility check still correctly rejects unapproved candidates; revision 1 separately generated the 20 pending audio entries above, awaiting real review.
+- Still to verify: Jada's Shanghainese naturalness, reliability of key fields for real Shanghainese/beginner recordings, cost/latency across more scenarios and devices, normal/slow-speed two-person listening review, and the full real-voice Nanxiang pipeline.
 
 
-## 用户授权后的真实技术诊断（2026-10-17）
+## Live technical diagnostics after user authorization (2026-10-17)
 
-执行时间为 America/New_York 13:51–13:53。只读取根 `.env` 中的相关配置，未输出凭据值、未修改其中的 key。真实调用仅在诊断进程内启用，根 `.env` 的总开关仍为 `false`。诊断脚本、预算、原始/修复后音频和逐次脱敏结果保留在 Git 忽略的 `artifacts/local/speech-diagnostics/`；这些文件不是教材、不进入内容包、没有任何语言或听审批准。CLI 现也读取根 `.env`，环境中已设的变量优先。
+Run time was America/New_York 13:51–13:53. Only the relevant config in the root `.env` was read; credential values were not output and the keys in it were not modified. Live calls were enabled only inside the diagnostic process; the master switch in the root `.env` remained `false`. Diagnostic scripts, budget, original/repaired audio and per-call redacted results are kept in the Git-ignored `artifacts/local/speech-diagnostics/`; these files are not teaching material, do not enter the content pack, and have no language or listening-review approval. The CLI now also reads the root `.env`, with variables already set in the environment taking precedence.
 
-预算采用官方北京地区目录价，不假定有免费额度：Qwen-Plus 非思考短输入每百万输入 Token 0.8 元、输出 2 元；ASR 每秒 0.00022 元；TTS 每万输入字符 0.8 元。事前保守预算低于 0.10 元，没有购买或部署资源。[Qwen-Plus 价格](https://help.aliyun.com/zh/model-studio/qwen-plus)、[ASR 价格](https://help.aliyun.com/zh/model-studio/qwen3-asr-flash)、[TTS 价格](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash)。
+The budget used the official Beijing-region list prices, without assuming any free quota: Qwen-Plus non-thinking short input at 0.8 yuan per million input tokens and 2 yuan per million output tokens; ASR at 0.00022 yuan per second; TTS at 0.8 yuan per 10,000 input characters. The conservative up-front budget was below 0.10 yuan, and no resources were purchased or deployed. [Qwen-Plus pricing](https://help.aliyun.com/zh/model-studio/qwen-plus), [ASR pricing](https://help.aliyun.com/zh/model-studio/qwen3-asr-flash), [TTS pricing](https://help.aliyun.com/zh/model-studio/qwen3-tts-flash).
 
-| 调用 | 实际结果 | 服务耗时 | 上游请求 ID | API 返回用量 |
+| Call | Actual result | Service latency | Upstream request ID | API-returned usage |
 | --- | --- | --- | --- | --- |
-| Qwen-Plus 完整句 `Two servings to take away, please.` | quantity=2、unit=serving、takeaway=true，原文证据齐全 | 3544 ms | `chatcmpl-b60fa81f-7fef-9c40-abcf-d6c0ced51c90` | 输入 344 / 输出 113 Token |
-| Qwen-Plus 缺项句 `Two, please.` | 只返回 quantity=2，没有臆补单位或外带 | 2007 ms | `chatcmpl-e95be17f-646f-910f-8c15-f3e379f20b09` | 输入 340 / 输出 43 Token |
-| Qwen-Plus 修改句，修复前 | `Not three. Two servings, and not takeaway.` 返回 quantity=2、takeaway=false，漏掉本轮明确说出的 unit；**不满足原验收预期** | 2878 ms | `chatcmpl-47c72146-3891-90f5-8740-0d63611ccffb` | 输入 364 / 输出 84 Token |
-| 同一修改句，修复后 | quantity=2、unit=serving、takeaway=false，均有本轮证据，满足原预期 | 3437 ms | `chatcmpl-638fdeab-30ed-9210-aefd-19409b69e40f` | 输入 400 / 输出 112 Token |
-| ASR 合成英文 | macOS Samantha 本机合成 2.229 秒 PCM16/16 kHz 单声道；返回完整原句 `Two servings to take away, please.`，language=en、confidence=null | 2628 ms | `chatcmpl-6ba36622-8728-9946-958e-0a2054580fe7` | seconds=2，输入 55 / 输出 15 Token |
-| Jada 英文 `Hello.` 首次 | HTTP 200，下载完成，但占位 WAV 长度触发严格校验失败；未发布素材 | HTTP 1219 ms；含下载 2573 ms | `1442b050-326a-93ef-b59f-e4eeaf88a7d7` | 6 字符 |
-| 同一 Jada 诊断重试 | HTTP 200，保存原始文件；离线确认并修复 WAV 头后为 560 ms、24 kHz 单声道 PCM16 | HTTP 1378 ms；含下载 2638 ms | `98973fde-2b48-9deb-8de2-4a586132edc9` | 6 字符 |
+| Qwen-Plus full sentence `Two servings to take away, please.` | quantity=2, unit=serving, takeaway=true, with complete source-text evidence | 3544 ms | `chatcmpl-b60fa81f-7fef-9c40-abcf-d6c0ced51c90` | Input 344 / output 113 tokens |
+| Qwen-Plus missing-field sentence `Two, please.` | Returned only quantity=2, without inventing unit or takeaway | 2007 ms | `chatcmpl-e95be17f-646f-910f-8c15-f3e379f20b09` | Input 340 / output 43 tokens |
+| Qwen-Plus modification sentence, before fix | `Not three. Two servings, and not takeaway.` returned quantity=2, takeaway=false, missing the unit explicitly said in this turn; **does not meet the original acceptance expectation** | 2878 ms | `chatcmpl-47c72146-3891-90f5-8740-0d63611ccffb` | Input 364 / output 84 tokens |
+| Same modification sentence, after fix | quantity=2, unit=serving, takeaway=false, all with evidence from this turn, meets the original expectation | 3437 ms | `chatcmpl-638fdeab-30ed-9210-aefd-19409b69e40f` | Input 400 / output 112 tokens |
+| ASR synthetic English | macOS Samantha local synthesis, 2.229 seconds PCM16/16 kHz mono; returned the full original sentence `Two servings to take away, please.`, language=en, confidence=null | 2628 ms | `chatcmpl-6ba36622-8728-9946-958e-0a2054580fe7` | seconds=2, input 55 / output 15 tokens |
+| Jada English `Hello.` first attempt | HTTP 200, download completed, but the placeholder WAV length triggered strict validation failure; no asset published | HTTP 1219 ms; including download 2573 ms | `1442b050-326a-93ef-b59f-e4eeaf88a7d7` | 6 characters |
+| Same Jada diagnostic retry | HTTP 200, original file saved; after offline confirmation and WAV header repair, 560 ms, 24 kHz mono PCM16 | HTTP 1378 ms; including download 2638 ms | `98973fde-2b48-9deb-8de2-4a586132edc9` | 6 characters |
 
-实际共有 **7 次模型请求**（4 LLM、1 ASR、2 TTS）；另一次最初因运行环境网络限制失败，未获得上游响应，单独记录为连接失败。四次 LLM 合计输入 1448 / 输出 352 Token，ASR 返回 seconds=2，TTS 合计 12 字符。按上述 API 返回用量及目录价估算约 **0.0032624 元**，不等同于账单扣费；未读取账户账单或免费额度，实际计费舍入以提供商为准。以上延迟仅为少量诊断观测，不能据此声称达到产品延迟指标。
+In total there were **7 model requests** (4 LLM, 1 ASR, 2 TTS); one other initially failed due to runtime network restrictions, received no upstream response, and is recorded separately as a connection failure. The four LLM calls totaled input 1448 / output 352 tokens, ASR returned seconds=2, and TTS totaled 12 characters. Based on the API-returned usage above and list prices, the estimate is about **0.0032624 yuan**, which is not the same as the billed charge; account billing and free quota were not read, and actual billing rounding is determined by the provider. The latencies above are only a few diagnostic observations and cannot be used to claim the product latency targets are met.
 
-真实诊断带来的修正：
+Fixes resulting from the live diagnostics:
 
-1. 后端规则会在数量修改且缺单位时清除旧单位，以免错用此前订单。保留这一规则，将模型提示改为：数量出现时，必须同时抽取本轮明确说出的单位，即使该单位与旧值相同；未说出的单位仍不得从旧订单继承。保留失败记录并用同一句重跑通过，没有放松预期。
-2. 实际 Jada 文件有标准 44 字节 PCM WAV 头，但 RIFF/data 长度分别为 `0x7fffffbf` / `0x7fffff9b` 占位值；真实文件仅 26924 字节。新增 `finalize_generated_wav`，仅对这组已观测的供应商占位头按实际完整 body 收尾，PCM 样本不变；普通上传仍执行严格校验，不因这项修复接受截断文件。来源及修复后 SHA256、处理方式写入元数据。真实样本经离线修复后 SHA256 为 `b9d3e3ada60288aa13f465bb8cb1c4b0f49819283461217de3067dbfb3d91423`。
-3. 适配器版本升为 `qwen-http-v2`，配置 ID 随之变化。已开始会话不热切配置，新配置用于新会话。新增 WAV 占位头及截断拒绝用例后，提供商测试 31 项通过；当时后端全套 75 项通过，测试环境强制关闭 live，不产生额外模型请求。
+1. Backend rules clear the old unit when the quantity is modified and the unit is missing, to avoid wrongly using the previous order. This rule is kept, and the model prompt was changed to: when a quantity appears, the unit explicitly said in this turn must also be extracted, even if it equals the old value; units not said must still not be inherited from the old order. The failure record is kept and the same sentence was rerun and passed, without relaxing the expectation.
+2. The actual Jada file has a standard 44-byte PCM WAV header, but the RIFF/data lengths are the placeholder values `0x7fffffbf` / `0x7fffff9b`; the real file is only 26924 bytes. `finalize_generated_wav` was added, which finalizes only this observed set of provider placeholder headers according to the actual complete body, with PCM samples unchanged; ordinary uploads still undergo strict validation, and this fix does not cause truncated files to be accepted. The source and repaired SHA256 and the processing method are written into metadata. After offline repair, the real sample's SHA256 is `b9d3e3ada60288aa13f465bb8cb1c4b0f49819283461217de3067dbfb3d91423`.
+3. The adapter version was bumped to `qwen-http-v2`, and the config ID changed accordingly. Sessions already started do not hot-switch config; the new config is used for new sessions. After adding the WAV placeholder header and truncation rejection cases, 31 provider tests passed; at that time the full backend suite of 75 passed, with live forcibly disabled in the test environment and no extra model requests.
 
-本地交接配置：北京地区这三个初选模型已对当前共享 key 返回成功响应；随后在用户本地 `.env` 单独启用了 `QWEN_ASR_ENABLE_LIVE=true`，总开关仍为 false，示例配置保持默认关闭；文字理解仍需显式选择 `TEXT_INTERPRETER=qwen`，不能因配置 key 就悄悄替换开发解析器。当前教材的语言审核仍未完成，教学 TTS 制作门槛保持拒绝；英文 Jada 诊断的成功不证明上海话读音合格，也没有验证常/慢速教材。全量真实上海话语料、手机录音及完整任务验收继续留待后续工作。
+Local handoff configuration: in the Beijing region, these three initial models returned successful responses for the current shared key; afterwards `QWEN_ASR_ENABLE_LIVE=true` was enabled separately in the user's local `.env`, the master switch is still false, and the example config stays off by default; text understanding still requires explicitly selecting `TEXT_INTERPRETER=qwen`, and configuring a key must not quietly replace the development parser. Language review of the current teaching material is still not complete, and the teaching TTS production gate keeps rejecting; the success of the English Jada diagnostic does not prove Shanghainese pronunciation is acceptable, nor does it verify normal/slow-speed teaching material. Full real Shanghainese corpus, phone recordings and complete task acceptance remain for later work.

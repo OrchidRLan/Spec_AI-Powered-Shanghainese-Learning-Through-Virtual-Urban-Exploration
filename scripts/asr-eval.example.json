@@ -1,0 +1,17 @@
+{
+  "_note": "Synthetic example. Labels are illustrative, not native-speaker judgments. Real items add \"audio\": \"relative/path.wav\" (keep recordings under private/, which Git ignores).",
+  "items": [
+    {"id": "nx-qty-clean", "station": "nanxiang", "step": "quantity", "target": {"type": "set_order", "quantity": 2, "unit": "serving"}, "label": "acceptable", "reference": "两份", "transcript": "两份"},
+    {"id": "nx-qty-restart", "station": "nanxiang", "step": "quantity", "target": {"type": "set_order", "quantity": 2, "unit": "serving"}, "label": "acceptable", "reference": "两份", "transcript": "两份，两份"},
+    {"id": "nx-qty-homophone", "station": "nanxiang", "step": "quantity", "target": {"type": "set_order", "quantity": 2, "unit": "serving"}, "label": "acceptable", "reference": "两份", "transcript": "两分"},
+    {"id": "nx-qty-negated", "station": "nanxiang", "step": "quantity", "target": {"type": "set_order", "quantity": 2, "unit": "serving"}, "label": "incorrect", "reference": "两份", "transcript": "嗯，不要两份"},
+    {"id": "nx-item", "station": "nanxiang", "step": "item", "target": {"type": "set_order", "item": "xiaolongbao"}, "label": "acceptable", "reference": "小笼馒头", "transcript": "小笼馒头"},
+    {"id": "tea-filler", "station": "teahouse", "step": "appreciation", "target": "good_tea", "label": "acceptable", "reference": "好喝", "transcript": "嗯，好喝"},
+    {"id": "tea-negative", "station": "teahouse", "step": "appreciation", "target": "good_tea", "label": "incorrect", "reference": "好喝", "transcript": "茶不好喝"},
+    {"id": "tea-thanks", "station": "teahouse", "step": "thanks", "target": "thanks", "label": "acceptable", "reference": "谢谢侬", "transcript": "谢谢侬"},
+    {"id": "old-not-spicy", "station": "restaurant", "step": "preference", "target": "not_spicy", "label": "acceptable", "reference": "我勿吃辣", "transcript": "我不吃辣"},
+    {"id": "old-spicy", "station": "restaurant", "step": "preference", "target": "not_spicy", "label": "incorrect", "reference": "我勿吃辣", "transcript": "我吃辣"},
+    {"id": "candy-two", "station": "candy", "step": "quantity", "target": "two_packs", "label": "acceptable", "reference": "两包", "transcript": "两包"},
+    {"id": "candy-mishear", "station": "candy", "step": "quantity", "target": "two_packs", "label": "understandable", "reference": "两包", "transcript": "量包", "_why": "Example of an ASR mishearing a correct utterance: counts as a false reject."}
+  ]
+}

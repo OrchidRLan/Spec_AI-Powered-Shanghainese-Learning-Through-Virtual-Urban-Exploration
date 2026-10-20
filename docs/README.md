@@ -20,6 +20,7 @@ For local setup and commands, use the [project README](../README.md). Implementa
 | [Automatic deployment](engineering/Automatic-deployment.md) | Main-branch checks, fork synchronization, sequential releases, credentials, and failure recovery |
 | [Database maintenance](engineering/Database-maintenance.md) | Consistent SQLite backups, safe recovery, and guest cleanup |
 | [Backend API](../backend/API.md) | Authentication, guest sessions, progress, speech interfaces, and maintenance commands |
+| [Speech provider swap and evaluation](engineering/ASR-evaluation.md) | Swappable ASR and TTS (Qwen or OpenAI-compatible local server), offline provider comparison, reference-audio similarity |
 | [Scoring system](engineering/Scoring-system.md) | Lenient rule-based utterance scoring: before/after, deduction rules, and calibration plan |
 | [Speech integration](engineering/Speech-integration.md) | Provider contracts, audio production, actual call history, and verification limits |
 | [Content review](content-review/README.md) | Current teaching materials, review evidence, and approval workflow |

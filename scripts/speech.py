@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env", override=False)
 sys.path.insert(0, str(ROOT / "backend"))
-from app.providers import ASRRequest, ProviderConfig, ProviderError, QwenASR, QwenInterpreter, QwenTTS
+from app.providers import ASRRequest, ProviderConfig, ProviderError, QwenInterpreter, asr_from_env, tts_from_env
 from app.providers.production import approved_text, produce_audio
 
 
@@ -24,8 +24,8 @@ def content_file(value: str) -> dict:
 
 async def run(args: argparse.Namespace) -> dict:
     if args.command == "config":
-        return {"network_calls": 0, "services": [ProviderConfig.from_env(service).public_dict()
-                                                for service in ("asr", "tts", "llm")]}
+        return {"network_calls": 0, "services": [asr_from_env()[1].public_dict(), tts_from_env().config.public_dict(),
+                                                ProviderConfig.from_env("llm").public_dict()]}
     if args.command == "tts-check":
         entry = approved_text(content_file(args.pack), content_file(args.reviews), args.text_id)
         return {"text_id": entry["id"], "text_version": entry["version"], "eligible": True, "network_calls": 0}
@@ -35,7 +35,7 @@ async def run(args: argparse.Namespace) -> dict:
         path = Path(args.audio).expanduser().resolve()
         if path.stat().st_size > 3 * 1024 * 1024:
             raise ProviderError("audio_too_large")
-        result = await QwenASR(ProviderConfig.from_env("asr")).transcribe(ASRRequest(path.read_bytes(), str(uuid.uuid4())))
+        result = await asr_from_env()[0].transcribe(ASRRequest(path.read_bytes(), str(uuid.uuid4())))
         # Do not persist raw audio or transcript in console logs by default.
         return {"status": result.status, "config_id": result.config_id, "elapsed_ms": result.elapsed_ms,
                 "upstream_request_id": result.upstream_request_id, "transcript_characters": len(result.transcript),
@@ -48,7 +48,7 @@ async def run(args: argparse.Namespace) -> dict:
                 "config_id": result.config_id, "elapsed_ms": result.elapsed_ms, "upstream_request_id": result.upstream_request_id}
     if args.command == "tts-generate":
         result = await produce_audio(content_file(args.pack), content_file(args.reviews), args.text_id,
-            QwenTTS(ProviderConfig.from_env("tts")), ROOT / "artifacts" / "audio", args.speed)
+            tts_from_env(), ROOT / "artifacts" / "audio", args.speed)
         return {"generation_id": result["generationId"], "file": "artifacts/audio/" + result["file"],
                 "sha256": result["sha256"], "status": result["status"], "listening_review": "pending"}
     raise ProviderError("invalid_command")

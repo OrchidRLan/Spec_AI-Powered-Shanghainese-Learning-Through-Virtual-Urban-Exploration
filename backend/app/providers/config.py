@@ -76,6 +76,10 @@ class ProviderConfig:
                 "voice": self.voice if self.service == "tts" else None,
                 "real_validation": "pending"}
 
+    @property
+    def ready(self) -> bool:
+        return bool(self.live_enabled and self.api_key)
+
     def require_enabled(self) -> None:
         if not self.live_enabled:
             raise ProviderError("service_disabled")

@@ -18,6 +18,7 @@
     "content:check": "node scripts/validate-content.mjs",
     "content:deployment": "node scripts/validate-deployment.mjs",
     "test:deployment-content": "node --test scripts/deployment-content.test.mjs",
+    "asr:eval": "backend/.venv/bin/python scripts/asr-eval.py",
     "test:api": "backend/.venv/bin/python -m pytest backend/tests -q",
     "test:content": "node --test content/*.test.mjs",
     "check": "npm run typecheck && npm run test:content && npm run test:ui && npm run test:api && npm run audio:check",

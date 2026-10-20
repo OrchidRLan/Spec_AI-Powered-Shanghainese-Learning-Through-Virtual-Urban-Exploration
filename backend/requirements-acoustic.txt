@@ -1,0 +1,5 @@
+# Optional, local evaluation only (scripts/asr-eval.py --acoustic). Never installed in production.
+# Model weights (default microsoft/wavlm-base-plus, ~380 MB) download from Hugging Face on first use.
+numpy>=1.26,<3
+torch>=2.2,<3
+transformers>=4.40,<5

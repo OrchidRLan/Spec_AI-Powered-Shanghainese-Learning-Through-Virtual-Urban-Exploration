@@ -1,37 +1,37 @@
-# 四站 API（账号、临时游客与生产配置）
+# Four-Station API (Accounts, Temporary Guests, and Production Configuration)
 
-Python 3.11+，FastAPI + SQLite。开发时数据库在本机；生产时必须将其放在后端的持久磁盘。配置实现不表示实际部署或验收已完成。
+Python 3.11+, FastAPI + SQLite. In development the database lives on the local machine; in production it must be placed on the backend's persistent disk. Having the configuration implemented does not mean deployment or acceptance has actually been completed.
 
 ```sh
 cd backend
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock
 .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-# 另一终端运行根目录前端；/api 经 Vite 同源代理。
+# Run the root frontend in another terminal; /api goes through the Vite same-origin proxy.
 .venv/bin/python -m pytest
 ```
 
-默认数据库 `backend/data/app.db`，可通过 `DATABASE_PATH` 改到独立目录。后端自动加载根 `.env`，不覆盖进程已有环境变量；配置修改后重启后端。数据库、录音、日志、虚拟环境都不提交。Cookie 为随机 256 位 token（数据库只保存哈希），`HttpOnly; SameSite=Strict`；生产额外要求 `Secure`。返回的 session ID 不是访问凭证。写请求检验 Origin / Fetch Metadata 并要求 JSON（ASR 除外）。ASR 已有会话每分钟 30 个请求的上限。
+The default database is `backend/data/app.db`; it can be moved to a separate directory via `DATABASE_PATH`. The backend automatically loads the root `.env` without overriding environment variables already set in the process; restart the backend after changing configuration. The database, recordings, logs, and virtual environment are not committed. The cookie is a random 256-bit token (the database stores only its hash), `HttpOnly; SameSite=Strict`; production additionally requires `Secure`. The returned session ID is not an access credential. Write requests check Origin / Fetch Metadata and require JSON (except ASR). ASR already has a per-session limit of 30 requests per minute.
 
-## 生产运行边界
+## Production Runtime Boundaries
 
-| 环境变量 | 开发默认值 | 生产要求 |
+| Environment variable | Development default | Production requirement |
 | --- | --- | --- |
-| `APP_ENV` | `development` | `production`；其他值启动失败 |
-| `DATABASE_PATH` | `backend/data/app.db` | 显式绝对路径，部署配置负责挂载持久磁盘，例如 `/var/data/app.db` |
-| `COOKIE_SECURE` | `false` | 必须为 `true` |
-| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | 显式 HTTPS 前端源，逗号分隔；无路径、凭据或通配符。不自动允许请求 Host 或预览域名 |
-| `BACKEND_PROXY_SECRET` | 不使用 | 至少 32 位无空白 ASCII 随机秘密；只在 Vercel 代理函数和 Render 后端环境中配置 |
+| `APP_ENV` | `development` | `production`; any other value fails at startup |
+| `DATABASE_PATH` | `backend/data/app.db` | Explicit absolute path; the deployment configuration is responsible for mounting the persistent disk, e.g. `/var/data/app.db` |
+| `COOKIE_SECURE` | `false` | Must be `true` |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Explicit HTTPS frontend origins, comma-separated; no paths, credentials, or wildcards. The request Host and preview domains are not automatically allowed |
+| `BACKEND_PROXY_SECRET` | Not used | Random secret of at least 32 non-whitespace ASCII characters; configured only in the Vercel proxy function and the Render backend environment |
 
-Vercel 以同源 `/api` 服务前端，服务端代理转发至 Render。生产后端除 `GET/HEAD /api/health` 外，均要求 `X-Shanghai-Proxy-Secret` 与配置值恒定时间比对成功，并要求 `X-Shanghai-Client-IP` 为单个有效 IP。代理必须覆盖这两个请求头，客户端 IP 从 Vercel 可信元数据取得；不能转发浏览器自报的 IP 或秘密。IPv4 映射的 IPv6 地址归一到同一限流桶。后端不依赖 `X-Forwarded-For`，部署启动使用 `--no-proxy-headers`；无秘密或 IP 格式错误返回 `403 proxy_required`。生产写请求还必须带允许的 `Origin`，保留浏览器的 `Sec-Fetch-Site` 检查，不由代理伪造一个始终通过的 Origin。
+Vercel serves the frontend with a same-origin `/api`, and a server-side proxy forwards requests to Render. Except for `GET/HEAD /api/health`, the production backend requires `X-Shanghai-Proxy-Secret` to match the configured value in a constant-time comparison, and requires `X-Shanghai-Client-IP` to be a single valid IP. The proxy must overwrite both request headers and take the client IP from Vercel's trusted metadata; it must not forward a browser-reported IP or secret. IPv4-mapped IPv6 addresses are normalized into the same rate-limit bucket. The backend does not rely on `X-Forwarded-For`, and the deployment starts with `--no-proxy-headers`; a missing secret or malformed IP returns `403 proxy_required`. Production write requests must also carry an allowed `Origin`; the browser `Sec-Fetch-Site` check is retained, and the proxy does not forge an Origin that always passes.
 
-`GET/HEAD /api/health` 检查数据库连接和表可访问，返回运行模式及内容／规则版本；数据库不可用返回 503，不返回数据路径、密钥或账号信息，不调用任何模型服务。生产关闭 `/docs`、`/redoc`、`/openapi.json`。新会话和创建事件记录实际 `production` 模式，旧会话模式不被重写。
+`GET/HEAD /api/health` checks the database connection and that tables are accessible, and returns the runtime mode and content/rule versions; if the database is unavailable it returns 503. It does not return data paths, secrets, or account information, and does not call any model service. Production disables `/docs`, `/redoc`, and `/openapi.json`. New sessions and creation events record the actual `production` mode; the mode of existing sessions is not rewritten.
 
-首次部署使用空数据库，由既有事务初始化创建表；重启与升级保留已有账号和进度。挂载路径、备份／恢复、游客清理、平台限额和实际 HTTPS 检查仍需按部署计划落实，配置校验本身不能证明磁盘已经持久挂载。
+The first deployment uses an empty database, and tables are created by the existing transactional initialization; restarts and upgrades preserve existing accounts and progress. Mount path, backup/restore, guest cleanup, platform quotas, and actual HTTPS checks still need to be carried out according to the deployment plan; configuration validation by itself cannot prove that the disk is persistently mounted.
 
-## 认证与临时进度
+## Authentication and Temporary Progress
 
-本轮身份独立于已有学习 session。账号使用 `shanghai_account` HttpOnly / SameSite=Strict Cookie，服务器令牌与浏览器均最长 30 天；退出撤销当前令牌，不清空账号进度。游客使用 `X-Guest-Token` 请求头，前端只存标签页 `sessionStorage`，最长 24 小时。数据库只存两类随机令牌的 SHA-256 摘要。用户名按 trim + casefold 唯一，显示保留大小写；3–24 位 ASCII 字母、数字、下划线。规范化的 `users.username_key` 是数据库 `NOT NULL PRIMARY KEY`，并使用 `NOCASE` 排序规则约束大小写重复；原 `users.id` 保留为 `NOT NULL UNIQUE`，继续承接令牌和学习会话的外键。已有数据库启动时事务迁移主键，保留账号 ID、密码摘要、令牌与进度；迁移失败回滚，不重置数据。密码 8–128 字符，不要求字符种类，空格不裁剪，随机盐 scrypt `N=32768,r=8,p=3`，不存明文。
+Identity in this round is independent of the existing learning session. Accounts use the `shanghai_account` HttpOnly / SameSite=Strict cookie; both the server token and the browser cookie last at most 30 days. Logout revokes the current token and does not clear account progress. Guests use the `X-Guest-Token` request header, which the frontend stores only in the tab's `sessionStorage`, for at most 24 hours. The database stores only SHA-256 digests of both kinds of random token. Usernames are unique after trim + casefold, and display preserves case; 3–24 ASCII letters, digits, and underscores. The normalized `users.username_key` is the database `NOT NULL PRIMARY KEY` and uses the `NOCASE` collation to prevent case-only duplicates; the original `users.id` is kept as `NOT NULL UNIQUE` and continues to back the foreign keys of tokens and learning sessions. On startup, existing databases migrate the primary key in a transaction, preserving account IDs, password digests, tokens, and progress; if migration fails it rolls back and does not reset data. Passwords are 8–128 characters with no character-class requirements, and spaces are not trimmed; random-salt scrypt `N=32768,r=8,p=3`; no plaintext is stored.
 
 ```ts
 type AuthState = {
@@ -42,56 +42,56 @@ type AuthState = {
 };
 ```
 
-| 接口 | 请求 | 返回 |
+| Endpoint | Request | Response |
 | --- | --- | --- |
-| GET /api/auth | 可选账号 Cookie / 游客头 | AuthState；旧匿名 Cookie 不自动登录，只报告 legacy_available |
-| POST /api/auth/guest | `{locale?: 'zh'|'en'}` | AuthState + guest_token；不签发长期匿名 Cookie |
-| POST /api/auth/register | `{username,password,locale?,import_legacy?:boolean}`，可带游客头 | 注册并登录，AuthState；承接当前游客进度 |
-| POST /api/auth/login | 同上 | AuthState；恢复账号并事务合并当前游客进度 |
-| POST /api/auth/logout | `{}`，附当前 X-Expected-Session-ID | 撤销当前令牌，返回 signed_out；保留账号数据 |
+| GET /api/auth | Optional account cookie / guest header | AuthState; the legacy anonymous cookie does not log in automatically, it only reports legacy_available |
+| POST /api/auth/guest | `{locale?: 'zh'|'en'}` | AuthState + guest_token; no long-lived anonymous cookie is issued |
+| POST /api/auth/register | `{username,password,locale?,import_legacy?:boolean}`, may include the guest header | Registers and signs in, AuthState; takes over the current guest progress |
+| POST /api/auth/login | Same as above | AuthState; restores the account and transactionally merges the current guest progress |
+| POST /api/auth/logout | `{}`, with the current X-Expected-Session-ID | Revokes the current token, returns signed_out; account data is preserved |
 
-课程 API 的身份优先级为显式游客头 → 有效账号 Cookie → 旧匿名 Cookie。**带了无效/过期游客头时返回 `guest_expired`，不得回退到同浏览器账号。** 普通欢迎界面不调用旧匿名 `/session` 恢复；只有用户明确勾选 `import_legacy`，登录/注册才导入其持有的旧 Cookie 数据。旧匿名记录不会自动删除。
+For the lesson API, identity precedence is explicit guest header → valid account cookie → legacy anonymous cookie. **If an invalid/expired guest header is sent, `guest_expired` is returned; the request must not fall back to an account in the same browser.** The normal welcome screen does not call the legacy anonymous `/session` to restore; only when the user explicitly checks `import_legacy` does login/registration import the legacy cookie data they hold. Legacy anonymous records are not deleted automatically.
 
-前端在恢复身份后，所有课程 API、原始 ASR 上传与私有糖店音频携带 `X-Expected-Session-ID`，其值为当前显示的 Session.id。服务器将它与实际凭据绑定比对；不一致返回 401 `session_changed`，防止另一标签切换账号后把旧页面操作写入新账号。登录/注册/游客入口与 GET /auth 不受此绑定限制；退出会比对。为了已有 API/旧匿名兼容，未提供该头的请求仍使用其实际凭据授权，但正式前端不得省略。私有音频必须带头 fetch 为 Blob 后播放，令牌不放 URL。
+After identity is restored, the frontend sends `X-Expected-Session-ID` with all lesson API calls, raw ASR uploads, and private candy-shop audio; its value is the currently displayed Session.id. The server compares it against the session bound to the actual credential; a mismatch returns 401 `session_changed`, which prevents actions from an old page being written to a new account after another tab switches accounts. Login/registration/guest entry and GET /auth are not subject to this binding; logout does compare. For compatibility with the existing API/legacy anonymous clients, requests without this header are still authorized by their actual credential, but the official frontend must not omit it. Private audio must be fetched with the header as a Blob before playback; tokens are not put in URLs.
 
-合并在同一 SQLite 事务中移动尝试、事件、ASR 与使用记录；课程版本先固化到每条 attempt。合并保留历史成功和所有练习记录，撤销来源游客/旧匿名凭据，并留下账号来源归属。不同课程版本或会话内请求 ID 冲突返回 `merge_conflict`，两边原记录均不改变；旧版可单独关联新账号后通过原有升级入口继续。仍在处理的请求返回 `merge_in_progress`，完成后可重试；超过 30 秒的未完成 ASR 先存为 `asr_interrupted` 终态，避免进程重启后永远不能保存。旧版 turns 的 processing / prepared 同样以 30 秒为界：近期请求仍阻止合并，超时请求记录为 cancelled，只清除匹配的 pending_request_id；原始 payload、解释和记录保留，不自动应用订单。取消状态阻止迟到解释重新写成 prepared 或推进订单。迟到云端结果不能覆盖终态。ASR 上传完成和云端返回时重新核验身份；退出后的转写被丢弃，不改变练习进度。
+Merging moves attempts, events, ASR, and usage records within a single SQLite transaction; the lesson version is first pinned onto each attempt. Merging preserves historical successes and all practice records, revokes the source guest/legacy anonymous credential, and leaves account source attribution. A different lesson version or a request ID conflict within a session returns `merge_conflict`, and the original records on both sides remain unchanged; the old version can be linked to the new account separately and then continued via the existing upgrade entry point. Requests still in progress return `merge_in_progress` and can be retried after they complete; unfinished ASR older than 30 seconds is first stored with the terminal state `asr_interrupted`, so that it does not become permanently unsaveable after a process restart. Legacy turns in processing / prepared use the same 30-second threshold: recent requests still block merging, timed-out requests are recorded as cancelled, and only the matching pending_request_id is cleared; the original payload, interpretation, and records are kept, and the order is not applied automatically. The cancelled state prevents a late interpretation from being rewritten to prepared or advancing the order. Late cloud results cannot overwrite a terminal state. Identity is re-verified when the ASR upload completes and when the cloud returns; transcriptions after logout are discarded and do not change practice progress.
 
-服务端 SQLite 限流：登录每用户名 10 次 / 15 分钟、每来源 IP 50 次 / 15 分钟；注册每 IP 15 次 / 小时；游客创建每 IP 50 次 / 15 分钟。生产来源 IP 只取上述通过秘密校验的代理头；开发模式使用直接连接地址，忽略自报代理头。账号不存在与密码错误统一 `invalid_credentials`。常用错误还包括 `invalid_username` / `invalid_password` (422)、`username_taken` (409)、`auth_rate_limited` (429)、`legacy_unavailable` (409)、`session_required` / `guest_expired` / `session_changed` (401)。
+Server-side SQLite rate limiting: login 10 per username / 15 minutes and 50 per source IP / 15 minutes; registration 15 per IP / hour; guest creation 50 per IP / 15 minutes. In production the source IP is taken only from the proxy header described above that passed secret validation; development mode uses the direct connection address and ignores self-reported proxy headers. A nonexistent account and a wrong password both return `invalid_credentials`. Other common errors include `invalid_username` / `invalid_password` (422), `username_taken` (409), `auth_rate_limited` (429), `legacy_unavailable` (409), and `session_required` / `guest_expired` / `session_changed` (401).
 
-每次 API 请求惰性清理到期游客及其所有关联尝试、请求、事件与 ASR 数据，不清理旧匿名或账号记录。无访问时可从 backend 目录执行下列命令；部署时将其纳入定时维护：
+Each API request lazily cleans up expired guests and all their associated attempts, requests, events, and ASR data; legacy anonymous and account records are not cleaned up. When there is no traffic, the following command can be run from the backend directory; include it in scheduled maintenance at deployment:
 
 ```sh
 .venv/bin/python -m app.cleanup_guests --database /absolute/path/to/app.db
 ```
 
-命令不会加载语音服务或读取 `.env`；不传参数时采用进程 `DATABASE_PATH` 或默认 backend/data/app.db。数据库初始化仅新增认证/归属表，不改写已有会话数据。账号升级旧课程会保留 account_sessions 归属记录；游客升级不延长原 24 小时窗口。关闭页面不能可靠通知服务器，24 小时是凭据有效期上限；实际数据在后续 API 请求或清理命令中移除，无访问时不能保证准点物理删除。浏览器恢复标签页可能恢复游客凭据。
+The command does not load speech services or read `.env`; with no arguments it uses the process's `DATABASE_PATH` or the default backend/data/app.db. Database initialization only adds auth/attribution tables and does not rewrite existing session data. When an account upgrades a legacy lesson, the account_sessions attribution record is kept; a guest upgrade does not extend the original 24-hour window. Closing the page cannot reliably notify the server, so 24 hours is the upper bound on credential validity; actual data is removed on subsequent API requests or by the cleanup command, and without traffic on-time physical deletion cannot be guaranteed. A browser restoring tabs may restore guest credentials.
 
-## 接口
+## Endpoints
 
-| 接口 | 请求 | 返回 |
+| Endpoint | Request | Response |
 | --- | --- | --- |
-| GET/HEAD /api/health | 无，生产允许直接健康检查 | mode/content_version/rule_version；数据库不可用返回 503 |
-| GET /api/session | 当前身份 | 恢复 Session；没有身份返回 401，不再自动创建匿名 Cookie |
+| GET/HEAD /api/health | None; production allows direct health checks | mode/content_version/rule_version; returns 503 if the database is unavailable |
+| GET /api/session | Current identity | Restores Session; returns 401 when there is no identity, and no longer auto-creates an anonymous cookie |
 | PATCH /api/session | locale?: zh/en, show_romanization?: bool, reduced_motion?: bool | Session |
-| POST /api/session/new | 当前身份；JSON `{}` | 明确升级旧课程时创建 Session；账号更新当前绑定，游客沿用原 token 与到期时刻，旧匿名才替换 Cookie；保留偏好与旧记录 |
-| GET /api/services | 无 | asr.enabled/formats/config；text.mode=development_parser |
-| GET /api/content | 当前身份 | 会话绑定的当前内容包或历史归档包；不会自动回退到其他版本 |
-| POST /api/attempts | station_id: nanxiang/restaurant/candy/teahouse, restart?: bool | Attempt；未完成时恢复，同一请求重试不重复创建。已完成时 restart:true 才新建 |
-| GET /api/attempts/{id} | 当前身份 | Attempt |
-| POST /api/attempts/{id}/practice | PracticeInput，仅 R3 | PracticeResult；保存本题选择/评估或显式推进 |
-| GET /api/attempts/{id}/practice/{request_id} | 当前身份 | 原始 PracticeResult；未知 404 |
-| POST /api/attempts/{id}/practice/{request_id}/cancel | expected_revision | 已保存结果或取消 tombstone，保护迟到原请求 |
-| POST /api/attempts/{id}/lesson | LessonInput，仅 B+C 三站 | PracticeResult；保存选择、评估、明确继续、编辑或听辨接触 |
-| GET /api/attempts/{id}/lesson/{request_id} | 当前身份 | 原始 PracticeResult；未知 404 |
-| POST /api/attempts/{id}/lesson/{request_id}/cancel | expected_revision | 原始结果或取消 tombstone |
-| GET /api/attempts/{id}/introduction/audio | 当前身份；仅本人糖店尝试 | 版本、原文、注音与文件哈希核验后的 WAV；不发送目标文件名 |
+| POST /api/session/new | Current identity; JSON `{}` | Creates a Session when explicitly upgrading a legacy lesson; accounts update the current binding, guests keep the original token and expiry time, and only legacy anonymous replaces the cookie; preferences and old records are preserved |
+| GET /api/services | None | asr.enabled/formats/config; text.mode=development_parser |
+| GET /api/content | Current identity | The current content pack or historical archived pack bound to the session; does not automatically fall back to another version |
+| POST /api/attempts | station_id: nanxiang/restaurant/candy/teahouse, restart?: bool | Attempt; resumes if unfinished, and retrying the same request does not create a duplicate. When completed, only restart:true creates a new one |
+| GET /api/attempts/{id} | Current identity | Attempt |
+| POST /api/attempts/{id}/practice | PracticeInput, R3 only | PracticeResult; saves the current question's selection/evaluation or an explicit advance |
+| GET /api/attempts/{id}/practice/{request_id} | Current identity | Original PracticeResult; unknown returns 404 |
+| POST /api/attempts/{id}/practice/{request_id}/cancel | expected_revision | Saved result or cancellation tombstone, protecting against a late original request |
+| POST /api/attempts/{id}/lesson | LessonInput, B+C three stations only | PracticeResult; saves selection, evaluation, explicit continue, edit, or listening exposure |
+| GET /api/attempts/{id}/lesson/{request_id} | Current identity | Original PracticeResult; unknown returns 404 |
+| POST /api/attempts/{id}/lesson/{request_id}/cancel | expected_revision | Original result or cancellation tombstone |
+| GET /api/attempts/{id}/introduction/audio | Current identity; only the user's own candy-shop attempt | WAV after verification of version, original text, romanization, and file hash; the target filename is not sent |
 | POST /api/attempts/{id}/turns | TurnInput | TurnResult |
-| GET /api/attempts/{id}/turns/{request_id} | 当前身份 | TurnResult；未知 404 |
-| POST /api/attempts/{id}/turns/{request_id}/cancel | expected_revision | TurnResult；支持取消先于原 POST 到达 |
-| POST /api/attempts/{id}/skip | expected_revision | Attempt；取消在途回合，不覆盖成功 |
-| POST /api/events | event_id, attempt_id?, event_type, metadata? | saved, duplicate；不更新订单字段 |
-| GET /api/events | 当前身份 | 仅自己会话的事件 |
-| POST /api/asr | 原始 PCM16 WAV；Content-Type:audio/wav，X-Request-ID | {text,transcript,status,elapsed_ms,config_id,...}，转写本身不推进任务 |
+| GET /api/attempts/{id}/turns/{request_id} | Current identity | TurnResult; unknown returns 404 |
+| POST /api/attempts/{id}/turns/{request_id}/cancel | expected_revision | TurnResult; supports the cancel arriving before the original POST |
+| POST /api/attempts/{id}/skip | expected_revision | Attempt; cancels in-flight turns, does not overwrite a success |
+| POST /api/events | event_id, attempt_id?, event_type, metadata? | saved, duplicate; does not update order fields |
+| GET /api/events | Current identity | Only events from the user's own session |
+| POST /api/asr | Raw PCM16 WAV; Content-Type:audio/wav, X-Request-ID | {text,transcript,status,elapsed_ms,config_id,...}; the transcription by itself does not advance the task |
 
 ```ts
 type Order = {
@@ -110,8 +110,8 @@ type Attempt = {
   prompt_id: string; pending_request_id: string|null;
   metrics: {voice_attempts:number;help_used:number};
   unit_convention_seen: boolean; turns: Turn[];
-  practice?: Practice; // 仅 R3，历史版本没有此字段
-  lesson?: Lesson; // B+C 三站，南翔继续使用 practice
+  practice?: Practice; // R3 only; historical versions lack this field
+  lesson?: Lesson; // B+C three stations; Nanxiang keeps using practice
   created_at:string; updated_at:string;
 };
 type TurnInput = {
@@ -134,9 +134,9 @@ type Session = {
 };
 ```
 
-## B+C：三站固定问题
+## B+C: Fixed Questions for the Three Stations
 
-南翔和基础会话继续绑定 R3 内容与规则；第一次开始 B+C 站点时，为当前 R3 会话追加 `lesson_content_version=batch-bc.2026-10-17.v1`、`lesson_rule_version=station-lessons.v1`。三站 Attempt 分别绑定这两个版本，不重置南翔进度。旧 R1/R2 会话与未知扩展绑定不静默迁移，返回 `lesson_version_required`；已有尝试按原绑定恢复。`/turns` 和 `/practice` 不能绕过新站规则。
+Nanxiang and the base session remain bound to R3 content and rules; the first time a B+C station is started, `lesson_content_version=batch-bc.2026-10-17.v1` and `lesson_rule_version=station-lessons.v1` are appended to the current R3 session. The Attempts of the three stations are each bound to these two versions, without resetting Nanxiang progress. Old R1/R2 sessions and unknown extension bindings are not silently migrated and return `lesson_version_required`; existing attempts resume under their original binding. `/turns` and `/practice` cannot bypass the new station rules.
 
 ```ts
 type Lesson = {
@@ -157,24 +157,24 @@ type LessonInput = {
 };
 ```
 
-| 站点 | 固定步骤 | 本题选项 |
+| Station | Fixed steps | Options per question |
 | --- | --- | --- |
-| restaurant | preference → recommendation → dish → confirm | not_spicy；recommend；fish/chicken/tofu；confirm |
-| candy | flavor → quantity → confirm | rose/osmanthus/mint；two_packs；confirm |
-| teahouse | appreciation → thanks | good_tea；thanks |
+| restaurant | preference → recommendation → dish → confirm | not_spicy; recommend; fish/chicken/tofu; confirm |
+| candy | flavor → quantity → confirm | rose/osmanthus/mint; two_packs; confirm |
+| teahouse | appreciation → thanks | good_tea; thanks |
 
-- 所有步骤均先选目标、再识别核对、结果停留；`continue` 才写入 `answers`。前置选择、播放台词、展示推荐均不冒充用户回答。最终 `confirm` 的目标自动设为 `confirm`，仍需语音尝试或技术回退后明确继续；茶楼的 thanks 明确继续直接保存完成，不生成订单核对。
-- 新三站使用有限的 `station-target-check.v1`，对原始转写做目标表达核对，另外执行任务约束。豆腐为辣菜，不能完成不辣任务；糖店口味必须匹配服务端固定目标。因此清楚说出不合任务的预选项会返回 `incorrect/task_mismatch`，辅助继续同样不能绕过任务约束。用户可以重选与练习，不产生追问。
-- 南翔与新三站的每次核对都附带 `scoring`（`lenient-rules.v1`）：先按原文核对，失败时再去掉语气词与重说后复核；停顿、重复、同音变体记为 0 分扣减，内容错误记为关键错误并强制 `retry`。分数仅供内部分析，界面不展示，详见 [宽松评分说明](../docs/engineering/Scoring-system.md)。
-- 双重否定、错对象、转述／引用、数量冲突和询问不按关键词误记为目标完成。有限语义核对不是任意自由对话理解或逐字发音评分。全部教材选项均有原句回归；不修改保存的 ASR 原文。
-- 糖店每次尝试随机分配一个固定口味，刷新、切语言、重播、错误选择和恢复都不改变。私有目标不会出现在 Attempt、Session、错误、幂等快照或日志中；音频通过无口味标记的私有 URL 发送。`listened` 需先成功取得该尝试的音频，且由播放器正常结束后调用；服务端把结束事实记录为 `reported_by:client`，不称为已听懂。音频下载、播放失败、取消、仅打开词卡均不算已听。
-- `help` 是明确查看介绍文字，保存不可撤销的曝光记录，之后才返回对应 `introduction_text_id`。完整播完或使用文字帮助后才能核对/继续口味题。音频缺失或身份校验失败返回 503，文字帮助仍可完成任务。
-- `edit` 只能从餐厅／糖店确认题回到之前的既定步骤，清除该步及后续已提交答案、旧结果和确认版本，开始新 `step_id` 并重新先 Speak。过去回答保留在 history；新的确认只依据最新有效答案。完成后修改被拒绝，重练产生新尝试。
-- 评估的原文绑定、ASR 一次消费、故障原文恢复、结果 ID、幂等与取消和原子保存与南翔相同；同一 ASR 也不能跨南翔和新三站重复消费。响应丢失可查询或取消原请求，客户端必须按 revision 防止原快照覆盖后续状态。保存失败不会记录完成、消耗 ASR 或留下半条历史。
+- Every step first selects a target, then recognizes and checks, and the result stays on screen; only `continue` writes into `answers`. A preliminary selection, playing a dialogue line, or showing a recommendation does not count as a user answer. The target of the final `confirm` is set to `confirm` automatically, but it still requires a voice attempt or technical fallback followed by an explicit continue; for the teahouse, an explicit continue on thanks saves completion directly, and no order check is generated.
+- The new three stations use the limited `station-target-check.v1`, which checks the target expression against the raw transcript, and additionally enforces task constraints. Tofu is a spicy dish and cannot complete the not-spicy task; the candy-shop flavor must match the fixed server-side target. Therefore, clearly saying a preselected option that does not fit the task returns `incorrect/task_mismatch`, and assisted continue likewise cannot bypass task constraints. The user can reselect and practice; no follow-up questions are generated.
+- Every check for Nanxiang and the new three stations includes `scoring` (`lenient-rules.v1`): it first checks against the original text, and on failure rechecks after removing filler words and restarts. Pauses, repetitions, and homophone variants are recorded as 0-point deductions; content errors are recorded as critical errors and force `retry`. The score is for internal analysis only and is not shown in the UI; see [Lenient scoring notes](../docs/engineering/Scoring-system.md).
+- Double negation, wrong object, paraphrase/quotation, quantity conflicts, and questions are not miscounted as target completion based on keywords. The limited semantic check is not arbitrary free-dialogue understanding or word-by-word pronunciation scoring. All textbook options have original-sentence regression tests; the saved ASR original text is not modified.
+- Each candy-shop attempt is randomly assigned one fixed flavor, which does not change on refresh, language switch, replay, wrong selection, or resume. The private target never appears in Attempt, Session, errors, idempotency snapshots, or logs; audio is delivered via a private URL with no flavor marker. `listened` requires first successfully fetching that attempt's audio and must be called after the player ends normally; the server records the ended fact as `reported_by:client` and does not call it understood. Audio download, playback failure, cancellation, or only opening the word card do not count as listened.
+- `help` is explicitly viewing the introduction text; it saves an irreversible exposure record, and only then returns the corresponding `introduction_text_id`. The flavor question can be checked/continued only after full playback or after using text help. Missing audio or identity verification failure returns 503; text help can still complete the task.
+- `edit` can only go back from the restaurant/candy-shop confirm question to an earlier fixed step; it clears that step's and subsequent submitted answers, old results, and the confirmation revision, starts a new `step_id`, and requires Speak first again. Past answers are kept in history; the new confirmation is based only on the latest valid answers. Edits after completion are rejected; re-practicing creates a new attempt.
+- Evaluation's original-text binding, single-use ASR consumption, original-text recovery on failure, result IDs, idempotency and cancellation, and atomic saving are the same as Nanxiang; the same ASR also cannot be consumed twice across Nanxiang and the new three stations. If a response is lost, the original request can be queried or cancelled; the client must use revision to prevent the original snapshot from overwriting later state. A save failure does not record completion, consume the ASR, or leave a half-written history entry.
 
-## 修订 3：固定练习与手动继续
+## Revision 3: Fixed Practice and Manual Continue
 
-新会话绑定 `batch-a-r3.2026-10-17.v1`、`nanxiang-rules.v3`。R2、R1、原基线会话按其原内容快照和规则继续恢复；不静默迁移。R3 禁止通过旧 `POST /turns` 直接修改订单，返回 `guided_practice_required`；旧版本使用 `/practice` 返回 `practice_version_required`。版本变化后仍由用户明确选择新探索。
+New sessions bind `batch-a-r3.2026-10-17.v1` and `nanxiang-rules.v3`. R2, R1, and original baseline sessions continue to resume under their original content snapshot and rules; they are not silently migrated. R3 forbids modifying the order directly through the old `POST /turns`, returning `guided_practice_required`; old versions using `/practice` get `practice_version_required`. After a version change, the user still explicitly chooses a new exploration.
 
 ```ts
 type Practice = {
@@ -203,46 +203,46 @@ type PracticeInput = {
 type PracticeResult = {request_id:string;status:'applied'|'cancelled';attempt:Attempt};
 ```
 
-- `select` 只保存本题合法目标、清空旧结果；不写订单。商品只能 `xiaolongbao`，数量为 1–20 和 `unit:'serving'`，方式为布尔值。每次只能提交本题字段，不能选择一个包含全部订单字段的目标。最终题默认目标 `{type:'confirm'}`。
-- `evaluate` 携带本会话保存的 ASR ID 和完全相同的原转写 `text`；服务端独立核对，不信任客户端正确标志。不改订单、问题、状态、摘要或完成列表，只保存结果。原文始终保留，空转写为 `unrecognized/no_speech`；有文字但不理解为 `incorrect/not_understood`。返回结果后前端必须停留。
-- 故障使用 `evaluate` 的 `failure_kind`，不能同时提交 `text`；存在 ASR 失败 ID 时服务端按已保存错误区分无语音和技术故障。浏览器技术超时所带 ID 若仍 pending/尚未建立，保存 `reported_by:'client'` 的真实技术空态并开放回退；若后台其实已成功，就从服务端读取原转写核对并显示结果。没有 ASR ID 的设备/浏览器失败同样标为 client，原文为空；不能伪记为后端识别证据。技术故障为 `technical`，不是错误发音；晚返回的 ASR 不会覆盖已保存结果。
-- `continue` 正常推进必须携带当前正确结果的 `result_request_id`。错误、无语音或技术故障后 `can_choose=true`，用户明确选择 `assisted:true` 才用当前目标推进；增加帮助计数并记录辅助继续，不变造原语音结果。失败后改选新目标会清结果但保留本题回退资格，此时辅助继续可不带结果 ID；若提供结果 ID 就必须匹配当前结果。
-- 进入下一题才替换 `step_id` 并重置目标/回退资格；本题选择、评估、刷新保持 `step_id`。固定问题仅为 `NX-N01 → NX-N02 → NX-N03 → NX-N09`，结束为 `NX-N10`。额外字段不能跨题推进，没有单位、商品、越界等临时追问。
-- `edit` 仅从最终核对返回指定既定题，立即使旧确认摘要失效。原订单先保留，评估仍不修改；点击继续才应用新字段并回到核对。新的编辑题重新要求先尝试语音，其失败/结果可跨刷新恢复。
-- `revision` 包含选择、结果与推进的状态变化；`summary_revision` 在进入核对题时固定，不因该题选择/评估而失效。确认结果也必须停留，明确 `continue` 保存成功才完成；辅助确认同样必须显式点击。
+- `select` only saves a valid target for the current question and clears the old result; it does not write the order. The item can only be `xiaolongbao`, the quantity is 1–20 with `unit:'serving'`, and the mode is a boolean. Each submission may contain only the current question's field; a target containing all order fields cannot be selected. The final question's default target is `{type:'confirm'}`.
+- `evaluate` carries an ASR ID saved in this session and the exactly identical original transcript `text`; the server checks independently and does not trust a client correctness flag. It does not change the order, issues, status, summary, or completion list; it only saves the result. The original text is always kept; an empty transcript is `unrecognized/no_speech`, and text that is present but not understood is `incorrect/not_understood`. After the result is returned, the frontend must stay on it.
+- Failures use `evaluate`'s `failure_kind` and cannot submit `text` at the same time; when an ASR failure ID exists, the server distinguishes no speech from technical failure using the saved error. If the ID carried by a browser technical timeout is still pending/not yet created, a genuine technical empty state with `reported_by:'client'` is saved and fallback is opened; if the backend actually succeeded, the original transcript is read from the server, checked, and the result shown. Device/browser failures without an ASR ID are likewise marked client, with an empty original text; they cannot be falsely recorded as backend recognition evidence. A technical failure is `technical`, not mispronunciation; a late-returning ASR does not overwrite a saved result.
+- A normal advance via `continue` must carry the `result_request_id` of the current correct result. After an error, no speech, or a technical failure, `can_choose=true`, and only when the user explicitly chooses `assisted:true` does it advance using the current target; this increments the help count and records an assisted continue, without fabricating a voice result. Changing to a new target after a failure clears the result but keeps the current question's fallback eligibility; in that case assisted continue may omit the result ID, but if a result ID is provided it must match the current result.
+- Only moving to the next question replaces `step_id` and resets the target/fallback eligibility; selection, evaluation, and refresh within the current question keep `step_id`. The fixed questions are only `NX-N01 → NX-N02 → NX-N03 → NX-N09`, ending at `NX-N10`. Extra fields cannot advance across questions; there are no ad-hoc follow-ups for unit, item, out-of-range values, etc.
+- `edit` only returns from the final check to a specified fixed question, and immediately invalidates the old confirmation summary. The original order is kept at first, and evaluation still does not modify it; only clicking continue applies the new field and returns to the check. The new edit question again requires a voice attempt first, and its failures/results can be restored across refreshes.
+- `revision` covers state changes from selection, results, and advancing; `summary_revision` is fixed upon entering the check question and is not invalidated by selection/evaluation within that question. The confirmation result must also stay on screen; completion happens only when an explicit `continue` is saved successfully; an assisted confirmation must likewise be clicked explicitly.
 
-核对来源为 `guided-target-check.v1`，不调用自由对话 LLM，也不是声调或逐字发音评分。数量题允许纯数字、常见词和有限的“分→份”同音误写；判定用的替换不改原文。显式只/笼/个等不同单位、范围、分数、时长、冲突、否定给当前结果卡不正确，不启动新问题。R3 对否定表达采用保守边界，不会因提及目标字词就判通过；它不承诺理解任意自由修改句。
+The check source is `guided-target-check.v1`; it does not call a free-dialogue LLM, and it is not tone or word-by-word pronunciation scoring. The quantity question allows bare digits, common words, and a limited "分→份" homophone miswriting; substitutions used for judging do not change the original text. Explicitly different units such as 只/笼/个, ranges, fractions, durations, conflicts, and negations mark the current result card incorrect without starting a new question. R3 takes a conservative boundary on negative expressions and will not pass merely because target words are mentioned; it does not promise to understand arbitrary free-form modification sentences.
 
-结果原因：`target_matched`、`ambiguous_expression`、`target_mismatch`、`quantity_mismatch`、`mode_mismatch`、`item_mismatch`、`unit_mismatch`、`confirmation_mismatch`、`not_understood`、`no_speech`、`device_or_service_unavailable`、`asr_failed`。这些稳定代码由前端按语言呈现，服务端不拼写用户文案。
+Result reasons: `target_matched`, `ambiguous_expression`, `target_mismatch`, `quantity_mismatch`, `mode_mismatch`, `item_mismatch`, `unit_mismatch`, `confirmation_mismatch`, `not_understood`, `no_speech`, `device_or_service_unavailable`, `asr_failed`. These stable codes are rendered by the frontend according to language; the server does not compose user-facing text.
 
-所有练习操作的状态、事件、幂等响应在一个 SQLite 事务写入，不产生需要重新付费处理的 pending。重复相同 ID/负载返回原结果；同 ID 不同负载返回 `idempotency_conflict`，旧 revision 返回最新 Attempt 和 `stale_revision`。保存失败回滚所有变更和 ASR 消费标记，可查询原 ID，再重试原负载。取消未知 ID 建立 tombstone，迟到 POST 返回 cancelled；取消已完成的操作返回其保存结果，不撤销既成推进。
+The state, events, and idempotent responses of all practice operations are written in one SQLite transaction, and no pending state is produced that would require paid reprocessing. Repeating the same ID/payload returns the original result; the same ID with a different payload returns `idempotency_conflict`, and an old revision returns the latest Attempt and `stale_revision`. A save failure rolls back all changes and the ASR consumption marker; the original ID can be queried and the original payload retried. Cancelling an unknown ID creates a tombstone, and a late POST returns cancelled; cancelling a completed operation returns its saved result and does not undo an advance that has already happened.
 
-同会话同一 ASR 结果只能被一次练习评估消费（同一请求 ID 的幂等读取例外），跨题或不同请求再次使用返回 `asr_result_already_used`。前端录音回调仍需绑定录制时的 attempt/step/目标/revision，离开、取消、改选后的迟到回调应丢弃，不能拿最新 revision 重新包装旧录音。客户端故障回退是教学策略，不是声学准确性或安全认证证明。
+Within the same session, the same ASR result can be consumed by only one practice evaluation (except for idempotent reads with the same request ID); reusing it across questions or in a different request returns `asr_result_already_used`. Frontend recording callbacks must still be bound to the attempt/step/target/revision at recording time; late callbacks after leaving, cancelling, or reselecting should be discarded and must not rewrap an old recording with the latest revision. Client failure fallback is a teaching strategy, not proof of acoustic accuracy or a security certification.
 
-## 原基线／修订 1／修订 2 的历史回合合同
+## Historical Turn Contract for the Original Baseline / Revision 1 / Revision 2
 
-以下 `/turns`、自由字段解析与澄清规则只描述保留的历史版本，不用于 R3 主流程。
+The following `/turns`, free-field parsing, and clarification rules describe only the retained historical versions and are not used in the R3 main flow.
 
-提交 `set_order` 的字段必须实际表达；未出现字段保留，null 明确清空，false 真实堂吃。R2 完成条件为小笼、有效 1–20 份、明确堂吃或外带和独立确认；不再强制两份或外带。数量变更必须携带单位，不从旧订单偷用单位。新数量/单位/商品/方式及无效修改先让旧摘要失效；同轮文字里的“对”不能确认尚未展示的摘要。随后独立提交 `confirm`，带已展示的 `summary_revision`。每次请求使用新的 request_id（8–100 位字母/数字/`_`/`-`）；网络重试复用相同 ID 与完全相同负载。重复已应用回合返回原始保存结果；若之后已有新进展，前端应按 revision 防止旧结果覆盖当前状态，必要时 GET attempt。
+Fields submitted in `set_order` must actually have been expressed; absent fields are kept, null explicitly clears, and false genuinely means dine-in. R2 completion requires xiaolongbao, a valid 1–20 servings, explicit dine-in or takeaway, and a separate confirmation; two servings or takeaway are no longer required. A quantity change must carry a unit; the unit is not borrowed from the old order. A new quantity/unit/item/mode, and invalid modifications, first invalidate the old summary; a "对" in the same turn's text cannot confirm a summary that has not yet been displayed. `confirm` is then submitted separately, carrying the displayed `summary_revision`. Each request uses a new request_id (8–100 letters/digits/`_`/`-`); network retries reuse the same ID with exactly the same payload. Repeating an already-applied turn returns the originally saved result; if newer progress exists since then, the frontend should use revision to prevent the old result from overwriting the current state, and GET the attempt if necessary.
 
-`POST /api/session/new` 只供用户明确点击“开始新的探索”并确认后调用，不在配置冲突或普通刷新时自动调用。它保留当前语言、注音显示及减少动态偏好，为新会话绑定当前内容/规则/模型配置，并返回空 attempts 与完成列表。旧会话、已保存尝试和成功记录留在数据库中，既不删除也不转入新会话；新 Cookie 没有访问旧会话的权限。前端应先取消在途任务并清空旧会话的本地草稿/请求状态，防止迟到界面结果覆盖新探索。
+`POST /api/session/new` is called only after the user explicitly clicks "开始新的探索" (Start a new exploration) and confirms; it is not called automatically on configuration conflicts or ordinary refreshes. It keeps the current language, romanization display, and reduced-motion preferences, binds the new session to the current content/rule/model configuration, and returns empty attempts and an empty completion list. The old session, saved attempts, and success records remain in the database; they are neither deleted nor moved into the new session, and the new cookie has no access to the old session. The frontend should first cancel in-flight tasks and clear the old session's local drafts/request state, to prevent late UI results from overwriting the new exploration.
 
-修订 2 新会话绑定 `batch-a-r2.2026-10-17.v1` 和 `nanxiang-rules.v2`。R1 会话保留 `batch-a-r1.2026-10-17.v1`，基线会话保留 `batch-a.2026-10-17.v1`，分别从 `content/versions/<原版本>.json` 读取原内容；缺失、未知或文件内版本不匹配时返回 `content_version_unavailable`，不能用新文案静默替换旧包。规则也按 Attempt 原绑定分派：`nanxiang-rules.v1` 仍要求两份外带，不会因上线 R2 静默完成旧任务。所有 Attempt 响应附所属 `content_version/rule_version`；早期记录缺这些字段时从其原会话补充，读取本身不迁移数据库。历史回合的缓存响应仍是当时的订单和修订，附原版本，不替换成最新订单。
+Revision 2 new sessions bind `batch-a-r2.2026-10-17.v1` and `nanxiang-rules.v2`. R1 sessions keep `batch-a-r1.2026-10-17.v1` and baseline sessions keep `batch-a.2026-10-17.v1`, each reading its original content from `content/versions/<原版本>.json`; if the file is missing, unknown, or its in-file version does not match, `content_version_unavailable` is returned, and an old pack cannot be silently replaced with new copy. Rules are likewise dispatched by the Attempt's original binding: `nanxiang-rules.v1` still requires two servings for takeaway and will not silently complete old tasks because R2 has gone live. All Attempt responses include their `content_version/rule_version`; when early records lack these fields they are filled in from their original session, and reading by itself does not migrate the database. Cached responses of historical turns are still the order and revision of that time, with the original version attached; they are not replaced with the latest order.
 
-R2 界面只呈现语音与按钮，后端仍保留 `text`、`voice_edited` 数据结构、历史读取和已提交请求的幂等结果。旧成功、旧文本、ASR 原转写及编辑文本不删除或改写。当前静态界面若只带 R2 包，遇旧会话应说明版本差异并提供用户主动“开始新的探索”入口，不把旧进度标为新内容下的结果。
+The R2 UI presents only voice and buttons; the backend still retains the `text` and `voice_edited` data structures, historical reads, and the idempotent results of submitted requests. Old successes, old text, ASR original transcripts, and edited text are not deleted or rewritten. If the current static UI carries only the R2 pack, then on encountering an old session it should explain the version difference and provide a user-initiated "开始新的探索" (Start a new exploration) entry, without labeling old progress as results under the new content.
 
-允许事件：`expression_opened`, `expression_inserted`, `unit_explanation_viewed`, `recording_started`, `recording_stopped`, `recording_cancelled`, `recording_played`, `recording_permission_denied`, `asr_submitted`, `asr_succeeded`, `asr_failed`, `asr_cancelled`, `audio_started`, `audio_ended`, `audio_interrupted`, `pronunciation_support_changed`, `input_channel_changed`, `station_entered`, `assistance_recorded`, `logging_gap`。只在真的展示“一笼示意对应一份”后发 `unit_explanation_viewed`；之后提交的 basket 单位才可归一。事件不能直接完成订单。录音权限拒绝不能发 `recording_started`。客户端 ASR 与回听事件只是 UI 诊断，后端强制记录 `reported_by:client`，不会增加语音尝试、帮助、成功或完成计数；真正识别结果由服务端单独记录 `asr_finished`（`reported_by:server`），客户端不能提交该事件。
+Allowed events: `expression_opened`, `expression_inserted`, `unit_explanation_viewed`, `recording_started`, `recording_stopped`, `recording_cancelled`, `recording_played`, `recording_permission_denied`, `asr_submitted`, `asr_succeeded`, `asr_failed`, `asr_cancelled`, `audio_started`, `audio_ended`, `audio_interrupted`, `pronunciation_support_changed`, `input_channel_changed`, `station_entered`, `assistance_recorded`, `logging_gap`. Send `unit_explanation_viewed` only after actually displaying "一笼示意对应一份" (one basket illustrated as one serving); only basket units submitted after that can be normalized. Events cannot complete an order directly. A recording permission denial must not send `recording_started`. Client ASR and playback events are UI diagnostics only; the backend forcibly records `reported_by:client`, and they do not increase voice-attempt, help, success, or completion counts. The real recognition result is recorded separately by the server as `asr_finished` (`reported_by:server`), and the client cannot submit that event.
 
-HTTP 409 的 `detail={code,message,attempt?}` 表示冲突；刷新 attempt 并展示最新版本。422 为请求校验失败；503 表示服务或保存失败。保存失败时不得显示完成；先查询原 ID，再用原负载重试。已准备的解释会落盘，最终事务失败后可重试提交而不重新解释；状态、完成事件与结果在同一事务保存。进行中的解释可取消；崩溃后遗留 pending 可查询并取消，再以新 ID 提交。
+HTTP 409 with `detail={code,message,attempt?}` indicates a conflict; refresh the attempt and display the latest version. 422 is a request validation failure; 503 means a service or save failure. On a save failure, completion must not be shown; first query the original ID, then retry with the original payload. Prepared interpretations are persisted to disk, so after a final transaction failure the submission can be retried without reinterpreting; state, completion events, and results are saved in the same transaction. In-progress interpretations can be cancelled; a pending request left over after a crash can be queried and cancelled, then resubmitted with a new ID.
 
-解释失败会终结该回合并返回 `detail.terminal=true`，明确重试时生成新 ID；这与保存失败和网络未知结果的原 ID 重试不同。页面刷新后也要根据 `attempt.pending_request_id` 展示查询/取消入口，不能只依赖内存中的请求对象。
+An interpretation failure terminates the turn and returns `detail.terminal=true`; an explicit retry generates a new ID. This differs from retrying with the original ID for save failures and unknown network results. After a page refresh, the query/cancel entry must also be shown based on `attempt.pending_request_id`, rather than relying only on in-memory request objects.
 
-R2 中用户主动结束录音后由前端自动转写，并自动提交 `channel:'voice',text,asr_request_id`，不再要求手动发送录音和“使用这句话”。原转写可只读查看；旧客户端及历史的 `voice_edited` 兼容结构保留。ASR ID 必须属于当前会话，原转写从服务端保存结果读取；`voice` 文本必须完全匹配原转写，前置练习选择不能替换这份证据。回合分别返回 `asr_transcript` 与 `text`，不把编辑后的内容伪记为识别结果。ASR 出错返回稳定 `detail.code/retryable/terminal`；空转写返回 `detail.code='no_speech'`。只有终结失败重新试才换 ID，未知结果仍复用原 ID。转写处理超过 30 秒的未知请求允许用户明确开始新请求；不会自动重调模型。
+In R2, after the user actively ends a recording, the frontend automatically transcribes it and automatically submits `channel:'voice',text,asr_request_id`; manually sending the recording and "使用这句话" (Use this sentence) are no longer required. The original transcript can be viewed read-only; the `voice_edited` compatibility structure for old clients and history is kept. The ASR ID must belong to the current session, and the original transcript is read from the server's saved result; `voice` text must exactly match the original transcript, and a preliminary practice selection cannot replace this evidence. Turns return `asr_transcript` and `text` separately, and edited content is not falsely recorded as a recognition result. ASR errors return a stable `detail.code/retryable/terminal`; an empty transcript returns `detail.code='no_speech'`. Only a retry after a terminal failure changes the ID; unknown results still reuse the original ID. For unknown requests whose transcription has been processing for more than 30 seconds, the user may explicitly start a new request; the model is not re-called automatically.
 
-已应用的 `voice` 回合增加 `speech_feedback`，与订单和幂等响应同时保存。`accepted` 表示表达已理解，不代表已完成或发音正确；清楚的否定/合法修改为 `understood`，请求重说为 `repeat_requested`，尚未展示摘要的确认是 `confirmation_required`。无法识别语义返回 `retry/unrecognized`，字段歧义或数量/单位等规则问题为 `retry/needs_clarification`。这些不是逐字发音评价。前端据 `retry` 开放本题按钮回答，并区分没理解与内容需澄清；正常帮助请求和无进展的明确表达不伪记为语音失败。ASR/麦克风/服务故障也允许前端回退，每题首次 Speak 是教学交互策略，不作为订单 API 的安全授权边界；历史按钮客户端与幂等恢复继续兼容。
+Applied `voice` turns add `speech_feedback`, which is saved together with the order and the idempotent response. `accepted` means the expression was understood; it does not mean completion or correct pronunciation. A clear negation/valid modification is `understood`, a request to repeat is `repeat_requested`, and a confirmation before the summary has been displayed is `confirmation_required`. Unrecognizable meaning returns `retry/unrecognized`; field ambiguity or rule issues such as quantity/unit return `retry/needs_clarification`. These are not word-by-word pronunciation evaluations. Based on `retry`, the frontend opens button answers for the current question and distinguishes "not understood" from "content needs clarification"; normal help requests and explicit expressions that make no progress are not falsely recorded as voice failures. ASR/microphone/service failures also allow frontend fallback; the first Speak per question is a teaching interaction strategy, not a security authorization boundary of the order API; historical button clients and idempotent recovery remain compatible.
 
-文字解析默认是有限开发解析器，覆盖草案中的常见中文/英文、数量/单位/否定修正；不承诺任意自然语言，不把模型输出或 UI 文案伪称已审核上海话。设置 `TEXT_INTERPRETER=qwen` 可选择实际 Qwen 解释适配器；还必须显式启用服务并配置凭据，不会在失败后静默回退到开发解析器。会话绑定解释/ASR 配置 ID，变更模型或模式后使用新会话，不静默修改历史会话来源。ASR/TTS 的真实调用必须显式启用且配置凭据，未配置清楚报错。ASR 在内存中处理录音，不在磁盘存原始音频；请求 ID 对同一录音去重。实际真人语音、模型质量与听审状态以验证记录为准。
+Text parsing defaults to a limited development parser covering the common Chinese/English expressions and quantity/unit/negation corrections in the draft; it does not promise arbitrary natural language, and does not present model output or UI copy as reviewed Shanghainese. Setting `TEXT_INTERPRETER=qwen` selects the actual Qwen interpretation adapter; the service must also be explicitly enabled and credentials configured, and it does not silently fall back to the development parser on failure. Sessions are bound to interpretation/ASR configuration IDs; after changing the model or mode, use a new session; the source of historical sessions is not silently modified. Real ASR/TTS calls must be explicitly enabled with credentials configured; when unconfigured, a clear error is reported. ASR processes recordings in memory and does not store raw audio on disk; the request ID deduplicates the same recording. Actual human speech, model quality, and listening-review status are as stated in the verification records.
 
-R2 开发解析器标为 `development-parser.v3`：明确说出的“小笼／小笼包／小笼馒头”映射到 `xiaolongbao`，支持 1–20 常用中英文数词、在明确份数问句下的“要两／两吧／两，谢谢”、堂食/这里吃等说法和“好个／嗯，对个，谢谢”等独立确认。只在 `NX-N02` 已明确询问份数时省略单位可补 `serving`，两个/两只不会换成两份。分数、范围、近似数、后置否定和互相矛盾的用餐方式仍需澄清。数量、否定、单位与确认单独校验，证据和原文保留原句。重复请求和修正同时出现时必须保留修正，不以“再讲一遍”绕过订单变更。旧 `development-parser.v1/v2` 会话的历史和缓存重试可读取；新文字或语音解释返回 `configuration_changed`，提示显式新探索，原版本按钮规则及已准备好、只待保存的回合仍可恢复。此处有限解析器回归不代表真实 ASR／LLM 对新沪语稿的质量已审核。
+The R2 development parser is labeled `development-parser.v3`: explicitly spoken "小笼／小笼包／小笼馒头" map to `xiaolongbao`; it supports common Chinese and English numerals 1–20, "要两／两吧／两，谢谢" under an explicit servings question, expressions such as 堂食/这里吃 (dine-in / eat here), and standalone confirmations such as "好个／嗯，对个，谢谢". Only when `NX-N02` has explicitly asked for the number of servings can an omitted unit be filled in as `serving`; 两个/两只 are not converted to 两份. Fractions, ranges, approximate numbers, trailing negation, and contradictory dining modes still require clarification. Quantity, negation, unit, and confirmation are validated separately, and the evidence and original text keep the original sentence. When a repeat request and a correction appear together, the correction must be kept; "再讲一遍" (say it again) cannot be used to bypass an order change. History and cached retries of old `development-parser.v1/v2` sessions are readable; new text or voice interpretation returns `configuration_changed`, prompting an explicit new exploration, while the original version's button rules and turns that are already prepared and only awaiting save can still be resumed. Regression results for the limited parser here do not mean that real ASR/LLM quality on the new Shanghainese script has been reviewed.
 
-自动测试的 `tests/conftest.py` 在加载应用前关闭所有真实调用并选择开发解析器，避免用户本地 `.env` 引发测试计费。适配器通过 mock HTTP 测试；通过测试不等于已验证上海话效果。
+The automated tests' `tests/conftest.py` disables all real calls and selects the development parser before the app is loaded, so that a user's local `.env` cannot cause test charges. Adapters are tested via mock HTTP; passing tests does not mean Shanghainese performance has been verified.

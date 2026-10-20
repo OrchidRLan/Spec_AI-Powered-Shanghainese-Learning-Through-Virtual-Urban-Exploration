@@ -1,6 +1,6 @@
 # Lenient Shanghainese speaking scoring: before and after
 
-Updated: 2026-10-20. Status: **implemented locally and passing tests; not yet committed or deployed; deduction values have not been calibrated with native speakers.**
+Updated: 2026-10-20. Status: **implemented, tested, and merged to main; deduction values have not been calibrated with native speakers.**
 
 Implementation: [scoring.py](../../backend/app/scoring.py). Tests: [test_scoring.py](../../backend/tests/test_scoring.py). Integration points: [main.py](../../backend/app/main.py) (Nanxiang) and [lesson_api.py](../../backend/app/lesson_api.py) (old restaurant, pear-candy shop, teahouse).
 
