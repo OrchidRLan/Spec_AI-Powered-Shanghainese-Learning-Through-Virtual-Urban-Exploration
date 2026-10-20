@@ -82,7 +82,7 @@ export default function App({ initialSession = null, accountName = null, onSignI
   const [route, setRoute] = useState<Destination>(getRoute);
   const view = routeView(route);
   const reviewStation = route.startsWith('review/') ? route.slice(7) as StationId : null;
-  const [selected, setSelected] = useState<StationId>('nanxiang');
+  const [selected, setSelected] = useState<StationId>(stationIds[0]);
   const [panel, setPanel] = useState<Panel>(null);
   const [error, setError] = useState('');
   const [booting, setBooting] = useState(true);

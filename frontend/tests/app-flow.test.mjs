@@ -622,9 +622,58 @@ test('R4 incomplete and unsupported orders never borrow a confirmation for anoth
   }
 });
 
+test('new account and guest journeys select the first route stop on the map and after About', async t => {
+  for (const locale of ['zh', 'en']) for (const accountName of [null, 'NewUser']) for (const hash of ['#map', '#about']) {
+    const initialSession = {
+      id: 'new-journey', locale, show_romanization: true, reduced_motion: false,
+      content_version: content.contentVersion, rule_version: 'test', attempts: [], completed_station_ids: [], services: {},
+    };
+    const h = harness({ hash, locale, attempts: [], props: { initialSession, accountName } });
+    t.after(() => h.dispose()); await h.settle();
+    if (hash === '#about') {
+      h.click(locale === 'zh' ? '开始探索' : 'Start exploring'); await h.settle();
+      assert.equal(h.hash, 'map');
+    }
+    const card = h.find(node => node.type === 'aside' && node.props.className.includes('r4-station-detail'));
+    assert.match(card.props.className, /station-restaurant/);
+    assert.match(h.textOf(card), locale === 'zh' ? /第 01 站/ : /STOP 01/);
+    assert.match(h.textOf(card), locale === 'zh' ? /上海老饭店/ : /Shanghai Old Restaurant/);
+    for (const station of ['restaurant', 'candy', 'nanxiang', 'teahouse']) {
+      const marker = h.find(node => node.type === 'button' && node.props.className?.includes(`marker-${station}`));
+      assert.equal(marker.props['aria-pressed'], station === 'restaurant');
+    }
+    assert.equal(h.requests.length, 0, 'opening the first stop card does not create a task');
+    const open = h.find(node => node.props?.className === 'r4-station-action').props.children.flat(Infinity).find(node => node.type === 'button');
+    h.click(node => node === open); await h.settle();
+    assert.equal(h.hash, 'restaurant');
+    assert.equal(h.lesson.station, 'restaurant');
+  }
+});
+
+test('all stops remain selectable and returning to the map keeps the user selection', async t => {
+  for (const locale of ['zh', 'en']) for (const station of ['restaurant', 'candy', 'nanxiang', 'teahouse']) {
+    const h = harness({ hash: '#map', locale, attempts: [], beginResponse: makeAttempt() });
+    t.after(() => h.dispose()); await h.settle();
+    h.click(node => node.type === 'button' && node.props.className?.includes(`marker-${station}`));
+    const open = h.find(node => node.props?.className === 'r4-station-action').props.children.flat(Infinity).find(node => node.type === 'button');
+    h.click(node => node === open); await h.settle();
+    if (station === 'nanxiang') {
+      h.click(locale === 'zh' ? '开始交流' : 'Start the conversation'); await h.settle();
+      assert.equal(h.requests.find(request => request.path === '/attempts').body.station_id, 'nanxiang');
+    } else assert.equal(h.lesson.station, station);
+    assert.equal(h.hash, station);
+    h.hashChange('#map'); await h.settle();
+    const card = h.find(node => node.type === 'aside' && node.props.className.includes('r4-station-detail'));
+    assert.ok(card.props.className.includes(`station-${station}`));
+    const marker = h.find(node => node.type === 'button' && node.props.className?.includes(`marker-${station}`));
+    assert.equal(marker.props['aria-pressed'], true);
+  }
+});
+
 test('R4 map card hierarchy remains intact as B+C opens all four stops in both languages', async t => {
   for (const locale of ['zh', 'en']) {
     const h = harness({ hash: '#map', locale }); t.after(() => h.dispose()); await h.settle();
+    h.click(node => node.type === 'button' && node.props.className?.includes('marker-nanxiang'));
     const card = h.find(node => node.type === 'aside' && node.props.className.includes('r4-station-detail'));
     const parts = card.props.children.flat(Infinity).filter(Boolean);
     assert.deepEqual(parts.map(node => node.props.className.split(' ')[0]), ['r4-station-topline', 'r4-station-art', 'r4-station-copy', 'r4-station-action']);
