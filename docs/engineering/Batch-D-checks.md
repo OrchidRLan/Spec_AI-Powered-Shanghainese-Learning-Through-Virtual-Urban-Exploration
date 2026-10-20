@@ -1,64 +1,64 @@
-# 批次 D 检查记录
+# Batch D Checks
 
-日期：2026-10-17。**D 已按部署与基本运行范围完成，E 尚未开始。** 前后端、账号与四站辅助路径、真实更新重启持久化、唯一一次合成音频 ASR、备份私密下载及隔离恢复已检查。本文件不代表真人语音、设备兼容、教学质量或最终产品验收。
+Date: 2026-10-17. **D is complete within the deployment and basic-operation scope; E has not started.** Checked: frontend and backend, accounts and the assisted path through the four stations, persistence across a real update restart, the single ASR call on synthetic audio, private backup download, and isolated restore. This file does not represent real human speech, device compatibility, teaching quality, or final product acceptance.
 
-## 已实现
+## Implemented
 
-- Vercel Vite 前端与 Node `/api` 代理配置；Render Python 单实例、Virginia、付费持久磁盘配置。初期手动部署选定提交。
-- 生产启动必填配置校验，Secure／HttpOnly／SameSite Cookie，精确 Origin 白名单，代理密钥与可信 IP 验证；未认证直连 API 拒绝，健康检查可公开读取。
-- `build:deployment` 保留教材待审状态，检查 4 套清单、82 条音频绑定、64 个独立 WAV，并生成版本清单；正式 `build:release` 门槛保留。
-- SQLite 在线一致性备份、完整性与外键检查、仅恢复到新路径；启动前备份和专用自动备份最近 3 份保留，不删除手动备份。首次启动初始化空库。
-- 每日同盘备份和空闲游客清理已上线；首个维护周期与更新启动前快照成功，健康检查不触发清理。
-- [部署操作](Deployment.md)、[数据库维护](Database-maintenance.md) 与环境变量模板。
+- Vercel Vite frontend and Node `/api` proxy configuration; Render Python single instance, Virginia, paid persistent disk configuration. Initially, selected commits are deployed manually.
+- Validation of required configuration at production startup, Secure/HttpOnly/SameSite cookies, exact Origin allowlist, proxy secret and trusted IP verification; unauthenticated direct API access is rejected, and the health check is publicly readable.
+- `build:deployment` keeps teaching materials in pending-review status, checks 4 manifests, 82 audio bindings, and 64 distinct WAV files, and generates a version manifest; the formal `build:release` gate is retained.
+- SQLite online consistent backup, integrity and foreign-key checks, restore to a new path only; pre-start backups and dedicated automatic backups keep the latest 3, and manual backups are not deleted. An empty database is initialized on first startup.
+- Daily same-disk backup and idle-guest cleanup are live; the first maintenance cycle and the pre-update-start snapshot succeeded, and the health check does not trigger cleanup.
+- [Deployment operations](Deployment.md), [Database maintenance](Database-maintenance.md), and environment variable templates.
 
-## 本地验证
+## Local Verification
 
-| 范围 | 结果与边界 |
+| Scope | Result and boundaries |
 | --- | --- |
-| 待验收构建 | 首轮类型检查、49 项既有内容测试、11 项新增部署内容测试、Vite 构建与输出音频哈希检查通过；64 个独立 WAV 完整。追加云端来源元数据修正后，部署内容测试共 12 项通过；11 与 12 为先后两轮，不相加 |
-| 前端回归 | 170 项通过，涵盖既有固定问题、结果停留、辅助继续、身份绑定、Review 与音频行为 |
-| 后端 | 首轮完整回归 473 项通过；追加数据库故障回归后，生产专项 35 项全部通过。两组存在重叠，不相加 |
-| API 代理 | 15 项通过，含临时本机 HTTP 上游的 WAV／JSON 原始字节、多 Cookie、会话头、伪造头、Origin、路径、重定向、大小限制、超时与取消；不等同真实 Vercel 路由 |
-| 数据维护与启动 | 9 项备份／恢复测试与 5 项启动测试通过，全部使用临时数据库；覆盖 WAL、损坏库、拒绝覆盖、配置优先检查、备份失败中止与仅自动备份轮转 |
-| 每日维护追加 | 新增 9 项测试、相关检查 92 项通过，两次独立审查均未发现阻断；已部署，实际运行证据见下节。相关检查范围有重叠，不与上列累计 |
-| 生产启动／重启 | 实际启动生产脚本两次，使用临时源码副本、空库、合成代理密钥和禁用语音的环境；健康、拒绝直连、注册／登录／退出、大小写重名拒绝通过 |
-| 持久恢复 | 上述本机进程重启后，账号 ID、英文界面与隐藏注音偏好恢复；生成一份自动备份且完整性／外键检查通过。本行仅为本机证据，另有下节真实 Render 重启核验 |
-| Cookie | 生产模式返回 Secure／HttpOnly／SameSite=strict。本机 HTTP 冒烟手动转交 Cookie；实际 HTTPS 登录／刷新／退出重登另见下节 |
-| 独立审查 | 未发现新的明确阻断；普通 Node rewrite 的原路径和 fetch handler 已对照 Vercel 官方资料，并完成下述上线实测 |
+| Pending-acceptance build | First-round type check, 49 existing content tests, 11 new deployment content tests, Vite build, and output audio hash check passed; all 64 distinct WAV files intact. After an additional fix to cloud source metadata, 12 deployment content tests passed in total; 11 and 12 are two successive rounds and are not added together |
+| Frontend regression | 170 passed, covering existing fixed questions, result hold, assisted continue, identity binding, Review, and audio behavior |
+| Backend | First full regression: 473 passed; after adding database failure regressions, all 35 production-specific tests passed. The two sets overlap and are not added together |
+| API proxy | 15 passed, including raw bytes of WAV/JSON from a temporary local HTTP upstream, multiple cookies, session headers, forged headers, Origin, paths, redirects, size limits, timeouts, and cancellation; not equivalent to real Vercel routing |
+| Data maintenance and startup | 9 backup/restore tests and 5 startup tests passed, all using temporary databases; covers WAL, corrupted database, refusal to overwrite, config-first checks, abort on backup failure, and rotation of automatic backups only |
+| Daily maintenance addition | 9 new tests and 92 related checks passed; two independent reviews found no blockers; deployed, with actual runtime evidence in the next section. The related checks overlap and are not cumulative with the rows above |
+| Production startup/restart | Ran the production script for real twice, using a temporary copy of the source, an empty database, a synthetic proxy secret, and an environment with speech disabled; health, direct-access rejection, register/login/logout, and case-insensitive duplicate-name rejection passed |
+| Persistence recovery | After the above local process restart, account ID, English UI, and hidden-romanization preference were restored; one automatic backup was generated and passed integrity/foreign-key checks. This row is local evidence only; the real Render restart verification is in the next section |
+| Cookie | Production mode returns Secure/HttpOnly/SameSite=strict. The local HTTP smoke test passed cookies manually; actual HTTPS login/refresh/logout-and-relogin is covered in the next section |
+| Independent review | No new clear blockers found; the original path and fetch handler of the plain Node rewrite were checked against official Vercel documentation, and the online testing below was completed |
 
-以上检查未调用 ASR／TTS，生产启动冒烟未读取真实 `.env` 或本地用户库；测试进程、临时库均已清理。现有主 JS 677.43 kB 体积提示仍在，未在本次改变产品 UI 或音频内容。
+The checks above did not call ASR/TTS, and the production startup smoke test did not read the real `.env` or the local user database; test processes and temporary databases have been cleaned up. The existing 677.43 kB main JS size warning remains; product UI and audio content were not changed this time.
 
-## 实际平台与线上检查
+## Actual Platform and Online Checks
 
-- Vercel 和 Render 控制台均已登录；两平台均能读取个人 fork。Render 全仓库授权由用户明确确认，并由用户完成 GitHub 再验证。
-- Vercel 生产网址为 [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app)，部署 `GhTdMgq48GeChMw7i7Gdna9sqpKa` 为 Ready；Render 部署 `dep-db9vq2lg1s2s73a7ok80` 为 Live。两端当前应用源码均为 `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`，合作仓库与 fork 按约定同步。
-- 线上 `/deployment.json` 返回 200，提交为上述版本、`provider: vercel`、`dirty: null`、`reviewStatus: pending`。云端来源元数据修正已发布并核验，教材仍待审。
-- 公开 `/api/health` 返回 200、`production`，前端 `/api/auth` 返回 200、`signed_out`；未经代理认证的 Render 直连 `/api/auth` 返回 403、`proxy_required`。错误 Origin 的 POST 返回 403、`cross_origin_denied`。
-- 用户已解决 Chrome 扩展文件访问限制；Vercel 代理密钥已导入并限定 Production，Render 创建表单已导入 13 项环境变量。私有配置存于 Git 忽略目录，未在日志或文档中显示密钥。
-- Render 服务 `srv-db9vmreq1p3s739p3p30` 使用用户授权的 Virginia、0.5 CPU／512 MB、1 GB 磁盘，基础费用为计算 US$7／月与磁盘 US$0.25／月，合计 US$7.25／月，税费与超额用量另计；未升级、加购或购买自定义域名。后端网址为 [a-little-shanghai-api](https://a-little-shanghai-api.onrender.com)。
+- Logged in to both the Vercel and Render consoles; both platforms can read the personal fork. Full-repository authorization for Render was explicitly confirmed by the user, and the user completed GitHub re-verification.
+- The Vercel production URL is [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app), deployment `GhTdMgq48GeChMw7i7Gdna9sqpKa` is Ready; Render deployment `dep-db9vq2lg1s2s73a7ok80` is Live. The current application source on both ends is `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`, and the collaboration repository and fork are synced as agreed.
+- Online `/deployment.json` returns 200, with the commit being the version above, `provider: vercel`, `dirty: null`, `reviewStatus: pending`. The cloud source metadata fix has been released and verified; teaching materials are still pending review.
+- Public `/api/health` returns 200, `production`; frontend `/api/auth` returns 200, `signed_out`; direct Render `/api/auth` without proxy authentication returns 403, `proxy_required`. A POST with a wrong Origin returns 403, `cross_origin_denied`.
+- The user resolved the Chrome extension file access restriction; the Vercel proxy secret was imported and scoped to Production, and 13 environment variables were imported into the Render creation form. Private configuration is stored in a Git-ignored directory; secrets were not shown in logs or documents.
+- Render service `srv-db9vmreq1p3s739p3p30` uses the user-authorized Virginia region, 0.5 CPU/512 MB, and 1 GB disk; base costs are US$7/month compute and US$0.25/month disk, US$7.25/month in total, with taxes and overage usage billed separately; no upgrades, add-ons, or custom domain purchases. The backend URL is [a-little-shanghai-api](https://a-little-shanghai-api.onrender.com).
 
-| 线上检查 | 结果与边界 |
+| Online check | Result and boundaries |
 | --- | --- |
-| API 基线 | 36 项通过；记录在 Git 忽略的 `private/deployment/online-smoke-baseline-20261017T225126-3710.json`。使用隔离测试身份，验证注册承接、同名拒绝、跨账号隔离、受保护音频、登录合并、退出及重新登录；API 基线没有模型请求 |
-| 四站基本流程 | 上述基线以明确模拟客户端技术回退的方式，辅助完成四站并保存；不是四站真实识别或语音正确证明 |
-| 实际浏览器 | Chrome 中文游客入口默认 About、中英地图切换、进入南翔及常／慢速按钮的 `host-speaking` 状态通过。独立 UI 测试账号注册、刷新保持、退出重登后默认 About、Review 显示南翔进行中与其余三站未开始均通过；收尾已退出测试账号，网站保留登录入口。未做麦克风录音或硬件音频听审 |
-| 静态声音 | 线上 E08 WAV 的 SHA256 与已有教学资产一致；没有重新生成音频或增加 TTS 调用 |
-| 唯一一次真实 ASR | 额外获准的 E08 合成 WAV（1.6 秒、24 kHz、单声道）通过线上代理发送至北京 `qwen3-asr-flash`；返回原转写「我要两份小笼馒头。」、`elapsed_ms:1962`、配置 `asr-4c784f1651e2840a`。目标匹配正确，原转写停留在商品题，未自动推进 |
-| 请求与费用边界 | 实际发出 1 次 ASR，无麦克风、无重试、无新增 LLM／TTS。首次执行因本地文件路径错误在发送前退出，发出 0 次请求；修正后仅发出唯一一次。授权费用上限 ¥1，实际账单未核对；单次授权已用完 |
-| 真实更新重启持久化 | 发布 `da96ca8` 后，`--verify-persistence` 的 5 项检查通过；原账号会话、四站完成状态、5 次尝试与偏好保持一致。私有报告为 `private/deployment/online-smoke-verify_persistence-20261017T225747-1885.json`，没有新增模型请求 |
-| 线上自动维护 | 更新启动前生成 `/var/data/backups/auto-prestart-20261017T225647295404Z.db`；日志记录 `maintenance_cleanup_succeeded removed=0` 与 `maintenance_backup_succeeded`，证明首个维护周期成功。没有过期记录时删除 0 条符合预期，不冒充实际删除验证 |
-| 线上一致性备份 | Render Shell 生成 `/var/data/backups/dcheck-20261017T2253.db`，经 SSH 下载至本机 `private/deployment/dcheck-20261017T2253.db`；两端 SHA256 同为 `92482d727ef23a2fd201ec524b5067831a816786fd3f419c70a6f0e3f87ad8e6` |
-| 隔离恢复 | 将下载备份恢复到独立本机文件，使用 `git archive e3beb7d` 的匹配源码完成 11 项检查，包括原账号登录、四站与 5 次尝试、设置写入及重新登录；0 网络、0 模型。报告为 `private/deployment/offline-restore-check.json`。未覆盖生产库，也未执行生产原地回退 |
+| API baseline | 36 passed; recorded in Git-ignored `private/deployment/online-smoke-baseline-20261017T225126-3710.json`. Using isolated test identities, verified registration carry-over, duplicate-name rejection, cross-account isolation, protected audio, login merge, logout, and re-login; the API baseline made no model requests |
+| Four-station basic flow | The above baseline, explicitly simulating the client-side technical fallback, completed all four stations via assistance and saved; this is not proof of real recognition or speech correctness at the four stations |
+| Real browser | In Chrome: Chinese guest entry defaulting to About, Chinese/English map toggle, entering Nanxiang, and the `host-speaking` state of the normal/slow speed buttons passed. A separate UI test account passed registration, persistence across refresh, default About after logout and re-login, and Review showing Nanxiang in progress and the other three stations not started; at wrap-up the test account was logged out, and the site keeps the login entry. No microphone recording or hardware audio listening review was done |
+| Static audio | The SHA256 of the online E08 WAV matches the existing teaching asset; no audio was regenerated and no TTS calls were added |
+| The single real ASR call | A separately approved E08 synthetic WAV (1.6 s, 24 kHz, mono) was sent through the online proxy to Beijing `qwen3-asr-flash`; it returned the raw transcript 「我要两份小笼馒头。」, `elapsed_ms:1962`, config `asr-4c784f1651e2840a`. The target match was correct, the raw transcript stayed on the item question, and it did not auto-advance |
+| Request and cost boundaries | 1 ASR call actually sent, no microphone, no retries, no new LLM/TTS. The first run exited before sending due to a wrong local file path, sending 0 requests; after the fix, only the single request was sent. Authorized cost cap ¥1; the actual bill has not been checked; the single-use authorization is used up |
+| Persistence across real update restart | After releasing `da96ca8`, the 5 checks of `--verify-persistence` passed; the original account session, four-station completion state, 5 attempts, and preferences remained consistent. The private report is `private/deployment/online-smoke-verify_persistence-20261017T225747-1885.json`; no new model requests |
+| Online automatic maintenance | Before the update start, `/var/data/backups/auto-prestart-20261017T225647295404Z.db` was generated; the log records `maintenance_cleanup_succeeded removed=0` and `maintenance_backup_succeeded`, proving the first maintenance cycle succeeded. Deleting 0 records when there are no expired records is expected and is not presented as verification of actual deletion |
+| Online consistent backup | Render Shell generated `/var/data/backups/dcheck-20261017T2253.db`, downloaded via SSH to local `private/deployment/dcheck-20261017T2253.db`; the SHA256 on both ends is `92482d727ef23a2fd201ec524b5067831a816786fd3f419c70a6f0e3f87ad8e6` |
+| Isolated restore | Restored the downloaded backup to a separate local file and, using matching source from `git archive e3beb7d`, completed 11 checks, including original account login, four stations and 5 attempts, settings write, and re-login; 0 network, 0 model. The report is `private/deployment/offline-restore-check.json`. The production database was not overwritten, and no in-place production rollback was performed |
 
-上述 ASR 只证明合成教学音频的线上接通与目标核对，不计入 E 的真人语音、上海话识别质量或教学声音评估。详细真实调用记录见 [语音接入](Speech-integration.md#批次-d线上-e08-合成音频接通检查)。
+The ASR above only proves online connectivity and target checking for synthetic teaching audio; it does not count toward E's real human speech, Shanghainese recognition quality, or teaching audio evaluation. For the detailed record of the real call, see [Speech integration](Speech-integration.md#batch-d-online-e08-synthetic-audio-connectivity-check).
 
-上述备份和报告保存在 Git 忽略的私有目录。临时 SSH 公钥已从 Render 删除，控制台显示 `No authorized SSH keys`；本机临时私钥也已移除。没有把备份、认证信息或私钥加入 Git。
+The backups and reports above are stored in a Git-ignored private directory. The temporary SSH public key has been removed from Render, and the console shows `No authorized SSH keys`; the local temporary private key has also been removed. No backups, credentials, or private keys were added to Git.
 
-## 交付边界与后续维护
+## Delivery Boundaries and Ongoing Maintenance
 
-- 每日同盘备份和空闲游客清理已上线；本次已有人工下载的私密异地副本，自动异地传输尚未配置。按 [维护指引](Database-maintenance.md) 持续人工转存，同盘备份不能替代磁盘外副本。
-- 隔离恢复验证没有覆盖生产库，不是生产原地回退演练；正式回退应按部署／维护指引停服并保留原库。
-- E 尚未开始。浏览器麦克风、硬件音频、真人语音、实体设备兼容与模型效果仍待 E 验证，不用合成样本或播放状态代替；教材审核也保持 pending。
-- 取消代理请求不证明已经停止供应商推理或计费；系统不以此作费用保证。
+- Daily same-disk backup and idle-guest cleanup are live; this time there is a manually downloaded private off-site copy, but automatic off-site transfer is not yet configured. Continue manual transfers per the [maintenance guide](Database-maintenance.md); same-disk backups cannot replace off-disk copies.
+- The isolated restore verification did not cover the production database and is not an in-place production rollback drill; a formal rollback should follow the deployment/maintenance guides, stopping the service and keeping the original database.
+- E has not started. Browser microphone, hardware audio, real human speech, physical device compatibility, and model performance remain to be verified in E, and are not substituted by synthetic samples or playback state; teaching material review also remains pending.
+- Cancelling a proxy request does not prove that provider inference or billing has stopped; the system does not use this as a cost guarantee.
 
-各轮测试范围与来源分别记录，不将本地、线上、合成语音或恢复检查累计为统一质量评分。D 的部署基本范围已完成，以上局限继续保留到维护与 E 的相应工作中。
+The scope and source of each test round are recorded separately; local, online, synthetic speech, and restore checks are not aggregated into a single quality score. D's basic deployment scope is complete, and the limitations above carry over to the corresponding maintenance and E work.
