@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.responses import Response
 
-from . import lessons
+from . import lessons, scoring
 from .guided import PracticeError
 from .models import LessonInput, RevisionInput
 from .storage import encode
@@ -55,11 +55,14 @@ def register(app, database, *, session_id, owned_attempt, public_attempt, proble
             status, reason = "technical", "device_or_service_unavailable"
         if attempt["lesson"]["target"] is None:
             problem("lesson_target_required", "Select what you want to say first.", attempt=public_attempt(connection, attempt))
+        scored = scoring.unscored(status)
         if transcript is not None:
-            status, reason = lessons.assess(transcript, attempt)
+            status, reason, scored = scoring.assess_lenient(
+                transcript, lambda text: lessons.assess(text, attempt), attempt["lesson"]["step"])
         return {"request_id": body.request_id, "transcript": transcript, "status": status, "reason": reason,
                 "channel": "technical" if status == "technical" else "voice", "reported_by": reported_by,
-                "asr_request_id": body.asr_request_id, "interpretation_source": lessons.SOURCE if transcript is not None else None}
+                "asr_request_id": body.asr_request_id, "interpretation_source": lessons.SOURCE if transcript is not None else None,
+                "scoring": scored}
 
     @app.post("/api/attempts/{attempt_id}/lesson")
     def operation(attempt_id: str, body: LessonInput, request: Request):

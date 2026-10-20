@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from .interpreter import parse_development
 from .models import AttemptInput, EventInput, Interpretation, NewSessionInput, Preferences, PracticeInput, RevisionInput, TurnInput
 from .rules import CONTENT_VERSION, LEGACY_CONTENT_VERSION, R1_CONTENT_VERSION, R2_CONTENT_VERSION, RULE_VERSION, apply_interpretation, new_attempt
+from . import scoring
 from .guided import GUIDED_SOURCE, PracticeError, apply_practice, assess
 from .semantic import configure_interpreter
 from .storage import Database, encode
@@ -353,12 +354,15 @@ def create_app(database_path: str | None = None, interpreter=None) -> FastAPI:
                     status, reason = "technical", "device_or_service_unavailable"
                 if attempt["practice"]["target"] is None:
                     problem("practice_target_required", "Select what you want to say first.", attempt=public_attempt(connection, attempt))
+                scored = scoring.unscored(status)
                 if transcript is not None:
-                    status, reason = assess(transcript, attempt["practice"])
+                    status, reason, scored = scoring.assess_lenient(
+                        transcript, lambda text: assess(text, attempt["practice"]), attempt["practice"]["step"])
                 evaluation = {"request_id": body.request_id, "transcript": transcript, "status": status,
                               "reason": reason, "channel": "technical" if status == "technical" else "voice",
                               "reported_by": reported_by, "asr_request_id": body.asr_request_id,
-                              "interpretation_source": GUIDED_SOURCE if transcript is not None else None}
+                              "interpretation_source": GUIDED_SOURCE if transcript is not None else None,
+                              "scoring": scored}
             try:
                 result, events = apply_practice(attempt, body, evaluation)
             except PracticeError as exc:

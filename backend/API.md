@@ -165,6 +165,7 @@ type LessonInput = {
 
 - 所有步骤均先选目标、再识别核对、结果停留；`continue` 才写入 `answers`。前置选择、播放台词、展示推荐均不冒充用户回答。最终 `confirm` 的目标自动设为 `confirm`，仍需语音尝试或技术回退后明确继续；茶楼的 thanks 明确继续直接保存完成，不生成订单核对。
 - 新三站使用有限的 `station-target-check.v1`，对原始转写做目标表达核对，另外执行任务约束。豆腐为辣菜，不能完成不辣任务；糖店口味必须匹配服务端固定目标。因此清楚说出不合任务的预选项会返回 `incorrect/task_mismatch`，辅助继续同样不能绕过任务约束。用户可以重选与练习，不产生追问。
+- 南翔与新三站的每次核对都附带 `scoring`（`lenient-rules.v1`）：先按原文核对，失败时再去掉语气词与重说后复核；停顿、重复、同音变体记为 0 分扣减，内容错误记为关键错误并强制 `retry`。分数仅供内部分析，界面不展示，详见 [宽松评分说明](../docs/engineering/Scoring-system.md)。
 - 双重否定、错对象、转述／引用、数量冲突和询问不按关键词误记为目标完成。有限语义核对不是任意自由对话理解或逐字发音评分。全部教材选项均有原句回归；不修改保存的 ASR 原文。
 - 糖店每次尝试随机分配一个固定口味，刷新、切语言、重播、错误选择和恢复都不改变。私有目标不会出现在 Attempt、Session、错误、幂等快照或日志中；音频通过无口味标记的私有 URL 发送。`listened` 需先成功取得该尝试的音频，且由播放器正常结束后调用；服务端把结束事实记录为 `reported_by:client`，不称为已听懂。音频下载、播放失败、取消、仅打开词卡均不算已听。
 - `help` 是明确查看介绍文字，保存不可撤销的曝光记录，之后才返回对应 `introduction_text_id`。完整播完或使用文字帮助后才能核对/继续口味题。音频缺失或身份校验失败返回 503，文字帮助仍可完成任务。
@@ -182,9 +183,14 @@ type Practice = {
   result: null|{request_id:string;transcript:string|null;
     status:'correct'|'incorrect'|'unrecognized'|'technical';reason:string;
     channel:'voice'|'technical';reported_by:'server'|'client';
-    asr_request_id:string|null;interpretation_source:string|null};
+    asr_request_id:string|null;interpretation_source:string|null;
+    scoring:Scoring};
   can_choose:boolean;
 };
+// Internal only; the UI does not display it. See docs/engineering/Scoring-system.md.
+type Scoring = {version:'lenient-rules.v1';profile:'lenient'|'standard'|'strict';threshold:number;
+  score:number|null;verdict:'pass'|'retry'|'rerecord'|'unavailable';capped:boolean;
+  deductions:{type:string;points:number;span:string|null;uncertain:boolean}[]};
 type PracticeInput = {
   request_id:string;expected_revision:number;
   operation:'select'|'evaluate'|'continue'|'edit';
