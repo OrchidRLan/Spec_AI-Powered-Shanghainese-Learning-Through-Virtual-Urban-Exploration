@@ -146,7 +146,8 @@ async def main_async(args) -> dict:
     budget = {"calls": 0}
     reports = [await run_provider(name, items, manifest.parent, args, budget, hashes) for name in args.provider]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out = ROOT / "artifacts" / "local" / "asr-eval" / stamp
+    # The random suffix keeps runs started within the same second apart.
+    out = ROOT / "artifacts" / "local" / "asr-eval" / f"{stamp}-{uuid.uuid4().hex[:6]}"
     out.mkdir(parents=True, exist_ok=False)
     run = {"manifest": manifest.name, "manifest_sha256": sha256(raw),
            "manifest_version": data.get("version") if isinstance(data, dict) else None,

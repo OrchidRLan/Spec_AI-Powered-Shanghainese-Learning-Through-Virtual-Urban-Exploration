@@ -405,3 +405,12 @@ def test_recording_plan_is_valid_and_prepare_tool_keeps_data_private():
         assert run("freeze", work / "s.csv", "--out", work / "m.json", "--version", "t").returncode != 0  # no overwrite
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+def test_eval_runs_started_in_the_same_second_do_not_collide():
+    import concurrent.futures
+    cmd = [sys.executable, str(ROOT / "scripts" / "asr-eval.py"), str(ROOT / "scripts" / "asr-eval.example.json")]
+    with concurrent.futures.ThreadPoolExecutor(3) as pool:
+        runs = list(pool.map(lambda _: subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT), range(3)))
+    assert [r.returncode for r in runs] == [0, 0, 0], [r.stderr for r in runs]
+    assert len({json.loads(r.stdout)["results"] for r in runs}) == 3

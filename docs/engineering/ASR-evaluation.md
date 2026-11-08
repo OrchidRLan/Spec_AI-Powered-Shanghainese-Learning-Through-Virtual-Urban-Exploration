@@ -54,7 +54,7 @@ npm run asr:eval -- private/asr-eval/manifest.json --provider qwen --allow-paid-
 | `openai_compatible` | Each item's `audio` | Free on loopback; a non-loopback endpoint is treated as paid |
 | `qwen` | Each item's `audio` | Paid: requires `--allow-paid-call`; stops at `--max-calls` (default 0) |
 
-There is one attempt per item and no automatic retries. Full rows, including transcripts, go only to `artifacts/local/asr-eval/<UTC timestamp>/results.json`, which Git ignores. The console prints metrics only, unless you pass `--show-transcripts`.
+There is one attempt per item and no automatic retries. Full rows, including transcripts, go only to `artifacts/local/asr-eval/<UTC timestamp>-<random id>/results.json`, which Git ignores. The console prints metrics only, unless you pass `--show-transcripts`.
 
 ### Manifest format
 
