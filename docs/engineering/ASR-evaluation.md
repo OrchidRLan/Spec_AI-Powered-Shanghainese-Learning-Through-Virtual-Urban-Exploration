@@ -1,6 +1,6 @@
 # Speech provider swap and offline evaluation
 
-Updated 2026-10-20. Status: **implemented and merged to main, with mocked tests only. No real local model, paid call, acoustic model download, or human-labeled recording has been run.** Results from any provider are engineering measurements, not Shanghainese quality approval.
+Updated 2026-11-07. Status: **implemented and merged to main, with mocked tests only. No real local model, paid call, acoustic model download, or human-labeled recording has been run.** Results from any provider are engineering measurements, not Shanghainese quality approval. The current comparison round (candidates, frozen baseline, selection rules, budget) is in [model comparison](../evaluation/model-comparison.md); recordings follow the [recording plan](../evaluation/recording-plan.md).
 
 Code: [openai_compatible.py](../../backend/app/providers/openai_compatible.py) (ASR/TTS adapters + provider selection), [acoustic.py](../../backend/app/acoustic.py) (reference-audio similarity), [evaluation.py](../../backend/app/evaluation.py) (labels, metrics), [asr-eval.py](../../scripts/asr-eval.py) (CLI). Tests: [test_asr_swap.py](../../backend/tests/test_asr_swap.py).
 
@@ -71,18 +71,29 @@ See [asr-eval.example.json](../../scripts/asr-eval.example.json). That file is s
 | `station`, `step`, `target` | Nanxiang: `item` / `quantity` / `mode` / `confirm` with the same target objects as `/practice`. Other stations: the lesson step and option ID, e.g. `teahouse` / `appreciation` / `good_tea` |
 | `candy_flavor` | Candy only: the attempt's assigned flavor (defaults to the target on the flavor step) |
 | `label` | Native-speaker judgment: `acceptable` and `understandable` should pass, `incorrect` should be asked to retry |
-| `reference` | Optional expected wording, used for character error rate (CER) after removing punctuation |
+| `reference` | What the speaker **actually said**, reviewed by a fluent speaker — never the expected answer for a wrong utterance. Used for CER and judged by the same rules as "perfect ASR" for attribution |
 | `audio` / `transcript` | Audio path relative to the manifest (keep recordings under the ignored `private/`), and/or a saved transcript for `rules` |
+| `speaker_id`, `speaker_group` | Optional anonymous code (`S01`; names are rejected) and `fluent` / `heritage` / `beginner` / `synthetic` |
+| `source`, `split` | Optional `human` / `synthetic` (must agree with the group) and `dev` / `test` |
+| `condition` | Optional design category: `canonical`, `nonstandard`, `wrong_target`, `wrong_quantity`, `wrong_unit`, `negation`, `missing_field`, `filler_pause`, `self_correction`, `silence`, `noise` |
+| `utterance_group` | Optional; takes of one utterance. A group in both `dev` and `test` is rejected; a speaker in both splits is a warning |
+| `reviewed_by` | Reviewer codes; required for every audio item when running `--split test` |
+
+[asr-eval-prepare.py](../../scripts/asr-eval-prepare.py) creates annotation sheets from the [recording plan](../../scripts/asr-eval-plan.json), converts recordings to 16 kHz mono PCM16 with macOS `afconvert` (originals kept, processing logged), and freezes a versioned manifest with each file's SHA256, sample rate, channels and duration. It writes only under `private/` and never overwrites a frozen manifest.
 
 ### Metrics
 
 | Metric | Definition |
 | --- | --- |
-| `false_reject_rate` | Items labeled acceptable or understandable that got `retry` or `rerecord`, divided by all such items |
-| `false_accept_rate` | Items labeled incorrect that got `pass`, divided by all incorrect items |
-| `mean_cer` | Average CER against `reference`, where provided |
-| `technical_failure` | Timeouts, unreachable servers, or provider errors; excluded from both rates |
-| `mean_latency_ms` | Average transcription time reported by the provider adapter |
+| `false_reject_rate` | Items labeled acceptable or understandable that got `retry` or `rerecord`, divided by `acceptable_or_understandable_n` (non-technical items) |
+| `false_accept_rate` | Items labeled incorrect that got `pass`, divided by `incorrect_n` |
+| `technical_failure`, `technical_failure_rate`, `technical_failure_reasons` | Timeouts, unreachable servers, provider errors, budget exhaustion; counted over all items, broken down by reason, and excluded from the two rates above — never dropped |
+| `mean_cer` / `corpus_cer` | Mean of per-item CER, and total edits ÷ total reference characters. Both use `cer-norm.v1` (NFKC, lowercase, strip punctuation/space/symbols, traditional→simplified for characters in current content); Wu vs Mandarin word choices still count as errors |
+| `median_latency_ms`, `p95_latency_ms`, `mean_latency_ms` | Over `latency_items`. `elapsed_ms` is the adapter's request round trip (upload + network + inference); rows also keep `wall_ms`. p95 is nearest-rank, so with few items it is the slowest one. Cold/warm start, machine and network are recorded with the run |
+| `attribution` | Per row, comparing the ASR verdict with the verdict on `reference`: `asr_error` (rules would be right on the true words), `rule_error` (rules are wrong even on the true words), `ok`, `ok_despite_rule_error` |
+| `by_station`, `by_speaker_group`, `by_condition`, `by_split` | The same counts and rates per group |
+
+Each row keeps clip ID, provider, config ID, returned model, input SHA256, reference, raw transcript, verdict, reason, outcome and latency. Each run records the manifest SHA256 and version, Git commit (and whether `backend/app` or `scripts` were dirty), rule versions, machine, paid-call count and cap, and any manifest warnings. A manifest marked `draft` is flagged as interface-check only.
 
 For a lenient learning product, prioritize a low false-reject rate, but keep the false-accept rate near zero.
 
@@ -118,7 +129,7 @@ npm run asr:eval -- private/asr-eval/manifest.json --acoustic
 ## 5. Not done yet
 
 - No real local server, real model, or paid call has been run. All provider tests use mocked HTTP.
-- No labeled recordings exist yet. Collecting them, with native-speaker labels, is the next prerequisite.
+- No labeled recordings exist yet. The [recording plan](../evaluation/recording-plan.md) and annotation tools are ready; collecting recordings with fluent-speaker labels is the next prerequisite.
 - Hosted providers without an OpenAI-compatible API (Tencent, iFlytek, Volcengine, Azure) need their own adapters. Add them as separate `ASR_PROVIDER` values after choosing which ones to test and setting a budget.
 - The acoustic path has only been tested with a stand-in feature extractor. The optional dependencies and WavLM weights have not been downloaded, so no real similarity has been measured, and no calibration exists.
 - No local TTS voice has been generated or listened to.

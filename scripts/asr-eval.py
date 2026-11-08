@@ -12,7 +12,11 @@ which Git ignores. The console prints metrics, not transcripts, unless asked.
 """
 import argparse
 import asyncio
+import hashlib
 import json
+import platform
+import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -23,12 +27,39 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env", override=False)
 sys.path.insert(0, str(ROOT / "backend"))
-from app import acoustic, evaluation
+from app import acoustic, evaluation, guided, interpreter, lessons, scoring
 from app.providers import ASRRequest, OpenAICompatibleASR, OpenAICompatibleConfig, ProviderConfig, ProviderError, QwenASR
 from app.providers.openai_compatible import LOOPBACK
 from urllib.parse import urlsplit
 
 MAX_AUDIO = 3 * 1024 * 1024
+RULE_VERSIONS = {"guided": guided.GUIDED_SOURCE, "lessons": lessons.RULE_VERSION, "parser": interpreter.PARSER_VERSION,
+                 "scoring": scoring.SCORING_VERSION, "cer_normalization": evaluation.NORMALIZATION_VERSION}
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def git_state() -> dict:
+    def run(*cmd):
+        done = subprocess.run(["git", *cmd], capture_output=True, text=True, cwd=ROOT)
+        return done.stdout.strip() if done.returncode == 0 else None
+    return {"commit": run("rev-parse", "HEAD"), "dirty": bool(run("status", "--porcelain", "--", "backend/app", "scripts"))}
+
+
+def check_audio_leakage(items: list[dict], base: Path) -> dict:
+    """Hash every input once; identical audio must not appear in both dev and test."""
+    hashes, splits = {}, {}
+    for item in items:
+        if "audio" in item:
+            digest = sha256((base / item["audio"]).read_bytes())
+            hashes[item["id"]] = digest
+            if item.get("split"):
+                splits.setdefault(digest, set()).add(item["split"])
+    if any(len(v) > 1 for v in splits.values()):
+        raise evaluation.ManifestError("identical audio appears in both dev and test")
+    return hashes
 
 
 def build(name: str):
@@ -53,7 +84,7 @@ def with_acoustic(row: dict, similarity) -> dict:
     return {**row, "acoustic_similarity": similarity}
 
 
-async def run_provider(name: str, items: list[dict], base: Path, args, budget: dict) -> dict:
+async def run_provider(name: str, items: list[dict], base: Path, args, budget: dict, hashes: dict) -> dict:
     rows = []
     extractor, calibration = args.extractor, args.calibration
     if name == "rules":
@@ -61,7 +92,8 @@ async def run_provider(name: str, items: list[dict], base: Path, args, budget: d
             if "transcript" not in item:
                 continue
             similarity, events = acoustic_for(item, base, extractor, calibration)
-            rows.append(with_acoustic(evaluation.judge(item, item["transcript"], observations=events), similarity))
+            rows.append(with_acoustic({**evaluation.judge(item, item["transcript"], observations=events),
+                                       "provider": "rules", "input_sha256": hashes.get(item["id"])}, similarity))
         return {"provider": "rules", "config": None, "rows": rows, "summary": evaluation.summarize(rows)}
     provider, config, paid = build(name)
     if paid and not args.allow_paid_call:
@@ -69,44 +101,68 @@ async def run_provider(name: str, items: list[dict], base: Path, args, budget: d
     for item in items:
         if "audio" not in item:
             continue
+        row_meta = {"provider": name, "config_id": config.config_id, "input_sha256": hashes.get(item["id"])}
         if paid:
             if budget["calls"] >= args.max_calls:
-                rows.append({**evaluation.judge(item, None, "call_budget_exhausted"), "elapsed_ms": None})
+                rows.append({**evaluation.judge(item, None, "call_budget_exhausted"), **row_meta, "elapsed_ms": None})
                 continue
             budget["calls"] += 1
-        path = (base / item["audio"]).resolve()
-        audio = path.read_bytes()
+        audio = (base / item["audio"]).resolve().read_bytes()
         if len(audio) > MAX_AUDIO:
-            rows.append({**evaluation.judge(item, None, "audio_too_large"), "elapsed_ms": None})
+            rows.append({**evaluation.judge(item, None, "audio_too_large"), **row_meta, "elapsed_ms": None})
             continue
+        started = time.monotonic()
         try:  # One attempt per item: no automatic retries of possibly billed requests.
             result = await provider.transcribe(ASRRequest(audio, str(uuid.uuid4())))
+            wall_ms = round((time.monotonic() - started) * 1000)
             similarity, events = acoustic_for(item, base, extractor, calibration)
-            rows.append(with_acoustic({**evaluation.judge(item, result.transcript, observations=events),
-                                       "elapsed_ms": result.elapsed_ms}, similarity))
+            # elapsed_ms is the adapter's request round trip: upload + network + inference.
+            rows.append(with_acoustic({**evaluation.judge(item, result.transcript, observations=events), **row_meta,
+                                       "model": result.model, "elapsed_ms": result.elapsed_ms, "wall_ms": wall_ms},
+                                      similarity))
         except ProviderError as exc:
-            rows.append({**evaluation.judge(item, None, exc.code), "elapsed_ms": None})
+            rows.append({**evaluation.judge(item, None, exc.code), **row_meta, "elapsed_ms": None,
+                         "wall_ms": round((time.monotonic() - started) * 1000)})
     return {"provider": name, "config": config.public_dict(), "rows": rows, "summary": evaluation.summarize(rows)}
 
 
 async def main_async(args) -> dict:
     manifest = Path(args.manifest).resolve()
-    data = json.loads(manifest.read_text(encoding="utf-8"))
+    raw = manifest.read_bytes()
+    data = json.loads(raw.decode("utf-8"))
     items = data["items"] if isinstance(data, dict) else data
-    evaluation.validate(items)
+    warnings = evaluation.validate(items)
+    if isinstance(data, dict) and data.get("draft"):
+        warnings.append("draft manifest: labels/references not fully reviewed; use only for interface checks")
+    hashes = check_audio_leakage(items, manifest.parent)
+    if args.split:
+        items = [item for item in items if item.get("split") == args.split]
+        if not items:
+            raise evaluation.ManifestError(f"no items in split {args.split}")
+    unreviewed = [item["id"] for item in items if "audio" in item and not item.get("reviewed_by")]
+    if args.split == "test" and unreviewed:
+        # The held-out set is scored only after labels and references are reviewed and frozen.
+        raise evaluation.ManifestError(f"{len(unreviewed)} test items lack reviewed_by")
     budget = {"calls": 0}
-    reports = [await run_provider(name, items, manifest.parent, args, budget) for name in args.provider]
+    reports = [await run_provider(name, items, manifest.parent, args, budget, hashes) for name in args.provider]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out = ROOT / "artifacts" / "local" / "asr-eval" / stamp
     out.mkdir(parents=True, exist_ok=False)
-    (out / "results.json").write_text(json.dumps({"manifest": manifest.name, "created_at": stamp,
-        "paid_calls": budget["calls"], "reports": reports}, ensure_ascii=False, indent=2), encoding="utf-8")
+    run = {"manifest": manifest.name, "manifest_sha256": sha256(raw),
+           "manifest_version": data.get("version") if isinstance(data, dict) else None,
+           "split": args.split, "created_at": stamp, "git": git_state(), "rule_versions": RULE_VERSIONS,
+           "machine": {"system": platform.system(), "machine": platform.machine(), "python": platform.python_version()},
+           "unreviewed_audio_items": len(unreviewed), "warnings": warnings,
+           "paid_calls": budget["calls"], "max_calls": args.max_calls}
+    (out / "results.json").write_text(json.dumps({**run, "reports": reports}, ensure_ascii=False, indent=2),
+                                      encoding="utf-8")
     console = {"results": str(out.relative_to(ROOT) / "results.json"), "paid_calls": budget["calls"],
+               "split": args.split, "unreviewed_audio_items": len(unreviewed), "warnings": warnings,
                "providers": [{"provider": r["provider"], "config_id": (r["config"] or {}).get("config_id"),
                               **r["summary"]} for r in reports]}
     if args.show_transcripts:
-        console["rows"] = {r["provider"]: [{k: row.get(k) for k in ("id", "transcript", "verdict", "outcome")}
-                                           for row in r["rows"]] for r in reports}
+        keys = ("id", "reference", "transcript", "verdict", "outcome", "attribution")
+        console["rows"] = {r["provider"]: [{k: row.get(k) for k in keys} for row in r["rows"]] for r in reports}
     return console
 
 
@@ -120,6 +176,8 @@ def main() -> int:
     parser.add_argument("--acoustic", action="store_true",
                         help="Also compare each item's audio with its reference_audio (needs requirements-acoustic.txt)")
     parser.add_argument("--calibration", help="JSON {minor_below, severe_below, confidence}; without it similarity costs 0 points")
+    parser.add_argument("--split", choices=sorted(evaluation.SPLITS),
+                        help="Only run items of this split; 'test' requires every audio item to have reviewed_by")
     parser.add_argument("--show-transcripts", action="store_true", help="Also print transcripts to the console")
     args = parser.parse_args()
     args.provider = args.provider or ["rules"]

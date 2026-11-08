@@ -281,3 +281,127 @@ def test_evaluation_records_acoustic_similarity_by_label():
     row = {**evaluation.judge(item, "两份", observations=[{"type": "minor_tone", "uncertain": True}]), "acoustic_similarity": 0.8}
     assert row["score"] == 100 and row["deductions"][0]["uncertain"] is True
     assert evaluation.summarize([row])["mean_acoustic_similarity_by_label"] == {"acceptable": 0.8}
+
+
+QTY = {"type": "set_order", "quantity": 2, "unit": "serving"}
+
+
+def qty_item(i, label, reference, **extra):
+    return {"id": i, "station": "nanxiang", "step": "quantity", "target": QTY, "label": label, "reference": reference, **extra}
+
+
+def test_cer_is_reported_per_item_and_per_corpus_with_fixed_normalization():
+    rows = [evaluation.judge(qty_item("a", "acceptable", "两份"), "量份"),            # 1 edit / 2 chars
+            evaluation.judge(qty_item("b", "acceptable", "我要两份小笼馒头"), "我要两份小笼馒头")]  # 0 / 8
+    summary = evaluation.summarize(rows)
+    assert (summary["mean_cer"], summary["corpus_cer"], summary["cer_items"]) == (0.25, 0.1, 2)
+    assert summary["cer_normalization"] == "cer-norm.v1"
+    assert evaluation.cer("清蒸魚", "清蒸鱼") == 0  # traditional/simplified is not an error
+    assert evaluation.cer("侬好", "你好") == 0.5  # a Mandarin word choice still is
+
+
+def test_latency_reports_median_and_p95_separately_from_mean():
+    rows = [{**evaluation.judge(qty_item(str(i), "acceptable", "两份"), "两份"), "elapsed_ms": ms}
+            for i, ms in enumerate([100, 200, 300, 400, 5000])]
+    summary = evaluation.summarize(rows)
+    assert (summary["median_latency_ms"], summary["p95_latency_ms"], summary["mean_latency_ms"]) == (300, 5000, 1200)
+
+
+def test_attribution_separates_asr_errors_from_rule_errors():
+    asr = evaluation.judge(qty_item("asr", "acceptable", "两份"), "三份")   # the speaker was right, ASR was not
+    rule = evaluation.judge(qty_item("rule", "acceptable", "两客"), "两客")  # ASR is perfect, rules reject it
+    ok = evaluation.judge(qty_item("ok", "incorrect", "不要两份"), "不要两份")
+    tech = evaluation.judge(qty_item("t", "acceptable", "两份"), None, "timeout")
+    assert [r["attribution"] for r in (asr, rule, ok, tech)] == ["asr_error", "rule_error", "ok", None]
+    assert asr["reference_verdict"] == "pass" and rule["reference_verdict"] == "retry"
+    summary = evaluation.summarize([asr, rule, ok, tech])
+    assert summary["technical_failure_reasons"] == {"timeout": 1} and summary["technical_failure_rate"] == 0.25
+    assert (summary["acceptable_or_understandable_n"], summary["incorrect_n"]) == (2, 1)
+
+
+def test_breakdowns_by_station_group_and_condition():
+    rows = [evaluation.judge(qty_item("a", "acceptable", "两份", speaker_group="beginner", condition="canonical"), "两份"),
+            evaluation.judge(qty_item("b", "incorrect", "三份", speaker_group="fluent", condition="wrong_quantity"), "三份")]
+    summary = evaluation.summarize(rows)
+    assert summary["by_speaker_group"]["beginner"]["false_reject_rate"] == 0.0
+    assert summary["by_condition"]["wrong_quantity"]["false_accept_rate"] == 0.0
+    assert set(summary["by_station"]) == {"nanxiang"}
+
+
+def test_manifest_privacy_and_split_rules():
+    with pytest.raises(evaluation.ManifestError, match="anonymous"):
+        evaluation.validate([qty_item("a", "acceptable", "两份", speaker_id="Ruolan")])
+    with pytest.raises(evaluation.ManifestError, match="synthetic"):
+        evaluation.validate([qty_item("a", "acceptable", "两份", source="synthetic", speaker_group="fluent")])
+    with pytest.raises(evaluation.ManifestError, match="both dev and test"):
+        evaluation.validate([qty_item("a", "acceptable", "两份", utterance_group="u1", split="dev"),
+                             qty_item("b", "acceptable", "两份", utterance_group="u1", split="test")])
+    with pytest.raises(evaluation.ManifestError, match="condition"):
+        evaluation.validate([qty_item("a", "acceptable", "两份", condition="easy")])
+    warnings = evaluation.validate([qty_item("a", "acceptable", "两份", speaker_id="S01", split="dev"),
+                                    qty_item("b", "acceptable", "两份", speaker_id="S01", split="test")])
+    assert warnings == ["speaker S01 appears in both dev and test"]
+
+
+def test_eval_script_guards_held_out_split_and_audio_leakage(tmp_path):
+    script = ROOT / "scripts" / "asr-eval.py"
+    (tmp_path / "a.wav").write_bytes(wav())
+    (tmp_path / "b.wav").write_bytes(wav())
+    base = {"station": "nanxiang", "step": "quantity", "target": QTY, "label": "acceptable", "reference": "两份",
+            "transcript": "两份"}
+    def run(items, *extra):
+        manifest = tmp_path / "m.json"
+        manifest.write_text(json.dumps({"version": "t1", "items": items}, ensure_ascii=False))
+        return subprocess.run([sys.executable, str(script), str(manifest), *extra], capture_output=True, text=True, cwd=ROOT)
+    leaked = run([{**base, "id": "a", "audio": "a.wav", "split": "dev"}, {**base, "id": "b", "audio": "b.wav", "split": "test"}])
+    assert leaked.returncode == 1 and "identical audio" in leaked.stderr
+    (tmp_path / "b.wav").write_bytes(wav() + b"\0\0")
+    unreviewed = run([{**base, "id": "a", "audio": "a.wav", "split": "dev"}, {**base, "id": "b", "audio": "b.wav", "split": "test"}],
+                     "--split", "test")
+    assert unreviewed.returncode == 1 and "reviewed_by" in unreviewed.stderr
+    reviewed = run([{**base, "id": "a", "audio": "a.wav", "split": "dev"},
+                    {**base, "id": "b", "audio": "b.wav", "split": "test", "reviewed_by": ["R01"]}], "--split", "test")
+    assert reviewed.returncode == 0, reviewed.stderr
+    report = json.loads(reviewed.stdout)
+    assert report["providers"][0]["items"] == 1 and report["split"] == "test"
+    saved = json.loads((ROOT / report["results"]).read_text())
+    assert saved["manifest_version"] == "t1" and len(saved["manifest_sha256"]) == 64
+    assert saved["rule_versions"]["scoring"] == "lenient-rules.v1" and saved["reports"][0]["rows"][0]["input_sha256"]
+
+
+def test_recording_plan_is_valid_and_prepare_tool_keeps_data_private():
+    import csv
+    import shutil
+    plan = json.loads((ROOT / "scripts" / "asr-eval-plan.json").read_text())
+    items = [{"id": p["prompt_id"], "label": p["intended_label"], "station": p["station"], "step": p["step"],
+              "target": p["target"], "condition": p["condition"], **({"candy_flavor": p["candy_flavor"]} if "candy_flavor" in p else {})}
+             for p in plan["prompts"]]
+    assert evaluation.validate(items) == []
+    assert {"negation", "wrong_target", "wrong_quantity", "self_correction", "silence"} <= {i["condition"] for i in items}
+    tool, work = ROOT / "scripts" / "asr-eval-prepare.py", ROOT / "private" / "_pytest-prepare"
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        run = lambda *a: subprocess.run([sys.executable, str(tool), *map(str, a)], capture_output=True, text=True, cwd=ROOT)
+        assert run("sheet", "--speaker", "S01", "--group", "fluent", "--split", "dev", "--out", "/tmp/x.csv").returncode != 0
+        assert run("sheet", "--speaker", "Alice", "--group", "fluent", "--split", "dev", "--out", work / "a.csv").returncode != 0
+        assert run("sheet", "--speaker", "S01", "--group", "fluent", "--split", "dev", "--out", work / "s.csv").returncode == 0
+        (work / "S01").mkdir()
+        (work / "S01" / "NX-QTY-SHORT.wav").write_bytes(wav())
+        rows = [r for r in csv.DictReader((work / "s.csv").open()) if r["prompt_id"] == "NX-QTY-SHORT"]
+        with (work / "s.csv").open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, rows[0].keys())
+            writer.writeheader()
+            writer.writerows(rows)
+        missing = run("freeze", work / "s.csv", "--out", work / "m.json", "--version", "t")
+        assert missing.returncode != 0 and "reference" in missing.stderr
+        rows[0].update(label="acceptable", reference="两份", reviewed_by="R01;R02")
+        with (work / "s.csv").open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, rows[0].keys())
+            writer.writeheader()
+            writer.writerows(rows)
+        assert run("freeze", work / "s.csv", "--out", work / "m.json", "--version", "t").returncode == 0
+        item = json.loads((work / "m.json").read_text())["items"][0]
+        assert item["reviewed_by"] == ["R01", "R02"] and item["audio_info"]["sample_rate"] == 16000
+        assert run("freeze", work / "s.csv", "--out", work / "m.json", "--version", "t").returncode != 0  # no overwrite
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
