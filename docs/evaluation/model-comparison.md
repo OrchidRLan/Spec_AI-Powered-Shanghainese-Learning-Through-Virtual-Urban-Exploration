@@ -1,6 +1,6 @@
 # Shanghainese speech model comparison
 
-Started 2026-11-07 (batch E, step 9). **Status: baseline frozen, candidates researched, evaluation tooling and recording plan ready; budget approved; B, C, D downloaded and wired through local servers (checked on synthetic clips only). No model has been run on real speech in this round, and no result below is a quality measurement.** Results will be added only from saved, reproducible runs.
+Started 2026-11-07 (batch E, step 9). **Status: baseline frozen, candidates researched, evaluation tooling and recording plan ready; budget approved; B, C, D downloaded and wired through local servers (checked on synthetic clips only). First single-speaker pilot run on 2026-11-07 (§9): one heritage speaker, labels not yet reviewed. It is a pilot, not the formal comparison, and supports no model selection on its own.** Results will be added only from saved, reproducible runs.
 
 Related: [recording plan](recording-plan.md), [evaluation tooling](../engineering/ASR-evaluation.md), [speech integration](../engineering/Speech-integration.md), [scoring](../engineering/Scoring-system.md).
 
@@ -112,8 +112,33 @@ LOCAL_ASR_ENDPOINT=http://127.0.0.1:8011 LOCAL_ASR_MODEL=qwen3-asr-1.7b LOCAL_AS
 
 **Wiring check (synthetic, not evidence).** `asr-eval-prepare.py synthetic` pairs 20 plan prompts with existing Jada TTS clips of the same text (reference = TTS input, label = the plan's intended label, neither reviewed; `draft: true`). All three servers returned a transcript for 20/20 clips with 0 technical failures and 0 paid calls; runs are saved under `artifacts/local/asr-eval/`. The check found and fixed three integration problems (D's language setting, B's decoding mode, B's environment) and is the only reason those configurations are fixed now, before any real recording. One synthetic voice says nothing about learners' speech, so these outputs are not compared, ranked or reported as accuracy. B sometimes emits a `�` replacement character where a byte-level token is cut off; that is the model's raw output and is scored as is. Latency there is this Mac's local latency (C on MPS, B on CPU) and does not stand in for production latency.
 
-## 9. Not done yet
+## 9. Pilot 1 — one speaker, unreviewed labels (2026-11-07)
 
-- No real recordings, labels or listening ratings; no candidate run on real speech; no paid call in this round.
+**What it is.** Speaker `S01` (heritage group; a project author), 31 plan prompts, one take each, MacBook built-in microphone in a quiet room, recorded with [record-session.py](../../scripts/record-session.py) using the app's microphone settings. `reference` is what the speaker typed as actually said (not reviewed); `label` is the plan's intended label, copied into a separate provisional sheet; nobody has reviewed either. Draft manifest `pilot-v1.S01-provisional` (SHA256 `5fad9d1b…`), split `dev`, code `900efa5` clean, each model warmed with one synthetic clip first. Recordings, sheets and per-item transcripts stay in `private/`.
+
+| | C Qwen3-ASR-1.7B | D whisper-medium (`zh`) | B Whisper-Medium-Wu |
+| --- | --- | --- | --- |
+| Clips / technical failures | 31 / 0 | 31 / 0 | 31 / 0 |
+| False rejects (of 18 acceptable/understandable) | 6 | 16 | 3 |
+| False accepts (of 13 incorrect, incl. silence and noise) | 0 | 0 | 0 |
+| Of the false rejects, ASR error / rule error | 5 / 1 | 15 / 1 | 2 / 1 |
+| Corpus CER / mean CER (29 spoken clips, `cer-norm.v1`) | 0.398 / 0.507 | 0.828 / 0.823 | 0.141 / 0.162 |
+| Latency median / p95 (ms, this Mac, warm) | 226 / 376 | 321 / 393 | 324 / 563 |
+
+Paid calls: 0. The production baseline A was not run (no server key in this checkout), so the selection criteria in §5, which compare against A on a reviewed `test` split, cannot be applied yet.
+
+**Observations (to check on more speakers, not conclusions).**
+- The ordering B < C < D in error matches the published Wu results, but 18 acceptable items from one speaker cannot separate B from C reliably (3 vs 6 false rejects).
+- No false accept was observed in 13 incorrect items for any model. That is "none observed in 13", not a zero rate.
+- `NX-QTY-SELF` 「三份……勿对，两份」 is rejected for every model, and B transcribed it exactly: confirmed as a **rule-level** false reject (the guided check refuses any utterance with a negation word). This is the one `rule_error` in each column. Rules were not changed.
+- Common ASR errors: homophones in the item and mode words (小笼→小龙, 两份→两温, 堂吃→糖吃, the last one from all three models); C occasionally answers in English for short replies (对个 → "They are."); D often produces unrelated Mandarin or traditional-character text.
+- Candidate rule changes for later, tuned on `dev` only and re-checked against incorrect items: accepting near-homophones such as 糖吃 for 堂吃 and 小龙 for 小笼, and allowing self-correction that ends in the target. None is applied.
+- The silence and noise clips were nearly empty after the browser's noise suppression (as in the app), so they test hallucination on near-silence, not real background noise. Models still produced text on silence (C: a book title; D: "谢谢观看"), which the rules then rejected.
+
+**Before this counts as evidence:** a fluent reviewer confirms the 9 draft sentences, each `reference` and each `label`; at least 2–4 more speakers (fluent and beginner); the baseline A run within the approved budget; then a frozen, speaker-disjoint `test` split.
+
+## 10. Not done yet
+
+- Only one speaker recorded; no reviewed labels or listening ratings; baseline A not run on real speech; no paid call in this round.
 - CosyVoice2-Wu-SFT is downloaded but not set up; it also needs the consented prompt recording.
 - No production change. The [project report](https://docs.google.com/document/d/1EdI3IUBs7F1X_XHufFtIgYP4DChm3JsY8A4sL_nx6BQ/edit) has not been updated with results because there are none yet.
