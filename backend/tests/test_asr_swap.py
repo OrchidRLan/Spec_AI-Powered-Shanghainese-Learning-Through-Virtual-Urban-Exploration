@@ -414,3 +414,46 @@ def test_eval_runs_started_in_the_same_second_do_not_collide():
         runs = list(pool.map(lambda _: subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT), range(3)))
     assert [r.returncode for r in runs] == [0, 0, 0], [r.stderr for r in runs]
     assert len({json.loads(r.stdout)["results"] for r in runs}) == 3
+
+
+def test_synthetic_smoke_manifest_is_a_draft_kept_out_of_private_data():
+    import shutil
+    tool, work = ROOT / "scripts" / "asr-eval-prepare.py", ROOT / "artifacts" / "local" / f"_pytest-smoke-{uuid4().hex[:6]}"
+    run = lambda *a: subprocess.run([sys.executable, str(tool), *map(str, a)], capture_output=True, text=True, cwd=ROOT)
+    try:
+        assert run("synthetic", "--out", ROOT / "private" / "s.json").returncode != 0
+        assert run("synthetic", "--out", work / "s.json").returncode == 0
+        manifest = json.loads((work / "s.json").read_text())
+        assert manifest["draft"] is True and manifest["items"] and manifest["warnings"] == []
+        assert all(i["source"] == "synthetic" and i["speaker_group"] == "synthetic" and "reviewed_by" not in i
+                   for i in manifest["items"])
+        assert all((work / i["audio"]).resolve().is_file() for i in manifest["items"])
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def test_local_asr_server_rejects_other_model_names_and_large_uploads():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("local_asr_server", ROOT / "scripts" / "local-asr-server.py")
+    server = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server)
+
+    assert server.reject("qwen3-asr-1.7b", "whisper-medium", 10) == (400, "model mismatch")
+    assert server.reject("qwen3-asr-1.7b", "qwen3-asr-1.7b", server.MAX_UPLOAD + 1)[0] == 413
+    assert server.reject("qwen3-asr-1.7b", "qwen3-asr-1.7b", 10) is None
+    assert set(server.MODELS) == {"qwen3-asr-1.7b", "whisper-medium-wu", "whisper-medium"}
+    assert all(len(m["revision"]) == 40 for m in server.MODELS.values())  # pinned full commits
+    pytest.importorskip("multipart")  # eval-only server dependency, not needed by the backend
+
+    class Fake:
+        def transcribe(self, audio):
+            return f"len={len(audio)}", "zh"
+
+    client = TestClient(server.build_app("qwen3-asr-1.7b", Fake(), "rev", decode=lambda data: data))
+    post = lambda model, data: client.post("/v1/audio/transcriptions", data={"model": model},
+                                           files={"file": ("a.wav", data, "audio/wav")})
+    assert post("whisper-medium", wav()).status_code == 400
+    assert post("qwen3-asr-1.7b", b"x" * (server.MAX_UPLOAD + 1)).status_code == 413
+    ok = post("qwen3-asr-1.7b", wav())
+    assert ok.status_code == 200 and ok.json()["model"] == "qwen3-asr-1.7b" and ok.json()["revision"] == "rev"
+    assert client.get("/health").json() == {"model": "qwen3-asr-1.7b", "revision": "rev"}

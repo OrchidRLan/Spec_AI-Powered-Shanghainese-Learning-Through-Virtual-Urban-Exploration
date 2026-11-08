@@ -1,6 +1,6 @@
 # Shanghainese speech model comparison
 
-Started 2026-11-07 (batch E, step 9). **Status: baseline frozen, candidates researched, evaluation tooling and recording plan ready. No model has been run on real speech in this round, and no result below is a quality measurement.** Results will be added only from saved, reproducible runs.
+Started 2026-11-07 (batch E, step 9). **Status: baseline frozen, candidates researched, evaluation tooling and recording plan ready; budget approved; B, C, D downloaded and wired through local servers (checked on synthetic clips only). No model has been run on real speech in this round, and no result below is a quality measurement.** Results will be added only from saved, reproducible runs.
 
 Related: [recording plan](recording-plan.md), [evaluation tooling](../engineering/ASR-evaluation.md), [speech integration](../engineering/Speech-integration.md), [scoring](../engineering/Scoring-system.md).
 
@@ -76,7 +76,7 @@ If a candidate fails any of 1–3, the baseline stays. Changes are reported in t
 
 The 29 spoken pilot texts were judged by the current rules as if transcribed perfectly. 28 match their intended labels. One mismatch: `NX-QTY-SELF` 「三份……勿对，两份」 (self-correction meaning two) is rejected as `ambiguous_expression`, because the guided check rejects any utterance containing a negation word. This is the conservative boundary written into `guided.py`, so it is a **candidate** rule-level false reject, pending the reviewer's real label and real recordings. Rules were not changed.
 
-## 7. Budget (needs approval before any paid call)
+## 7. Budget (approved 2026-11-07)
 
 | Service | Planned use | Estimate at list price | Proposed hard cap |
 | --- | --- | --- | --- |
@@ -84,10 +84,36 @@ The 29 spoken pilot texts were judged by the current rules as if transcribed per
 | Local models | B, C, D and CosyVoice on this Mac | ¥0; ~19 GB downloads into the Hugging Face cache (`~/.cache/huggingface`) | Downloads only after approval |
 | Hosted GPU inference | Only if a local model wins and should go to production | Not estimated yet | Separate written proposal; nothing bought |
 
+Both rows were approved by the project owner on 2026-11-07: up to **400 `qwen3-asr-flash` calls with a ¥2 hard cap** (no automatic retries; `asr-eval.py --max-calls` enforces the count), and the ~19 GB download. The approval covers this evaluation only; hosted GPU still needs its own proposal. Paid calls also need the server key, which is not in this checkout, and they wait for real recordings: none are spent on synthetic clips.
+
 Rule changes do not need new ASR calls: saved transcripts are re-scored offline.
 
-## 8. Not done yet
+## 8. Local inference setup (2026-11-07)
 
-- No real recordings, labels or listening ratings; no candidate model downloaded or run; no paid call in this round.
-- Local inference wrappers for B, C, D are not written yet (they depend on the approved downloads).
+Weights are in the Hugging Face cache at the revisions in §3–4 (17 GB on disk; the CosyVoice files are downloaded but not run yet). [local-asr-server.py](../../scripts/local-asr-server.py) serves one candidate on `127.0.0.1` behind `POST /v1/audio/transcriptions`, so `asr-eval.py --provider openai_compatible` scores it with the same rules, metrics and run records as the baseline. It loads only from the local cache, refuses a request whose `model` differs from the loaded one, and returns the pinned revision with every result.
+
+| Candidate | Environment | Fixed configuration |
+| --- | --- | --- |
+| C `qwen3-asr-1.7b` | `~/.venvs/spec-speech-asr` (Python 3.11, torch 2.15, transformers 4.57.6, `qwen-asr` 0.0.6); Apple MPS, bf16 | Language auto-detected (`language=None`), no context prompt, greedy, max 256 new tokens |
+| D `whisper-medium` | Same | `language=zh`, task transcribe, greedy. With auto-detection the synthetic clips were labelled Turkish or Japanese, so auto-detection is not a usable configuration |
+| B `whisper-medium-wu` | `~/.venvs/spec-speech-wenet` (torch 2.5.1; current WeNet does not import under torch 2.15) + WeNet checkout `be6ad97f`; CPU | WeNet test-time dataset settings, language token `zh`, beam 10, CTC and reverse weights 0, mode `attention_rescoring`. Plain `attention` beam search repeated whole sentences on the synthetic clips with this checkpoint, so it is not used |
+
+Safety: the WeNet checkpoint is a pickle file. It is loaded with `torch.load(weights_only=True)` (tensors only, 951 entries) and a strict key and shape check, never through WeNet's own loader, which unpickles arbitrary objects under torch 2.5. The other two models use safetensors.
+
+Commands (one server at a time; ports are arbitrary):
+
+```bash
+~/.venvs/spec-speech-asr/bin/python scripts/local-asr-server.py qwen3-asr-1.7b --port 8011
+~/.venvs/spec-speech-asr/bin/python scripts/local-asr-server.py whisper-medium --language zh --port 8012
+~/.venvs/spec-speech-wenet/bin/python scripts/local-asr-server.py whisper-medium-wu --wenet-dir ~/.venvs/src/wenet --port 8013
+LOCAL_ASR_ENDPOINT=http://127.0.0.1:8011 LOCAL_ASR_MODEL=qwen3-asr-1.7b LOCAL_ASR_ENABLE_LIVE=true LOCAL_ASR_TIMEOUT_SECONDS=120 \
+  backend/.venv/bin/python scripts/asr-eval.py MANIFEST --provider openai_compatible
+```
+
+**Wiring check (synthetic, not evidence).** `asr-eval-prepare.py synthetic` pairs 20 plan prompts with existing Jada TTS clips of the same text (reference = TTS input, label = the plan's intended label, neither reviewed; `draft: true`). All three servers returned a transcript for 20/20 clips with 0 technical failures and 0 paid calls; runs are saved under `artifacts/local/asr-eval/`. The check found and fixed three integration problems (D's language setting, B's decoding mode, B's environment) and is the only reason those configurations are fixed now, before any real recording. One synthetic voice says nothing about learners' speech, so these outputs are not compared, ranked or reported as accuracy. B sometimes emits a `�` replacement character where a byte-level token is cut off; that is the model's raw output and is scored as is. Latency there is this Mac's local latency (C on MPS, B on CPU) and does not stand in for production latency.
+
+## 9. Not done yet
+
+- No real recordings, labels or listening ratings; no candidate run on real speech; no paid call in this round.
+- CosyVoice2-Wu-SFT is downloaded but not set up; it also needs the consented prompt recording.
 - No production change. The [project report](https://docs.google.com/document/d/1EdI3IUBs7F1X_XHufFtIgYP4DChm3JsY8A4sL_nx6BQ/edit) has not been updated with results because there are none yet.

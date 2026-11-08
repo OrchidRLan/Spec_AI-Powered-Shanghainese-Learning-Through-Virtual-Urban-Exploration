@@ -79,7 +79,9 @@ See [asr-eval.example.json](../../scripts/asr-eval.example.json). That file is s
 | `utterance_group` | Optional; takes of one utterance. A group in both `dev` and `test` is rejected; a speaker in both splits is a warning |
 | `reviewed_by` | Reviewer codes; required for every audio item when running `--split test` |
 
-[asr-eval-prepare.py](../../scripts/asr-eval-prepare.py) creates annotation sheets from the [recording plan](../../scripts/asr-eval-plan.json), converts recordings to 16 kHz mono PCM16 with macOS `afconvert` (originals kept, processing logged), and freezes a versioned manifest with each file's SHA256, sample rate, channels and duration. It writes only under `private/` and never overwrites a frozen manifest.
+[asr-eval-prepare.py](../../scripts/asr-eval-prepare.py) creates annotation sheets from the [recording plan](../../scripts/asr-eval-plan.json), converts recordings to 16 kHz mono PCM16 with macOS `afconvert` (originals kept, processing logged), and freezes a versioned manifest with each file's SHA256, sample rate, channels and duration. It writes only under `private/` and never overwrites a frozen manifest. Its `synthetic` subcommand builds a draft wiring-check manifest from existing teaching clips under `artifacts/local/` (never evidence).
+
+Open-weight candidates are served locally by [local-asr-server.py](../../scripts/local-asr-server.py) (loopback only, pinned revisions, model-name check); setup and fixed configurations are in [model comparison §8](../evaluation/model-comparison.md#8-local-inference-setup-2026-11-07).
 
 ### Metrics
 
@@ -128,7 +130,7 @@ npm run asr:eval -- private/asr-eval/manifest.json --acoustic
 
 ## 5. Not done yet
 
-- No real local server, real model, or paid call has been run. All provider tests use mocked HTTP.
+- Local servers for Whisper-Medium-Wu, Qwen3-ASR-1.7B and whisper-medium have run on synthetic clips only (wiring check). No paid call has been made; provider unit tests use mocked HTTP.
 - No labeled recordings exist yet. The [recording plan](../evaluation/recording-plan.md) and annotation tools are ready; collecting recordings with fluent-speaker labels is the next prerequisite.
 - Hosted providers without an OpenAI-compatible API (Tencent, iFlytek, Volcengine, Azure) need their own adapters. Add them as separate `ASR_PROVIDER` values after choosing which ones to test and setting a budget.
 - The acoustic path has only been tested with a stand-in feature extractor. The optional dependencies and WavLM weights have not been downloaded, so no real similarity has been measured, and no calibration exists.

@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-**批次 D 已按部署与基本运行范围完成，追加的全自动发布已启用并完成首轮验证；E 已于 2026-11-07 开始语音模型比较的准备阶段（基线冻结、候选调查、评测工具与录音方案），尚无真人录音或模型效果结果。** 网站为 [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app)，后端为 [a-little-shanghai-api](https://a-little-shanghai-api.onrender.com)。原 D 验收版本为 `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`；2026-10-18 首次自动发布验收版本为 `bb68e962d0cfc85bdf815a77980ee16f0507d0b0`，两端部署及稳定网址核验通过。后续提交会继续触发发布，最新前端版本以 [线上版本清单](https://spec-virtual-shanghainese-learning.vercel.app/deployment.json) 为准，发布记录见 [fork Actions](https://github.com/hollis-yang/Spec-Virtual-Shanghainese-Learning/actions/workflows/deploy-production.yml)。教材仍为 `reviewStatus: pending`。
+**批次 D 已按部署与基本运行范围完成，追加的全自动发布已启用并完成首轮验证；E 已于 2026-11-07 开始语音模型比较的准备阶段（基线冻结、候选调查、评测工具与录音方案），预算与下载已获批，三个本地 ASR 候选已接通（仅用合成音频做接口检查），尚无真人录音或模型效果结果。** 网站为 [A little Shanghai](https://spec-virtual-shanghainese-learning.vercel.app)，后端为 [a-little-shanghai-api](https://a-little-shanghai-api.onrender.com)。原 D 验收版本为 `da96ca8883d1d5b2aab626f5eb6f60ab1bafe93f`；2026-10-18 首次自动发布验收版本为 `bb68e962d0cfc85bdf815a77980ee16f0507d0b0`，两端部署及稳定网址核验通过。后续提交会继续触发发布，最新前端版本以 [线上版本清单](https://spec-virtual-shanghainese-learning.vercel.app/deployment.json) 为准，发布记录见 [fork Actions](https://github.com/hollis-yang/Spec-Virtual-Shanghainese-Learning/actions/workflows/deploy-production.yml)。教材仍为 `reviewStatus: pending`。
 
 四站功能、批次 2 的三轮修改和密码／用户名主键调整均已实现；批次 A 修订 4 已获用户体验通过，B+C 及后续修改尚无整体体验通过结论。教学文字、注音和声音仍待真实审核，部署成功不代表教材或最终产品通过。部署前已整理当前规格、历史归档和英文 README，检查通过 52 份 Markdown 的 550 个本地链接、43 处教学来源路径、171 个资源哈希及内容校验。
 
@@ -20,7 +20,9 @@
 
 ## 已交付与证据
 
-E 语音模型比较·准备阶段（2026-11-07，对应步骤 9 / E 的 ASR／TTS 评估，未完成整项）：冻结基线为源码 `3b438ee`（与线上 deployment.json 一致），线上 `/api/services` 实测 ASR 为北京 `qwen3-asr-flash`、`qwen-http-v2`、配置 `asr-4c784f1651e2840a`，文本仍为 `development-parser.v3`。按官方模型卡、论文与 HF 仓库核实候选：Whisper-Medium-Wu（WeNet 格式 3.27 GB）、Qwen3-ASR-1.7B（4.70 GB）、通用 whisper-medium（3.06 GB）、CosyVoice2-Wu-SFT（约 7.7 GB 含基座），均为 Apache-2.0，记录修订号、运行方式、本机可行性和部署限制；本机为 M5 Pro／48 GB，无 CUDA，本仓库无 `.env`，未下载权重、未调用付费服务。评测工具补齐 corpus／逐条 CER（固定 `cer-norm.v1`）、median／p95 延迟、技术失败原因、ASR 错与规则错归因、按站点／说话人组／条件／划分分层、逐条模型与输入哈希、运行 commit 与规则版本、dev/test 泄漏与留出集审核门槛；新增录音方案（31 条 pilot，覆盖四站、否定、错目标、错数量、量词、漏字段、语气词、自我修正、静音与噪声）和私有标注／转换／冻结工具。示例清单的 `reference` 改为实际所说内容。仅规则检查（非 ASR）发现自我修正「三份……勿对，两份」被保守否定规则拒绝，记为待真人标注确认的候选误拒，未改规则。评测相关 37 项测试通过；`npm run check` 通过（类型检查、49 项内容、172 项界面、602 项后端、音频校验），`build:deployment` 通过（含 12 项部署内容测试与 64 个教学音频校验）。前端与线上行为未改动。选型标准、预算（ASR 上限 400 次／¥2，待批准）与方法见 [模型比较](evaluation/model-comparison.md)，录音与标注说明见 [录音方案](evaluation/recording-plan.md)。
+E 本地候选接入（2026-11-07，承接上条，未完成整项）：项目负责人批准 ASR 上限 400 次／¥2 与约 19 GB 下载。已按固定修订号下载 Qwen3-ASR-1.7B、Whisper-Medium-Wu、whisper-medium 与 CosyVoice2 基座及 Wu-SFT（缓存实占 17 GB）；新增 [local-asr-server.py](../scripts/local-asr-server.py)，在本机回环地址以 OpenAI 转写接口提供单个候选，只读本地缓存、校验模型名并随结果返回修订号，使 `asr-eval.py --provider openai_compatible` 与基线用同一规则和指标评分。WeNet 检查点为 pickle 文件，改用 `weights_only=True` 只读张量并严格核对键与形状。用 20 条与计划句文字相同的 Jada 合成音频做接口检查（`asr-eval-prepare.py synthetic`，草稿、不作证据）：三个候选均 20/20 返回结果、0 技术失败、0 付费调用；据此在真人数据前固定配置——whisper-medium 用 `language=zh`（自动识别会判成土耳其语／日语），Whisper-Medium-Wu 用 `attention_rescoring`（`attention` 模式会整句重复），WeNet 单独用 torch 2.5.1 环境。合成音频的转写不比较、不排名、不作为准确率。付费调用仍待真人录音，且本仓库无服务端密钥；CosyVoice 未运行。评测相关测试 38 项通过、1 项因缺可选依赖 python-multipart 而跳过其 HTTP 部分（已用真实服务手动验证模型名不符返回 400）；`npm run check` 通过（后端 603 项通过、1 项跳过），`build:deployment` 通过；前端与线上行为未改动。配置与命令见 [模型比较 §8](evaluation/model-comparison.md#8-local-inference-setup-2026-11-07)。
+
+E 语音模型比较·准备阶段（2026-11-07，对应步骤 9 / E 的 ASR／TTS 评估，未完成整项）：冻结基线为源码 `3b438ee`（与线上 deployment.json 一致），线上 `/api/services` 实测 ASR 为北京 `qwen3-asr-flash`、`qwen-http-v2`、配置 `asr-4c784f1651e2840a`，文本仍为 `development-parser.v3`。按官方模型卡、论文与 HF 仓库核实候选：Whisper-Medium-Wu（WeNet 格式 3.27 GB）、Qwen3-ASR-1.7B（4.70 GB）、通用 whisper-medium（3.06 GB）、CosyVoice2-Wu-SFT（约 7.7 GB 含基座），均为 Apache-2.0，记录修订号、运行方式、本机可行性和部署限制；本机为 M5 Pro／48 GB，无 CUDA，本仓库无 `.env`，未下载权重、未调用付费服务。评测工具补齐 corpus／逐条 CER（固定 `cer-norm.v1`）、median／p95 延迟、技术失败原因、ASR 错与规则错归因、按站点／说话人组／条件／划分分层、逐条模型与输入哈希、运行 commit 与规则版本、dev/test 泄漏与留出集审核门槛；新增录音方案（31 条 pilot，覆盖四站、否定、错目标、错数量、量词、漏字段、语气词、自我修正、静音与噪声）和私有标注／转换／冻结工具。示例清单的 `reference` 改为实际所说内容。仅规则检查（非 ASR）发现自我修正「三份……勿对，两份」被保守否定规则拒绝，记为待真人标注确认的候选误拒，未改规则。评测相关 37 项测试通过；`npm run check` 通过（类型检查、49 项内容、172 项界面、602 项后端、音频校验），`build:deployment` 通过（含 12 项部署内容测试与 64 个教学音频校验）。前端与线上行为未改动。选型标准、预算（ASR 上限 400 次／¥2，当日获批）与方法见 [模型比较](evaluation/model-comparison.md)，录音与标注说明见 [录音方案](evaluation/recording-plan.md)。
 
 地图默认首站修复（2026-10-20，对应步骤 3／四站整合的局部修正）：移除批次 A 遗留的南翔默认选中值，改为使用路线首项上海老饭店（STOP 01）。新账号与游客仍先到 About，再进入地图；四站可自由选择，同次使用中返回地图保留所选站点，已有任务与进度不变。新增两项前端回归，覆盖中英、账号／游客、地图／About 入口和四站选择；原南翔卡片层级测试改为显式选站。172 项前端测试、类型检查与 `build:deployment` 通过（构建内含 49 项内容、12 项部署内容测试及 64 个教学音频文件校验）。Chrome 本机临时数据库实际验证游客中文入口、英文切换及新注册账号 About → 地图，均显示老饭店第 01 站；未调用真实语音服务。此项不代表 E 整体开始或通过，后续继续按下文验证计划执行；同步与上线版本以 Git 远端和线上版本清单为准。
 
@@ -65,7 +67,7 @@ E 语音模型比较·准备阶段（2026-11-07，对应步骤 9 / E 的 ASR／T
 | 批次 | 下一项工作 | 完成条件 |
 | --- | --- | --- |
 | D 部署准备与部署 | 原部署、基本检查与追加全自动发布均已完成；持续按指引发布、备份、转存，并在 2027-01-16 前轮换到期令牌 | 已验证合作仓库检查、fork 同步、后端先于前端部署、线上版本与部署后持久化 |
-| E 验证评估与修正 | 已开始模型比较准备；下一步：确认 9 条草拟句 → pilot 录音与标注 → 冻结 pilot 清单 → 基线与本地候选测评；设备兼容、教材审核和全路线验证随后进行 | 问题与复测记录完整，教材真实审核，完成最终验收 |
+| E 验证评估与修正 | 已完成准备并接通三个本地 ASR 候选；下一步：确认 9 条草拟句 → pilot 录音与标注 → 冻结 pilot 清单 → 基线与本地候选测评；设备兼容、教材审核和全路线验证随后进行 | 问题与复测记录完整，教材真实审核，完成最终验收 |
 
 保留原工作项编号：D 对应步骤 10，E 对应步骤 9，实际顺序为 D → E。`build:release` 仍拦截待审教材；`build:deployment` 已支持保留真实待审状态的完整性校验和部署构建。
 

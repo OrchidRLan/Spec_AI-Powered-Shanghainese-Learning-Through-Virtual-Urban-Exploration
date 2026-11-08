@@ -4,13 +4,16 @@
   sheet    Write one speaker's annotation CSV from the recording plan.
   convert  Convert recordings to 16 kHz mono PCM16 WAV with macOS afconvert, keeping originals.
   freeze   Check annotated CSVs and audio, hash every file, and write a versioned manifest.
+  synthetic  Pair plan prompts with existing Jada teaching clips of the same text, for wiring
+             checks of local ASR servers only (artifacts/local/, always a draft, never evidence).
 
-All outputs must live under private/ (ignored by Git). Nothing here calls a model.
+Recording outputs must live under private/ (ignored by Git). Nothing here calls a model.
 """
 import argparse
 import csv
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -135,6 +138,41 @@ def freeze(args) -> None:
                       "warnings": warnings}, ensure_ascii=False))
 
 
+def synthetic(args) -> None:
+    """Interface smoke test: TTS input text stands in for `reference`; not a human or reviewed label."""
+    plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
+    out = Path(args.out).resolve()
+    if ROOT / "artifacts" / "local" not in out.parents:
+        raise SystemExit("synthetic manifests go under artifacts/local/")
+    clips = {}
+    for manifest in sorted((ROOT / "content").glob("audio-review*.json")):
+        for clip in json.loads(manifest.read_text(encoding="utf-8")).get("clips", []):
+            if clip.get("speed") == "normal" and clip.get("file"):
+                clips.setdefault(clip["text"], clip)
+    items = []
+    for prompt in plan["prompts"]:
+        clip = clips.get(prompt["say"])
+        if clip is None:
+            continue
+        audio = ROOT / "frontend" / "public" / clip["file"].lstrip("/")
+        item = {"id": f"TTS01-{prompt['prompt_id']}", "station": prompt["station"], "step": prompt["step"],
+                "target": prompt["target"], "label": prompt["intended_label"], "reference": clip["text"],
+                "audio": os.path.relpath(audio, out.parent), "speaker_id": "TTS01", "speaker_group": "synthetic",
+                "source": "synthetic", "split": "dev", "condition": prompt["condition"],
+                "audio_info": audio_info(audio), "tts": {"model": clip.get("model"), "voice": clip.get("voice"),
+                                                       "config_id": clip.get("configId"), "clip_id": clip.get("id")}}
+        if prompt.get("candy_flavor"):
+            item["candy_flavor"] = prompt["candy_flavor"]
+        items.append(item)
+    manifest = {"version": "asr-smoke.synthetic-v1", "draft": True,
+                "_note": "Jada TTS clips matched to plan prompts by text. reference = TTS input text, label = the "
+                         "plan's intended label; neither is reviewed. Wiring check only, not model-quality evidence.",
+                "warnings": evaluation.validate(items), "items": items}
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"manifest": str(out.relative_to(ROOT)), "items": len(items)}, ensure_ascii=False))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -154,8 +192,11 @@ def main() -> int:
     f.add_argument("--version", required=True)
     f.add_argument("--plan-version", default="asr-recording-plan.pilot-v1")
     f.add_argument("--draft", action="store_true", help="Allow missing labels/references (pilot interface checks only)")
+    y = sub.add_parser("synthetic")
+    y.add_argument("--plan", default=str(ROOT / "scripts" / "asr-eval-plan.json"))
+    y.add_argument("--out", default=str(ROOT / "artifacts" / "local" / "asr-smoke" / "synthetic.json"))
     args = parser.parse_args()
-    {"sheet": sheet, "convert": convert, "freeze": freeze}[args.command](args)
+    {"sheet": sheet, "convert": convert, "freeze": freeze, "synthetic": synthetic}[args.command](args)
     return 0
 
 
