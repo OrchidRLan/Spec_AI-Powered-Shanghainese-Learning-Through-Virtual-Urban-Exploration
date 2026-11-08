@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recording review</title>
+<style>
+  :root { --bg:#faf8f4; --fg:#1f1d1a; --muted:#6b665e; --card:#fff; --line:#e4dfd6; --accent:#2f5d8a; --ok:#2e7d4f; --warn:#b4432b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#191816; --fg:#f1ede6; --muted:#a39d93; --card:#24221f; --line:#3a3733; --accent:#7fa8d6; --ok:#5cb784; --warn:#e0735b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 -apple-system, "PingFang SC", system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:20px; margin:0 0 4px; } h2 { font-size:17px; margin:0 0 8px; }
+  .muted { color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-top:16px; }
+  label.f { display:block; font-size:14px; color:var(--muted); margin:12px 0 4px; }
+  input[type=text], select { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); }
+  button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; align-items:center; }
+  .q { font-size:18px; margin:8px 0; }
+  .choice { display:block; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-top:8px; cursor:pointer; }
+  .choice input { margin-right:8px; }
+  .choice small { display:block; color:var(--muted); margin-left:24px; }
+  .grid { display:flex; flex-wrap:wrap; gap:4px; margin-top:16px; }
+  .grid button { padding:4px 8px; font-size:12px; }
+  .grid button.done { border-color:var(--ok); color:var(--ok); }
+  .grid button.cur { outline:2px solid var(--accent); }
+  .status { margin-top:12px; min-height:1.5em; font-size:14px; }
+  .err { color:var(--warn); }
+  .draft { border-top:1px solid var(--line); padding-top:12px; margin-top:12px; }
+  .say { font-size:22px; font-weight:600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>上海话录音审核</h1>
+  <div class="muted">只在本机运行，结果保存在 <code>private/</code>。审核时看不到模型的识别结果，也看不到预设答案。</div>
+
+  <section class="card" id="setup">
+    <label class="f" for="reviewer">审核人匿名编号（如 R01，不要写名字）</label>
+    <input type="text" id="reviewer" value="R01">
+    <label class="f" for="fluency">你的上海话水平</label>
+    <select id="fluency">
+      <option value="">请选择</option>
+      <option value="native">母语（从小说）</option>
+      <option value="fluent">流利（长期使用）</option>
+      <option value="heritage">能听能说但不流利</option>
+    </select>
+    <label class="f">这些录音里有你自己的声音吗？</label>
+    <div id="speakers"></div>
+    <div class="row"><button class="primary" id="start">开始审核</button></div>
+    <div class="status" id="setupStatus"></div>
+  </section>
+
+  <section class="card" id="guide" hidden>
+    <h2>怎么审核</h2>
+    <div>每条录音是一个人在回答下面写的问题。请：</div>
+    <ol>
+      <li>听录音（可以听多遍）。</li>
+      <li>核对「实际说的内容」：录音里说了什么就写什么，包括「嗯」、重复、说错的地方，用汉字写。和录音不一致就改掉。静音或噪音留空。</li>
+      <li>只根据<b>这个问题</b>选一个判断：
+        <ul>
+          <li><b>acceptable</b>：答对了，说法自然。</li>
+          <li><b>understandable</b>：意思答对了，听的人能懂，但说法不标准（如普通话口音、用词不地道）。</li>
+          <li><b>incorrect</b>：答错、没答到要点、意思相反、听不清，或者没说话。</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="muted">有些录音是故意说错的，这很正常，照实判断就好。</div>
+  </section>
+
+  <section class="card" id="rev" hidden>
+    <div class="muted" id="progress"></div>
+    <div class="q" id="question"></div>
+    <audio id="audio" controls preload="auto" style="width:100%; margin-top:8px"></audio>
+    <label class="f" for="ref">实际说的内容</label>
+    <input type="text" id="ref">
+    <div id="labels"></div>
+    <label class="f" for="note">备注（可选，如发音问题、口音、杂音）</label>
+    <input type="text" id="note">
+    <div class="row">
+      <button id="prevBtn">← 上一条</button>
+      <button class="primary" id="saveBtn">保存，下一条</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="card" id="drafts" hidden>
+    <h2>草拟句的说法</h2>
+    <div class="muted">下面这些句子是我们自己写的，请判断它们是不是地道的上海话说法（只看措辞，不看录音）。</div>
+    <div id="draftList"></div>
+    <div class="row"><button class="primary" id="draftSave">保存草拟句判断</button></div>
+    <div class="status" id="draftStatus"></div>
+  </section>
+</main>
+<script>
+const LABELS = [
+  ['acceptable', 'acceptable — 答对了，说法自然'],
+  ['understandable', 'understandable — 意思对，能听懂，但不标准'],
+  ['incorrect', 'incorrect — 答错 / 没答到 / 意思相反 / 听不清 / 没说话'],
+];
+const WORDING = [['natural', '地道'], ['ok_but_unnatural', '能懂，但不太自然'], ['not_shanghainese', '不是上海话的说法']];
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let reviewer = '', items = [], saved = {}, idx = 0;
+
+async function api(path, body) {
+  const res = await fetch(path, { method: 'POST', body: JSON.stringify({ reviewer, ...body }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+fetch('/api/speakers').then(r => r.json()).then(d => {
+  (d.speakers || []).forEach(sp => {
+    const l = document.createElement('label'); l.className = 'choice';
+    l.innerHTML = `<input type="checkbox" value="${esc(sp)}">有，我是说话人 ${esc(sp)}`;
+    $('speakers').appendChild(l);
+  });
+  const none = document.createElement('div'); none.className = 'muted'; none.textContent = '都不是就不用勾。';
+  $('speakers').appendChild(none);
+});
+
+$('start').onclick = async () => {
+  reviewer = $('reviewer').value.trim().toUpperCase();
+  if (!$('fluency').value) { $('setupStatus').innerHTML = '<span class="err">请选择上海话水平</span>'; return; }
+  const isSpeaker = [...$('speakers').querySelectorAll('input:checked')].map(x => x.value);
+  try {
+    const d = await api('/api/start', { profile: { fluency: $('fluency').value, is_speaker_of: isSpeaker } });
+    items = d.items; saved = d.saved || {};
+    $('setup').hidden = true; $('guide').hidden = false; $('rev').hidden = false; $('drafts').hidden = false;
+    const done = saved.items || {};
+    idx = Math.max(0, items.findIndex(x => !done[x.id]));
+    renderDrafts(d.drafts, saved.drafts || {});
+    show();
+  } catch (e) { $('setupStatus').innerHTML = '<span class="err">' + e.message + '</span>'; }
+};
+
+function show() {
+  const it = items[idx], done = (saved.items || {});
+  const prev = done[it.id];
+  $('progress').textContent = `第 ${idx + 1} / ${items.length} 条 · 已审 ${Object.keys(done).length} 条`;
+  $('question').textContent = it.question;
+  $('audio').src = '/audio/' + encodeURIComponent(it.id);
+  $('ref').value = prev ? prev.reference : (it.silent ? '' : it.speaker_text);
+  $('note').value = prev ? prev.note : '';
+  $('labels').innerHTML = LABELS.map(([v, t]) =>
+    `<label class="choice"><input type="radio" name="label" value="${v}" ${prev && prev.label === v ? 'checked' : ''}>${t}</label>`).join('');
+  $('status').textContent = prev ? '这条已审过，可以修改后再保存。' : '';
+  $('prevBtn').disabled = idx === 0;
+  $('grid').innerHTML = '';
+  items.forEach((x, i) => {
+    const b = document.createElement('button'); b.textContent = i + 1;
+    if (done[x.id]) b.className = 'done';
+    if (i === idx) b.classList.add('cur');
+    b.onclick = () => { idx = i; show(); };
+    $('grid').appendChild(b);
+  });
+}
+
+$('saveBtn').onclick = async () => {
+  const it = items[idx];
+  const label = (document.querySelector('input[name=label]:checked') || {}).value;
+  if (!label) { $('status').innerHTML = '<span class="err">请选一个判断</span>'; return; }
+  const item = { id: it.id, label, reference: $('ref').value, note: $('note').value };
+  try {
+    await api('/api/save', { item });
+    saved.items = saved.items || {}; saved.items[it.id] = item;
+    const next = items.findIndex((x, i) => i > idx && !saved.items[x.id]);
+    const any = items.findIndex(x => !saved.items[x.id]);
+    idx = next >= 0 ? next : (any >= 0 ? any : idx);
+    show();
+    if (items.every(x => saved.items[x.id])) $('status').textContent = '录音都审完了。请再看一下下面的草拟句。';
+  } catch (e) { $('status').innerHTML = '<span class="err">保存失败：' + e.message + '</span>'; }
+};
+$('prevBtn').onclick = () => { if (idx > 0) { idx--; show(); } };
+
+function renderDrafts(drafts, done) {
+  $('draftList').innerHTML = drafts.map(d => `
+    <div class="draft" data-id="${esc(d.prompt_id)}">
+      <div class="say">${esc(d.say)}</div>
+      <div class="muted">${esc(d.note || '')}</div>
+      ${WORDING.map(([v, t]) => `<label class="choice"><input type="radio" name="w-${d.prompt_id}" value="${v}" ${done[d.prompt_id] && done[d.prompt_id].wording === v ? 'checked' : ''}>${t}</label>`).join('')}
+      <label class="f">更地道的说法（可选）</label>
+      <input type="text" value="${esc(done[d.prompt_id] ? done[d.prompt_id].suggestion : '')}">
+    </div>`).join('');
+}
+$('draftSave').onclick = async () => {
+  let n = 0;
+  try {
+    for (const el of $('draftList').querySelectorAll('.draft')) {
+      const id = el.dataset.id, w = el.querySelector('input[type=radio]:checked');
+      if (!w) continue;
+      await api('/api/save', { draft: { prompt_id: id, wording: w.value, suggestion: el.querySelector('input[type=text]').value } });
+      n++;
+    }
+    $('draftStatus').textContent = `已保存 ${n} 条草拟句判断。`;
+  } catch (e) { $('draftStatus').innerHTML = '<span class="err">保存失败：' + e.message + '</span>'; }
+};
+</script>
+</body>
+</html>

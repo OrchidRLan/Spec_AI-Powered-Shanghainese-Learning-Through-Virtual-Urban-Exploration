@@ -494,3 +494,52 @@ def test_recording_page_saves_private_16k_wav_and_keeps_retakes():
         assert done.returncode != 0 and "not found" in done.stderr  # unrecorded prompts are reported, not skipped
     finally:
         shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_review_is_blind_per_reviewer_and_applies_only_agreed_decisions():
+    import csv
+    import importlib.util
+    import shutil
+    load = lambda name, file: importlib.util.spec_from_file_location(name, ROOT / "scripts" / file)
+    specs = {n: load(n, f) for n, f in (("rec", "record-session.py"), ("rev", "review-session.py"))}
+    mods = {}
+    for name, spec in specs.items():
+        mods[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mods[name])
+    folder = ROOT / "private" / "asr-eval" / f"_pytest-{uuid4().hex[:6]}"
+    plan = ROOT / "scripts" / "asr-eval-plan.json"
+    try:
+        session = mods["rec"].Session(folder, plan)
+        session.start("S01", "heritage", "mac", "quiet")
+        for prompt in ("NX-QTY-SHORT", "NX-QTY-SELF", "TEA-THANKS-CAN"):
+            session.save(prompt, wav(1.0), "两份" if prompt == "NX-QTY-SHORT" else "x", "")
+        review = mods["rev"].Review(folder, plan)
+        items = review.items("R01")
+        assert {i["id"] for i in items} == {"S01-NX-QTY-SHORT", "S01-NX-QTY-SELF", "S01-TEA-THANKS-CAN"}
+        assert all("label" not in i and "transcript" not in i and "intended" not in json.dumps(i) for i in items)
+        assert all("目标" in i["question"] for i in items)
+        assert all(mods["rev"].question({"station": p["station"], "step": p["step"], "target": json.dumps(p["target"])})
+                   != f"{p['station']} / {p['step']}" for p in json.loads(plan.read_text())["prompts"])
+        with pytest.raises(ValueError):
+            review.save("Alice", {"item": {"id": "S01-NX-QTY-SHORT", "label": "acceptable"}})
+        with pytest.raises(ValueError):
+            review.save("R01", {"item": {"id": "S01-NX-QTY-SHORT", "label": "great"}})
+        review.save("R01", {"profile": {"fluency": "native", "is_speaker_of": []}})
+        review.save("R02", {"profile": {"fluency": "heritage", "is_speaker_of": ["S01"]}})
+        for code in ("R01", "R02"):
+            review.save(code, {"item": {"id": "S01-NX-QTY-SHORT", "label": "acceptable", "reference": "两份", "note": ""}})
+        review.save("R01", {"item": {"id": "S01-NX-QTY-SELF", "label": "acceptable", "reference": "三份勿对两份"}})
+        review.save("R02", {"item": {"id": "S01-NX-QTY-SELF", "label": "understandable", "reference": "三份勿对两份"}})
+        review.save("R01", {"draft": {"prompt_id": "NX-QTY-SELF", "wording": "natural"}})
+        result = review.apply()
+        assert result["written"] == 1 and [d["id"] for d in result["disagreements"]] == ["S01-NX-QTY-SELF"]
+        assert result["unreviewed"] == ["S01-TEA-THANKS-CAN"] and result["draft_wording"]["R01"]["NX-QTY-SELF"]
+        rows = {r["prompt_id"]: r for r in csv.DictReader((folder / "S01.csv").open(encoding="utf-8"))}
+        assert rows["NX-QTY-SHORT"]["label"] == "acceptable" and rows["NX-QTY-SHORT"]["reviewed_by"] == "R01;R02"
+        assert "self-review" in rows["NX-QTY-SHORT"]["notes"] and "not yet reviewed" not in rows["NX-QTY-SHORT"]["notes"]
+        assert rows["NX-QTY-SELF"]["label"] == "" and rows["NX-QTY-SELF"]["reviewed_by"] == ""
+        review.apply()  # idempotent
+        again = {r["prompt_id"]: r for r in csv.DictReader((folder / "S01.csv").open(encoding="utf-8"))}
+        assert again["NX-QTY-SHORT"]["notes"] == rows["NX-QTY-SHORT"]["notes"]
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)

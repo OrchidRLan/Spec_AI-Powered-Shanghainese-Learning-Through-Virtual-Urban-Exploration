@@ -64,6 +64,14 @@ These sizes are a project suggestion, not a course requirement or a guarantee of
 | `ENG-SILENCE` | Nanxiang / quantity | quantity=2, unit=serving | silence | (3 seconds of silence) (Engineering negative: press record and stay silent) | — | incorrect |
 | `ENG-NOISE` | Teahouse / appreciation | good_tea | noise | (3 seconds of background noise, no speech) (Engineering negative: room or street noise only) | — | incorrect |
 
+### Recording and review tools
+
+- **Recording:** `backend/.venv/bin/python scripts/record-session.py`, then open http://127.0.0.1:8765 in a normal browser (the app's built-in preview pane has no microphone). One prompt at a time, app microphone settings, 16 kHz WAV saved straight into `private/asr-eval/<session>/`, re-takes kept in `_retakes/`. What the speaker types as "actually said" is stored as an unreviewed `reference`.
+- **Review:** `backend/.venv/bin/python scripts/review-session.py serve`, then open http://127.0.0.1:8766. Each reviewer (code `R01`, …) hears the recordings in their own random order, verifies or corrects the transcript, labels the answer to the question that was asked, and rates the wording of each draft prompt. Model transcripts and intended labels are not shown. Each reviewer's decisions go to `review-<code>.json`.
+- **Merge:** `backend/.venv/bin/python scripts/review-session.py apply` writes label, reference and `reviewed_by` into the speaker sheets only where all reviewers of a recording agree; disagreements are listed for discussion and left blank. A reviewer who is also the speaker is noted as a self-review.
+
+Pilot 1 deviation: speaker S01 recorded the draft prompts before a reviewer confirmed them. If the reviewer rejects a draft's wording, that recording stays as the speaker's own utterance with its reviewed label, and later speakers use the corrected wording.
+
 ## 4. Annotation fields
 
 Create one sheet per speaker; the tool fills the fixed columns:
