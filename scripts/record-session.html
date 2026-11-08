@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASR pilot recording</title>
+<style>
+  :root { --bg:#faf8f4; --fg:#1f1d1a; --muted:#6b665e; --card:#fff; --line:#e4dfd6; --accent:#b4432b; --ok:#2e7d4f; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#191816; --fg:#f1ede6; --muted:#a39d93; --card:#24221f; --line:#3a3733; --accent:#e0735b; --ok:#5cb784; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .muted { color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-top:16px; }
+  label { display:block; font-size:14px; color:var(--muted); margin:12px 0 4px; }
+  input, select, textarea { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); }
+  button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+  .say { font-size:34px; font-weight:600; margin:12px 0 4px; letter-spacing:.02em; }
+  .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted); margin-right:6px; }
+  .tag.warn { border-color:var(--accent); color:var(--accent); }
+  .hint { background:var(--bg); border-radius:8px; padding:10px 12px; margin-top:12px; font-size:15px; }
+  .meter { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:16px; }
+  .meter > div { height:100%; width:0; background:var(--ok); transition:width .05s; }
+  .grid { display:flex; flex-wrap:wrap; gap:4px; margin-top:16px; }
+  .grid button { padding:4px 8px; font-size:12px; }
+  .grid button.done { border-color:var(--ok); color:var(--ok); }
+  .grid button.cur { outline:2px solid var(--accent); }
+  .status { margin-top:12px; min-height:1.5em; font-size:14px; }
+  .err { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>上海话 ASR pilot 录音</h1>
+  <div class="muted">录音只保存在本机 <code>private/</code>（Git 不提交）。空格键 = 开始/停止录音。</div>
+
+  <section class="card" id="setup">
+    <label for="speaker">匿名编号（不要写名字）</label>
+    <input id="speaker" value="S01">
+    <label for="group">说话人组</label>
+    <select id="group">
+      <option value="">请选择</option>
+      <option value="fluent">fluent：上海话熟练（母语或长期使用）</option>
+      <option value="heritage">heritage：家里说、能听能说但不流利</option>
+      <option value="beginner">beginner：初学者</option>
+    </select>
+    <label for="device">设备与麦克风</label>
+    <input id="device" value="MacBook 内置麦克风">
+    <label for="environment">录音环境</label>
+    <input id="environment" value="安静室内">
+    <div class="row"><button class="primary" id="start">开始</button></div>
+    <div class="status" id="setupStatus"></div>
+  </section>
+
+  <section class="card" id="rec" hidden>
+    <div class="muted" id="progress"></div>
+    <div style="margin-top:8px"><span class="tag" id="station"></span><span class="tag" id="cond"></span><span class="tag warn" id="draft" hidden>草拟句</span></div>
+    <div class="say" id="say"></div>
+    <div class="muted" id="pid"></div>
+    <div class="hint" id="hint"></div>
+    <div class="meter"><div id="level"></div></div>
+    <div class="row">
+      <button class="primary" id="recBtn">● 录音</button>
+      <button id="playBtn" disabled>▶ 回放</button>
+      <button id="saveBtn" disabled>✓ 保存，下一句</button>
+    </div>
+    <label for="ref">实际说的内容（说得和上面不一样时请改；静音/噪音留空）</label>
+    <input id="ref">
+    <label for="note">备注（可选）</label>
+    <input id="note" placeholder="例如：中间咳嗽了一下">
+    <div class="row">
+      <button id="prevBtn">← 上一句</button>
+      <button id="nextBtn">跳过 →</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+<script>
+const STATIONS = { nanxiang: '南翔馒头店', restaurant: '上海老饭店', candy: '梨膏糖店', teahouse: '湖心亭茶楼' };
+const STEPS = { item: '点什么', quantity: '要几份', mode: '堂吃还是带走', confirm: '确认订单', preference: '口味（辣不辣）',
+  recommendation: '请人推荐', dish: '选菜', flavor: '选口味', appreciation: '夸茶', thanks: '道谢' };
+const CONDITIONS = {
+  canonical: ['标准说法', '正常、自然地说这句话。'],
+  nonstandard: ['另一种说法', '照着说；这句用来测试系统能否接受不同说法。'],
+  wrong_target: ['故意说错：目标不对', '这句是故意答错的（测试系统会不会误判通过），照着说就好。'],
+  wrong_quantity: ['故意说错：数量不对', '这句是故意答错的（数量不对），照着说就好。'],
+  wrong_unit: ['故意说错：量词不对', '这句是故意答错的（量词不对），照着说就好。'],
+  negation: ['否定句', '这句带否定，意思和目标相反，照着说就好。'],
+  missing_field: ['缺内容', '这句故意缺了要回答的部分，照着说就好。'],
+  filler_pause: ['停顿/语气词', '在「……」处自然地停顿或带语气词，不用刻意。'],
+  self_correction: ['自我修正', '先说错，再自然地改口。'],
+  silence: ['静音', '点录音后保持安静约 3 秒，再停止。'],
+  noise: ['只有噪音', '录约 3 秒环境声（翻纸、敲桌、远处说话都可以），自己不要说话。'],
+};
+const $ = id => document.getElementById(id);
+let prompts = [], idx = 0, ctx, stream, node, source, chunks = [], recording = false, wavBlob = null, audioEl = null;
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+$('start').onclick = async () => {
+  if (!$('group').value) { $('setupStatus').innerHTML = '<span class="err">请选择说话人组</span>'; return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  } catch (e) { $('setupStatus').innerHTML = '<span class="err">无法使用麦克风：' + e.message + '</span>'; return; }
+  try {
+    const state = await api('/api/start', { method: 'POST', body: JSON.stringify({
+      speaker: $('speaker').value.trim(), group: $('group').value, device: $('device').value, environment: $('environment').value }) });
+    prompts = state.prompts;
+    idx = Math.max(0, prompts.findIndex(p => !p.recorded));
+    $('setup').hidden = true; $('rec').hidden = false;
+    show();
+  } catch (e) { $('setupStatus').innerHTML = '<span class="err">' + e.message + '</span>'; }
+};
+
+function show() {
+  const p = prompts[idx];
+  const [condName, condHint] = CONDITIONS[p.condition] || [p.condition, ''];
+  const done = prompts.filter(x => x.recorded).length;
+  $('progress').textContent = `第 ${idx + 1} / ${prompts.length} 句 · 已录 ${done} 句`;
+  $('station').textContent = `${STATIONS[p.station] || p.station} · ${STEPS[p.step] || p.step}`;
+  $('cond').textContent = condName;
+  $('draft').hidden = p.say_source !== 'draft';
+  const silent = p.condition === 'silence' || p.condition === 'noise';
+  $('say').textContent = silent ? '（不说话）' : p.say;
+  $('pid').textContent = p.prompt_id + (p.note ? ' · ' + p.note : '');
+  $('hint').textContent = condHint + (p.say_source === 'draft' ? ' 这是草拟句：如果你觉得不地道，就用你认为地道的说法说，并在下面「实际说的内容」里改成你说的。' : '');
+  $('ref').value = p.reference || (silent ? '' : p.say);
+  $('note').value = '';
+  wavBlob = null; $('playBtn').disabled = true; $('saveBtn').disabled = true;
+  $('status').textContent = p.recorded ? '这句已录过；再录会保存新版本（旧版本保留在 _retakes/）。' : '';
+  $('prevBtn').disabled = idx === 0;
+  $('grid').innerHTML = '';
+  prompts.forEach((x, i) => {
+    const b = document.createElement('button');
+    b.textContent = i + 1; b.title = x.prompt_id;
+    if (x.recorded) b.className = 'done';
+    if (i === idx) b.classList.add('cur');
+    b.onclick = () => { if (!recording) { idx = i; show(); } };
+    $('grid').appendChild(b);
+  });
+}
+
+async function startRec() {
+  ctx = new AudioContext({ sampleRate: 16000 });
+  source = ctx.createMediaStreamSource(stream);
+  node = ctx.createScriptProcessor(4096, 1, 1);
+  chunks = [];
+  node.onaudioprocess = e => {
+    const data = e.inputBuffer.getChannelData(0);
+    chunks.push(new Float32Array(data));
+    let peak = 0; for (const v of data) peak = Math.max(peak, Math.abs(v));
+    $('level').style.width = Math.min(100, peak * 140) + '%';
+  };
+  source.connect(node); node.connect(ctx.destination);
+  recording = true;
+  $('recBtn').textContent = '■ 停止'; $('status').textContent = '录音中……';
+  $('playBtn').disabled = true; $('saveBtn').disabled = true;
+}
+
+function stopRec() {
+  source.disconnect(); node.disconnect();
+  const rate = ctx.sampleRate;
+  ctx.close(); recording = false;
+  $('level').style.width = '0';
+  $('recBtn').textContent = '● 重录';
+  let samples = concat(chunks);
+  if (rate !== 16000) samples = resample(samples, rate, 16000);
+  wavBlob = encodeWav(samples, 16000);
+  const secs = samples.length / 16000;
+  $('status').textContent = `录好了 ${secs.toFixed(1)} 秒。可以回放，满意就保存。`;
+  $('playBtn').disabled = false; $('saveBtn').disabled = secs < 0.3;
+}
+
+function concat(parts) {
+  const out = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
+  let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+function resample(input, from, to) {
+  const ratio = from / to, out = new Float32Array(Math.floor(input.length / ratio));
+  for (let i = 0; i < out.length; i++) {
+    const start = Math.floor(i * ratio), end = Math.min(input.length, Math.floor((i + 1) * ratio));
+    let sum = 0; for (let j = start; j < end; j++) sum += input[j];
+    out[i] = sum / Math.max(1, end - start);
+  }
+  return out;
+}
+function encodeWav(samples, rate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data');
+  v.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+$('recBtn').onclick = () => recording ? stopRec() : startRec();
+$('playBtn').onclick = () => { if (audioEl) audioEl.pause(); audioEl = new Audio(URL.createObjectURL(wavBlob)); audioEl.play(); };
+$('saveBtn').onclick = async () => {
+  const p = prompts[idx];
+  const q = new URLSearchParams({ prompt: p.prompt_id, reference: $('ref').value, note: $('note').value });
+  try {
+    $('saveBtn').disabled = true;
+    await api('/api/clip?' + q, { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wavBlob });
+    p.recorded = true; p.reference = $('ref').value;
+    const next = prompts.findIndex((x, i) => i > idx && !x.recorded);
+    if (next >= 0) idx = next; else if (idx < prompts.length - 1) idx++;
+    show();
+    if (prompts.every(x => x.recorded)) $('status').textContent = '全部录完了，谢谢！可以关掉这个页面了。';
+  } catch (e) { $('status').innerHTML = '<span class="err">保存失败：' + e.message + '</span>'; $('saveBtn').disabled = false; }
+};
+$('prevBtn').onclick = () => { if (!recording && idx > 0) { idx--; show(); } };
+$('nextBtn').onclick = () => { if (!recording && idx < prompts.length - 1) { idx++; show(); } };
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !$('rec').hidden && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+    e.preventDefault(); recording ? stopRec() : startRec();
+  }
+});
+</script>
+</body>
+</html>

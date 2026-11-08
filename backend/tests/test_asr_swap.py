@@ -457,3 +457,40 @@ def test_local_asr_server_rejects_other_model_names_and_large_uploads():
     ok = post("qwen3-asr-1.7b", wav())
     assert ok.status_code == 200 and ok.json()["model"] == "qwen3-asr-1.7b" and ok.json()["revision"] == "rev"
     assert client.get("/health").json() == {"model": "qwen3-asr-1.7b", "revision": "rev"}
+
+
+def test_recording_page_saves_private_16k_wav_and_keeps_retakes():
+    import importlib.util
+    import shutil
+    spec = importlib.util.spec_from_file_location("record_session", ROOT / "scripts" / "record-session.py")
+    rec = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rec)
+    folder = ROOT / "private" / "asr-eval" / f"_pytest-{uuid4().hex[:6]}"
+    try:
+        with pytest.raises(SystemExit):
+            rec.Session(ROOT / "artifacts" / "x", ROOT / "scripts" / "asr-eval-plan.json")  # outside private/
+        session = rec.Session(folder, ROOT / "scripts" / "asr-eval-plan.json")
+        with pytest.raises(ValueError):
+            session.save("NX-QTY-SHORT", wav(1.0), "两份", "")  # not started
+        with pytest.raises(ValueError):
+            session.start("Alice", "fluent", "mac", "quiet")
+        session.start("S01", "fluent", "mac", "quiet")
+        with pytest.raises(ValueError):
+            session.save("NX-QTY-SHORT", wav(1.0, rate=44100), "两份", "")
+        with pytest.raises(ValueError):
+            session.save("../../etc", wav(1.0), "", "")
+        assert session.save("NX-QTY-SHORT", wav(1.0), "两份", "")["saved"] == "S01/NX-QTY-SHORT.wav"
+        session.save("NX-QTY-SHORT", wav(1.2), "两份，两份", "restart")
+        assert len(list((folder / "S01" / "_retakes").iterdir())) == 1
+        row = next(r for r in session.rows() if r["prompt_id"] == "NX-QTY-SHORT")
+        assert row["reference"] == "两份，两份" and row["label"] == "" and row["reviewed_by"] == ""
+        assert "not yet reviewed" in row["notes"] and row["device"] == "mac"
+        state = session.state()
+        assert sum(p["recorded"] for p in state["prompts"]) == 1
+        manifest = folder / "m.json"
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "asr-eval-prepare.py"), "freeze",
+                               str(folder / "S01.csv"), "--out", str(manifest), "--version", "t", "--draft"],
+                              capture_output=True, text=True, cwd=ROOT)
+        assert done.returncode != 0 and "not found" in done.stderr  # unrecorded prompts are reported, not skipped
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
